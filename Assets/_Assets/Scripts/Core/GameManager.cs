@@ -56,7 +56,7 @@ namespace BaoZuPo.Core
             {
                 // Take values from the static database
                 var allCards = CardDatabase.GetAll().Values;
-                Deck.DeckManager.Instance.Initialize(allCards);
+                Deck.DeckManager.Instance.Initialize(allCards, gameConfig.maxHandSize);
             }
 
             // 5. Build game context

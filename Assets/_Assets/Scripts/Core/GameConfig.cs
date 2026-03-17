@@ -20,8 +20,14 @@ namespace BaoZuPo.Core
         public int loanInterval = 5;
 
         [Header("抽卡")]
-        [Tooltip("每次抽卡数量")]
-        public int drawCount = 3;
+        [Tooltip("第一回合抽卡数量")]
+        public int firstTurnDrawCount = 5;
+
+        [Tooltip("后续回合抽卡数量")]
+        public int normalTurnDrawCount = 3;
+
+        [Tooltip("手牌上限，达到上限时本次抽卡跳过")]
+        public int maxHandSize = 7;
 
         [Header("房间")]
         [Tooltip("初始房间数量")]

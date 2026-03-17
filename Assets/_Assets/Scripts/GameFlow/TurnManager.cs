@@ -40,9 +40,10 @@ namespace BaoZuPo.GameFlow
             EventBus.Publish(new GameEvents.TurnStarted { TurnNumber = _currentTurn });
             EventBus.Publish(new GameEvents.PhaseChanged { PhaseName = "Prepare" });
 
-            // 抽牌
+            // 抽牌（首回合与后续回合数量不同）
             var config = GameManager.Instance.gameConfig;
-            Deck.DeckManager.Instance.Draw(config.drawCount);
+            int drawCount = _currentTurn == 1 ? config.firstTurnDrawCount : config.normalTurnDrawCount;
+            Deck.DeckManager.Instance.Draw(drawCount);
 
             // 处理场上所有卡牌
             var fieldCards = BoardManager.Instance.GetAllFieldCards();
@@ -197,6 +198,9 @@ namespace BaoZuPo.GameFlow
             }
 
             BoardManager.Instance.CleanupDestroyedCards();
+
+            // 回合结束：处理手牌等待倒计时，归零进入弃牌堆
+            Deck.DeckManager.Instance.ResolveHandWaitAndDiscardExpired();
 
             // 还贷判定
             var config = GameManager.Instance.gameConfig;
