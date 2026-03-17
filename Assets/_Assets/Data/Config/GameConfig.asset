@@ -15,7 +15,9 @@ MonoBehaviour:
   startingMoney: 1000
   loanAmount: 500
   loanInterval: 5
-  drawCount: 3
+  firstTurnDrawCount: 5
+  normalTurnDrawCount: 3
+  maxHandSize: 7
   initialRoomCount: 3
   defaultTenantSlots: 1
   defaultEquipmentSlots: 3
