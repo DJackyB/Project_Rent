@@ -111,9 +111,38 @@ namespace BaoZuPo.Deck
         }
 
         /// <summary>
+        /// 新增一张卡到手牌（用于奖励/入库流程）
+        /// 手牌已满时改为加入弃牌堆。
+        /// </summary>
+        public void AddCardToHand(CardData data)
+        {
+            if (data == null) return;
+
+            var card = new CardInstance(data)
+            {
+                CurrentWait = data.waitTurns
+            };
+
+            if (_hand.Count >= _maxHandSize)
+            {
+                _discardPile.Add(card);
+                Debug.Log($"[DeckManager] 手牌已满，奖励卡改入弃牌堆: {data.cardName}");
+            }
+            else
+            {
+                _hand.Add(card);
+                Debug.Log($"[DeckManager] 奖励卡加入手牌: {data.cardName}");
+            }
+
+            UpdateDebugInfo();
+        }
+
+        /// <summary>
         /// 回合结束时处理手牌等待倒计时：
         /// 1. waitTurns > 0 的手牌 CurrentWait -1
-        /// 2. CurrentWait <= 0 的牌加入弃牌堆
+        /// 2. CurrentWait <= 0 的牌：
+        ///    - 租客卡：直接移除（不触发销毁效果）
+        ///    - 非租客卡：加入弃牌堆
         /// </summary>
         public int ResolveHandWaitAndDiscardExpired()
         {
@@ -130,8 +159,17 @@ namespace BaoZuPo.Deck
                 if (card.CurrentWait <= 0)
                 {
                     _hand.RemoveAt(i);
-                    _discardPile.Add(card);
-                    movedToDiscard++;
+
+                    // v0.6 规则：租客卡等待归零直接移除（不触发销毁效果）
+                    if (card.Data.cardType == CardType.Tenant)
+                    {
+                        card.MarkDestroyed();
+                    }
+                    else
+                    {
+                        _discardPile.Add(card);
+                        movedToDiscard++;
+                    }
                 }
             }
 

@@ -19,6 +19,9 @@ namespace BaoZuPo.Core
         [Tooltip("还贷间隔（每隔多少回合还一次贷）")]
         public int loanInterval = 5;
 
+        [Tooltip("还贷金额增长倍率（指数增长），例如 2 表示每次翻倍")]
+        public float loanGrowthFactor = 2f;
+
         [Header("抽卡")]
         [Tooltip("第一回合抽卡数量")]
         public int firstTurnDrawCount = 5;
