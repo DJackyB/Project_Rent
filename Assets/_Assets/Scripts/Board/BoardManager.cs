@@ -13,6 +13,7 @@ namespace BaoZuPo.Board
     {
         [Header("调试信息")]
         [SerializeField] private List<RoomSlot> _rooms = new();
+        [SerializeField] private List<CardInstance> _contracts = new();
         private Transform _roomRoot;
 
         /// <summary>当前房间数量</summary>
@@ -30,6 +31,7 @@ namespace BaoZuPo.Board
             }
 
             ClearAllRooms();
+            _contracts.Clear();
 
             for (int i = 0; i < roomCount; i++)
             {
@@ -48,7 +50,7 @@ namespace BaoZuPo.Board
             roomGO.transform.SetParent(_roomRoot);
 
             var room = roomGO.AddComponent<RoomSlot>();
-            room.Initialize(_rooms.Count - 1, tenantSlots, equipmentSlots);
+            room.Initialize(_rooms.Count, tenantSlots, equipmentSlots);
             _rooms.Add(room);
 
             Debug.Log($"[BoardManager] 新增房间: {room.RoomIndex}");
@@ -92,7 +94,7 @@ namespace BaoZuPo.Board
         }
 
         /// <summary>
-        /// 获取场上所有卡牌（遍历所有房间）
+        /// 获取场上所有卡牌（房间卡 + 合同卡）
         /// </summary>
         public List<CardInstance> GetAllFieldCards()
         {
@@ -101,8 +103,23 @@ namespace BaoZuPo.Board
             {
                 allCards.AddRange(room.GetAllCards());
             }
+            allCards.AddRange(_contracts);
             return allCards;
         }
+
+        /// <summary>
+        /// 新增一张合同牌（不占用房间）
+        /// </summary>
+        public void AddContract(CardInstance contract)
+        {
+            if (contract == null || contract.IsDestroyed) return;
+            _contracts.Add(contract);
+        }
+
+        /// <summary>
+        /// 获取所有已生效的合同牌
+        /// </summary>
+        public IReadOnlyList<CardInstance> GetAllContracts() => _contracts;
 
         /// <summary>
         /// 清理所有房间中已销毁的卡牌
@@ -113,6 +130,7 @@ namespace BaoZuPo.Board
             {
                 room.CleanupDestroyedCards();
             }
+            _contracts.RemoveAll(c => c == null || c.IsDestroyed);
         }
 
         /// <summary>

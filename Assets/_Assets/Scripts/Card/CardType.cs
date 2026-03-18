@@ -12,6 +12,9 @@ namespace BaoZuPo.Card
         Equipment,
 
         /// <summary>事件卡 - 普通/随机/全局</summary>
-        Event
+        Event,
+
+        /// <summary>合同卡 - 常驻结算，类似遗物</summary>
+        Contract
     }
 }
