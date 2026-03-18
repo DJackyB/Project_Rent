@@ -46,7 +46,7 @@ namespace BaoZuPo.Card
         public string destroyEffect;
 
         [Header("持续性")]
-        [Tooltip("耐久：每次准备阶段 -1，归零时销毁。0 表示无限耐久")]
+        [Tooltip("耐久：在结算阶段按规则扣减，归零时销毁。0 表示无限耐久")]
         public int durability;
 
         [Tooltip("等待回合数：每回合末 -1，归零时销毁（不触发销毁效果）。0 表示无等待")]
