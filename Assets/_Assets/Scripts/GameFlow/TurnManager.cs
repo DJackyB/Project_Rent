@@ -85,8 +85,10 @@ namespace BaoZuPo.GameFlow
         public bool PlayCard(CardInstance card, RoomSlot targetRoom)
         {
             if (_isGameOver) return false;
+            if (card == null || card.IsDestroyed) return false;
 
             var context = GameManager.Instance.GameContext;
+            context.EffectContext.SelectedRoom = targetRoom;
 
             // 检查费用
             if (!MoneyManager.Instance.CanAfford(card.Data.cost))
@@ -98,26 +100,13 @@ namespace BaoZuPo.GameFlow
             // 事件卡不需要放置到房间
             if (card.Data.cardType == CardType.Event)
             {
-                MoneyManager.Instance.ReduceMoney(card.Data.cost);
-                card.InstantEffect?.Execute(card, context);
-                Deck.DeckManager.Instance.RemoveFromHand(card);
-
-                EventBus.Publish(new GameEvents.CardPlayed { Card = card });
-                Debug.Log($"[TurnManager] 打出事件卡: {card}");
-                return true;
+                return ResolveCardAfterPlay(card, context, null, "事件卡");
             }
 
             // 合同卡生效后常驻，不占用房间槽位
             if (card.Data.cardType == CardType.Contract)
             {
-                MoneyManager.Instance.ReduceMoney(card.Data.cost);
-                card.InstantEffect?.Execute(card, context);
-                Deck.DeckManager.Instance.RemoveFromHand(card);
-                BoardManager.Instance.AddContract(card);
-
-                EventBus.Publish(new GameEvents.CardPlayed { Card = card });
-                Debug.Log($"[TurnManager] 打出合同卡: {card}");
-                return true;
+                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), "合同卡");
             }
 
             // 放置到房间
@@ -127,12 +116,28 @@ namespace BaoZuPo.GameFlow
                 return false;
             }
 
+            return ResolveCardAfterPlay(card, context, null, $"卡牌 -> 房间 {targetRoom.RoomIndex}");
+        }
+
+        public bool CardNeedsRoomTarget(CardInstance card)
+        {
+            if (card == null || card.Data == null) return false;
+            if (card.Data.cardType == CardType.Tenant || card.Data.cardType == CardType.Equipment)
+                return true;
+
+            string instant = card.Data.instantEffect ?? "";
+            return instant.Contains("SelectedRoom");
+        }
+
+        private bool ResolveCardAfterPlay(CardInstance card, GameContext context, System.Action<CardInstance> afterInstant, string tag)
+        {
             MoneyManager.Instance.ReduceMoney(card.Data.cost);
             card.InstantEffect?.Execute(card, context);
+            afterInstant?.Invoke(card);
             Deck.DeckManager.Instance.RemoveFromHand(card);
 
             EventBus.Publish(new GameEvents.CardPlayed { Card = card });
-            Debug.Log($"[TurnManager] 打出卡牌: {card} -> 房间 {targetRoom.RoomIndex}");
+            Debug.Log($"[TurnManager] 打出{tag}: {card.Data.cardName}");
             return true;
         }
 

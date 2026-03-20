@@ -11,6 +11,24 @@ namespace BaoZuPo.Card
     /// </summary>
     public static class CardEffectFactory
     {
+        private sealed class CompositeCardEffect : ICardEffect
+        {
+            private readonly List<ICardEffect> _effects;
+
+            public CompositeCardEffect(List<ICardEffect> effects)
+            {
+                _effects = effects;
+            }
+
+            public void Execute(CardInstance source, GameContext context)
+            {
+                foreach (var effect in _effects)
+                {
+                    effect?.Execute(source, context);
+                }
+            }
+        }
+
         /// <summary>
         /// 效果创建器注册表
         /// key: 效果ID（如 "AddMoney"）
@@ -34,6 +52,32 @@ namespace BaoZuPo.Card
         /// <param name="effectString">效果字符串，格式为 "EffectId;Param1;Param2..."，如 "AddMoney;100"</param>
         /// <returns>ICardEffect 实例，如果解析失败则返回 null</returns>
         public static ICardEffect Create(string effectString)
+        {
+            if (string.IsNullOrEmpty(effectString))
+                return null;
+
+            if (effectString.Contains("|"))
+            {
+                var segments = effectString.Split('|');
+                var effects = new List<ICardEffect>();
+                foreach (var segment in segments)
+                {
+                    var effect = CreateSingle(segment.Trim());
+                    if (effect != null)
+                    {
+                        effects.Add(effect);
+                    }
+                }
+
+                if (effects.Count == 0) return null;
+                if (effects.Count == 1) return effects[0];
+                return new CompositeCardEffect(effects);
+            }
+
+            return CreateSingle(effectString);
+        }
+
+        private static ICardEffect CreateSingle(string effectString)
         {
             if (string.IsNullOrEmpty(effectString))
                 return null;
