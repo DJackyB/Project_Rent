@@ -51,6 +51,7 @@ namespace BaoZuPo.Editor
             { "Card_Equipt", CardType.Equipment },
             { "Card_Equipment", CardType.Equipment },
             { "Card_Event", CardType.Event },
+            { "Card_Contract", CardType.Contract },
         };
 
         [MenuItem("Tools/包租婆/导入卡牌表")]

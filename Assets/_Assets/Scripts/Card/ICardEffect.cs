@@ -1,6 +1,15 @@
 namespace BaoZuPo.Card
 {
     /// <summary>
+    /// 效果执行时上下文（一次出牌/一次效果链共享）
+    /// </summary>
+    public class EffectExecutionContext
+    {
+        /// <summary>当前选择的房间目标（可为空）</summary>
+        public Board.RoomSlot SelectedRoom { get; set; }
+    }
+
+    /// <summary>
     /// 卡牌效果接口
     /// 所有卡牌效果（如 AddMoney、ReduceMoney）都实现此接口。
     /// </summary>
@@ -22,6 +31,7 @@ namespace BaoZuPo.Card
     {
         public Economy.MoneyManager MoneyManager { get; set; }
         public Board.BoardManager BoardManager { get; set; }
+        public EffectExecutionContext EffectContext { get; set; } = new();
 
         // 后续可扩展更多系统引用
     }

@@ -47,6 +47,7 @@ namespace BaoZuPo.UI
                     case CardType.Tenant: typeText.text = "Tenant"; break;
                     case CardType.Equipment: typeText.text = "Equipment"; break;
                     case CardType.Event: typeText.text = "Event"; break;
+                    case CardType.Contract: typeText.text = "Contract"; break;
                 }
             }
 
@@ -82,19 +83,18 @@ namespace BaoZuPo.UI
 
         private void OnClick()
         {
-            if (_handPanel != null)
+            if (_handPanel == null) return;
+
+            var turnManager = GameFlow.TurnManager.Instance;
+            if ((Card.Data.cardType == CardType.Event || Card.Data.cardType == CardType.Contract)
+                && !turnManager.CardNeedsRoomTarget(Card))
             {
-                // 如果是事件卡，直接打出
-                if (Card.Data.cardType == CardType.Event)
-                {
-                    GameFlow.TurnManager.Instance.PlayCard(Card, null);
-                    UIManager.Instance.RefreshAll();
-                }
-                else
-                {
-                    _handPanel.SelectCard(Card);
-                }
+                turnManager.PlayCard(Card, null);
+                UIManager.Instance.RefreshAll();
+                return;
             }
+
+            _handPanel.SelectCard(Card);
         }
 
         public void SetSelected(bool selected)

@@ -32,7 +32,6 @@ namespace BaoZuPo.UI
         public void RefreshBoard()
         {
             var rooms = BoardManager.Instance.GetAllRooms();
-            Debug.Log($"[UIBoardPanel] 正在刷新棋盘。BoardManager中共有 {rooms.Count} 个房间。");
 
             // Destroy ALL children of the container (to remove placeholders)
             foreach (Transform child in roomContainer)
@@ -63,7 +62,6 @@ namespace BaoZuPo.UI
                 }
             }
             
-            Debug.Log($"[UIBoardPanel] 已创建 {_roomViews.Count} 个房间UI元素。");
         }
 
         /// <summary>
