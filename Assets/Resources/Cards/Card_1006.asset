@@ -19,6 +19,7 @@ MonoBehaviour:
   rarity: 2
   cardArt: {fileID: 0}
   cost: 150
+  targetKind: 1
   preEffect: 
   instantEffect: AddMoney;240
   settleEffect: AddMoney;120

@@ -43,25 +43,28 @@ namespace BaoZuPo.UI
 
         public void RefreshTurn(int turn)
         {
+            UIFontCatalog.ApplyToText(turnText);
             if (turnText != null)
             {
-                turnText.text = $"Turn {turn}";
+                turnText.text = UIStrings.Turn(turn);
             }
         }
 
         public void RefreshMoney(int money)
         {
+            UIFontCatalog.ApplyToText(moneyText);
             if (moneyText != null)
             {
-                moneyText.text = $"Money {money}";
+                moneyText.text = UIStrings.Money(money);
             }
         }
 
         public void RefreshSummary()
         {
+            UIFontCatalog.ApplyToText(deckText);
             if (deckText != null)
             {
-                deckText.text = $"Spent {MoneyManager.Instance.TotalSpent}";
+                deckText.text = UIStrings.Spent(MoneyManager.Instance.TotalSpent);
             }
         }
 
@@ -103,6 +106,9 @@ namespace BaoZuPo.UI
             turnText.transform.SetParent(rootCanvas.transform, false);
             deckText.transform.SetParent(rootCanvas.transform, false);
             moneyText.transform.SetParent(rootCanvas.transform, false);
+            UIFontCatalog.ApplyToText(turnText);
+            UIFontCatalog.ApplyToText(deckText);
+            UIFontCatalog.ApplyToText(moneyText);
 
             ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.CenterLeft);
             ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.CenterRight);
@@ -151,9 +157,7 @@ namespace BaoZuPo.UI
             labelObject.transform.SetParent(parent, false);
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = TMP_Settings.defaultFontAsset != null
-                ? TMP_Settings.defaultFontAsset
-                : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            label.font = UIFontCatalog.GetPreferredFontAsset();
             label.color = Color.white;
             label.enableWordWrapping = false;
             label.fontSize = 24f;

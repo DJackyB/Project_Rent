@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 namespace BaoZuPo.Card
@@ -21,10 +22,16 @@ namespace BaoZuPo.Card
 
             foreach (var card in allCards)
             {
+                if (card == null)
+                {
+                    throw new InvalidOperationException("[CardDatabase] Encountered a null CardData asset while loading.");
+                }
+
                 if (_cards.ContainsKey(card.cardId))
                 {
-                    Debug.LogWarning($"[CardDatabase] \u68c0\u6d4b\u5230\u91cd\u590d\u5361\u724c ID {card.cardId} {card.cardName} \u5df2\u8df3\u8fc7");
-                    continue;
+                    CardData existing = _cards[card.cardId];
+                    throw new InvalidOperationException(
+                        $"[CardDatabase] Duplicate cardId detected: {card.cardId}. Existing={existing.cardName}, Incoming={card.cardName}");
                 }
 
                 _cards[card.cardId] = card;
@@ -39,7 +46,17 @@ namespace BaoZuPo.Card
         /// </summary>
         public static void Register(CardData data)
         {
-            if (data == null) return;
+            if (data == null)
+            {
+                throw new ArgumentNullException(nameof(data), "[CardDatabase] Cannot register a null CardData.");
+            }
+
+            if (_cards.TryGetValue(data.cardId, out var existing) && existing != data)
+            {
+                throw new InvalidOperationException(
+                    $"[CardDatabase] Duplicate cardId detected during Register: {data.cardId}. Existing={existing.cardName}, Incoming={data.cardName}");
+            }
+
             _cards[data.cardId] = data;
         }
 
@@ -50,8 +67,7 @@ namespace BaoZuPo.Card
         {
             if (!_isLoaded)
             {
-                Debug.LogWarning("[CardDatabase] \u5361\u724c\u6570\u636e\u5e93\u5c1a\u672a\u52a0\u8f7d \u6b63\u5728\u81ea\u52a8\u52a0\u8f7d");
-                LoadAll();
+                throw new InvalidOperationException("[CardDatabase] Accessed before LoadAll().");
             }
 
             _cards.TryGetValue(cardId, out var data);
@@ -63,7 +79,11 @@ namespace BaoZuPo.Card
         /// </summary>
         public static IReadOnlyDictionary<int, CardData> GetAll()
         {
-            if (!_isLoaded) LoadAll();
+            if (!_isLoaded)
+            {
+                throw new InvalidOperationException("[CardDatabase] Accessed before LoadAll().");
+            }
+
             return _cards;
         }
 

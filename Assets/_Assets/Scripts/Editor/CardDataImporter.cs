@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using BaoZuPo.Card;
+using BaoZuPo.GameFlow;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using UnityEditor;
@@ -8,9 +9,6 @@ using UnityEngine;
 
 namespace BaoZuPo.Editor
 {
-    /// <summary>
-    /// Excel import tool for reading the card table and generating CardData assets.
-    /// </summary>
     public static class CardDataImporter
     {
         private const string ExcelRelativePath = "Assets/_Assets/Data/Excel/CardData.xlsx";
@@ -27,12 +25,32 @@ namespace BaoZuPo.Editor
         private const string Col_ArtPath = "cardArt";
         private const string Col_Cost = "cost";
         private const string Col_BaseRent = "baseRent";
+        private const string Col_TargetKind = "targetKind";
         private const string Col_Wait = "waitTurns";
         private const string Col_Durability = "durability";
         private const string Col_PreEffect = "preEffect";
         private const string Col_InstantEffect = "instantEffect";
         private const string Col_SettleEffect = "settleEffect";
         private const string Col_DestroyEffect = "destroyEffect";
+
+        private static readonly string[] RequiredColumns =
+        {
+            Col_CardId,
+            Col_CardName,
+            Col_Description,
+            Col_CardType,
+            Col_Rarity,
+            Col_ArtPath,
+            Col_Cost,
+            Col_BaseRent,
+            Col_TargetKind,
+            Col_Wait,
+            Col_Durability,
+            Col_PreEffect,
+            Col_InstantEffect,
+            Col_SettleEffect,
+            Col_DestroyEffect,
+        };
 
         private static readonly Dictionary<string, CardType> CardTypeMap = new()
         {
@@ -46,6 +64,8 @@ namespace BaoZuPo.Editor
         [MenuItem("Tools/BaoZuPo/Import Card Data")]
         public static void Import()
         {
+            CardEffectRegistration.EnsureRegistered();
+
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             string excelPath = Path.Combine(projectRoot, ExcelRelativePath);
 
@@ -95,28 +115,25 @@ namespace BaoZuPo.Editor
             }
 
             Debug.Log($"[CardDataImporter] Found {columnMap.Count} columns: {string.Join(", ", columnMap.Keys)}");
+            ValidateRequiredColumns(columnMap);
 
             int created = 0;
             int updated = 0;
-            int skipped = 0;
 
             for (int rowIndex = DataStartRowIndex; rowIndex <= sheet.LastRowNum; rowIndex++)
             {
                 IRow row = sheet.GetRow(rowIndex);
-                if (row == null) continue;
-
-                int cardId = GetIntValue(row, columnMap, Col_CardId, -1);
-                if (cardId < 0)
+                if (row == null || IsRowEmpty(row))
                 {
                     continue;
                 }
 
+                int cardId = GetRequiredIntValue(row, columnMap, Col_CardId, rowIndex);
+
                 string cardName = GetStringValue(row, columnMap, Col_CardName);
-                if (string.IsNullOrEmpty(cardName))
+                if (string.IsNullOrWhiteSpace(cardName))
                 {
-                    skipped++;
-                    Debug.LogWarning($"[CardDataImporter] Row {rowIndex + 1}: ID={cardId} missing card name, skipped.");
-                    continue;
+                    throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: cardName is required.");
                 }
 
                 string assetPath = $"{OutputFolder}/Card_{cardId}.asset";
@@ -131,16 +148,26 @@ namespace BaoZuPo.Editor
                 cardData.cardId = cardId;
                 cardData.cardName = cardName;
                 cardData.description = GetStringValue(row, columnMap, Col_Description);
-                cardData.cardType = ParseCardType(GetStringValue(row, columnMap, Col_CardType));
-                cardData.rarity = (CardRarity)GetIntValue(row, columnMap, Col_Rarity, 0);
-                cardData.cost = GetIntValue(row, columnMap, Col_Cost, 0);
-                cardData.baseRent = GetIntValue(row, columnMap, Col_BaseRent, 0);
-                cardData.waitTurns = GetIntValue(row, columnMap, Col_Wait, 0);
-                cardData.durability = GetIntValue(row, columnMap, Col_Durability, 0);
+                cardData.cardType = ParseCardType(GetStringValue(row, columnMap, Col_CardType), rowIndex, cardId);
+                cardData.rarity = (CardRarity)GetRequiredIntValue(row, columnMap, Col_Rarity, rowIndex);
+                cardData.cost = GetRequiredIntValue(row, columnMap, Col_Cost, rowIndex);
+                cardData.baseRent = GetRequiredIntValue(row, columnMap, Col_BaseRent, rowIndex);
+                cardData.waitTurns = GetRequiredIntValue(row, columnMap, Col_Wait, rowIndex);
+                cardData.durability = GetRequiredIntValue(row, columnMap, Col_Durability, rowIndex);
                 cardData.preEffect = GetStringValue(row, columnMap, Col_PreEffect);
                 cardData.instantEffect = GetStringValue(row, columnMap, Col_InstantEffect);
                 cardData.settleEffect = GetStringValue(row, columnMap, Col_SettleEffect);
                 cardData.destroyEffect = GetStringValue(row, columnMap, Col_DestroyEffect);
+                cardData.targetKind = ParseTargetKind(
+                    GetStringValue(row, columnMap, Col_TargetKind),
+                    cardData.cardType,
+                    rowIndex,
+                    cardId);
+
+                ValidateEffectField(rowIndex, cardId, Col_PreEffect, cardData.preEffect);
+                ValidateEffectField(rowIndex, cardId, Col_InstantEffect, cardData.instantEffect);
+                ValidateEffectField(rowIndex, cardId, Col_SettleEffect, cardData.settleEffect);
+                ValidateEffectField(rowIndex, cardId, Col_DestroyEffect, cardData.destroyEffect);
 
                 string artPath = GetStringValue(row, columnMap, Col_ArtPath);
                 if (!string.IsNullOrEmpty(artPath))
@@ -165,15 +192,21 @@ namespace BaoZuPo.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[CardDataImporter] Done. Created {created}, updated {updated}, skipped {skipped}.");
+            Debug.Log($"[CardDataImporter] Done. Created {created}, updated {updated}.");
         }
 
         private static string GetStringValue(IRow row, Dictionary<string, int> columnMap, string columnName)
         {
-            if (!columnMap.TryGetValue(columnName, out int colIndex)) return "";
+            if (!columnMap.TryGetValue(columnName, out int colIndex))
+            {
+                return "";
+            }
 
             ICell cell = row.GetCell(colIndex);
-            if (cell == null) return "";
+            if (cell == null)
+            {
+                return "";
+            }
 
             return cell.CellType switch
             {
@@ -185,30 +218,115 @@ namespace BaoZuPo.Editor
             };
         }
 
-        private static int GetIntValue(IRow row, Dictionary<string, int> columnMap, string columnName, int defaultValue)
+        private static int GetRequiredIntValue(IRow row, Dictionary<string, int> columnMap, string columnName, int rowIndex)
         {
-            if (!columnMap.TryGetValue(columnName, out int colIndex)) return defaultValue;
+            if (!columnMap.TryGetValue(columnName, out int colIndex))
+            {
+                throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: missing required column '{columnName}'.");
+            }
 
             ICell cell = row.GetCell(colIndex);
-            if (cell == null) return defaultValue;
+            if (cell == null)
+            {
+                throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is empty.");
+            }
 
             return cell.CellType switch
             {
                 CellType.Numeric => (int)cell.NumericCellValue,
-                CellType.String => int.TryParse(cell.StringCellValue, out int val) ? val : defaultValue,
-                _ => defaultValue
+                CellType.String => int.TryParse(cell.StringCellValue, out int val)
+                    ? val
+                    : throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is not a valid int."),
+                _ => throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is not a valid int.")
             };
         }
 
-        private static CardType ParseCardType(string typeString)
+        private static CardType ParseCardType(string typeString, int rowIndex, int cardId)
         {
-            if (string.IsNullOrEmpty(typeString)) return CardType.Tenant;
+            if (string.IsNullOrWhiteSpace(typeString))
+            {
+                throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: cardType is required.");
+            }
 
             if (CardTypeMap.TryGetValue(typeString, out var cardType))
+            {
                 return cardType;
+            }
 
-            Debug.LogWarning($"[CardDataImporter] Unknown card type: {typeString}, defaulting to Tenant.");
-            return CardType.Tenant;
+            throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: unknown cardType '{typeString}'.");
+        }
+
+        private static void ValidateEffectField(int rowIndex, int cardId, string fieldName, string effectString)
+        {
+            if (CardEffectFactory.TryValidate(effectString, out var error))
+            {
+                return;
+            }
+
+            throw new InvalidDataException(
+                $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}, field '{fieldName}' is invalid: {effectString}. {error}");
+        }
+
+        private static CardPlayTargetKind ParseTargetKind(string configuredTarget, CardType cardType, int rowIndex, int cardId)
+        {
+            if (string.IsNullOrWhiteSpace(configuredTarget))
+            {
+                throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: targetKind is required.");
+            }
+
+            CardPlayTargetKind parsedTarget;
+            if (System.Enum.TryParse(configuredTarget, true, out CardPlayTargetKind enumTarget))
+            {
+                parsedTarget = enumTarget;
+            }
+            else if (int.TryParse(configuredTarget, out int numericTarget)
+                && System.Enum.IsDefined(typeof(CardPlayTargetKind), numericTarget))
+            {
+                parsedTarget = (CardPlayTargetKind)numericTarget;
+            }
+            else
+            {
+                throw new InvalidDataException(
+                    $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: invalid targetKind '{configuredTarget}'.");
+            }
+
+            if ((cardType == CardType.Tenant || cardType == CardType.Equipment) && parsedTarget != CardPlayTargetKind.Room)
+            {
+                throw new InvalidDataException(
+                    $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: {cardType} cards must use targetKind Room.");
+            }
+
+            return parsedTarget;
+        }
+
+        private static void ValidateRequiredColumns(Dictionary<string, int> columnMap)
+        {
+            foreach (string requiredColumn in RequiredColumns)
+            {
+                if (!columnMap.ContainsKey(requiredColumn))
+                {
+                    throw new InvalidDataException($"[CardDataImporter] Missing required column '{requiredColumn}'.");
+                }
+            }
+        }
+
+        private static bool IsRowEmpty(IRow row)
+        {
+            if (row == null)
+            {
+                return true;
+            }
+
+            for (int col = row.FirstCellNum; col < row.LastCellNum; col++)
+            {
+                ICell cell = row.GetCell(col);
+                if (cell != null && !string.IsNullOrWhiteSpace(cell.ToString()))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void CreateFolderRecursive(string folderPath)
@@ -223,6 +341,7 @@ namespace BaoZuPo.Editor
                 {
                     AssetDatabase.CreateFolder(currentPath, parts[i]);
                 }
+
                 currentPath = nextPath;
             }
         }

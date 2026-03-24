@@ -77,6 +77,14 @@ public static class ModifyExcelScript
                     enName = "cost";
                     typeName = "int";
                     break;
+                case "BaseRent":
+                    enName = "baseRent";
+                    typeName = "int";
+                    break;
+                case "TargetKind":
+                    enName = "targetKind";
+                    typeName = "enum";
+                    break;
                 case "Wait":
                     enName = "waitTurns";
                     typeName = "int";
@@ -107,11 +115,46 @@ public static class ModifyExcelScript
             headerRowType.CreateCell(col).SetCellValue(typeName);
         }
 
+        if (!HasHeader(headerRowEn, "baseRent"))
+        {
+            int baseRentCol = headerRowEn.LastCellNum >= 0 ? headerRowEn.LastCellNum : 0;
+            headerRowCh.CreateCell(baseRentCol).SetCellValue("BaseRent");
+            headerRowEn.CreateCell(baseRentCol).SetCellValue("baseRent");
+            headerRowType.CreateCell(baseRentCol).SetCellValue("int");
+        }
+
+        if (!HasHeader(headerRowEn, "targetKind"))
+        {
+            int targetKindCol = headerRowEn.LastCellNum >= 0 ? headerRowEn.LastCellNum : 0;
+            headerRowCh.CreateCell(targetKindCol).SetCellValue("TargetKind");
+            headerRowEn.CreateCell(targetKindCol).SetCellValue("targetKind");
+            headerRowType.CreateCell(targetKindCol).SetCellValue("enum");
+        }
+
         using (var stream = new FileStream(excelPath, FileMode.Create, FileAccess.Write))
         {
             workbook.Write(stream);
         }
 
         Debug.Log("[ModifyExcelScript] Inserted English headers and type row.");
+    }
+
+    private static bool HasHeader(IRow row, string headerName)
+    {
+        if (row == null)
+        {
+            return false;
+        }
+
+        for (int col = row.FirstCellNum; col < row.LastCellNum; col++)
+        {
+            ICell cell = row.GetCell(col);
+            if (cell != null && cell.ToString().Trim() == headerName)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

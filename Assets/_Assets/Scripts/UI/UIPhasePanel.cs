@@ -33,16 +33,12 @@ namespace BaoZuPo.UI
         public void UpdatePhase(string phaseName)
         {
             EnsureRuntimeLayout();
+            UIFontCatalog.ApplyToText(phaseText);
+            UIFontCatalog.ApplyToText(buttonText);
 
             if (phaseText != null)
             {
-                phaseText.text = phaseName switch
-                {
-                    "Prepare" => "Prepare",
-                    "Action" => "Action",
-                    "Settle" => "Settle",
-                    _ => phaseName
-                };
+                phaseText.text = UIStrings.PhaseName(phaseName);
             }
 
             bool isAction = phaseName == "Action";
@@ -53,7 +49,7 @@ namespace BaoZuPo.UI
 
             if (buttonText != null)
             {
-                buttonText.text = isAction ? "End Turn" : "Waiting";
+                buttonText.text = isAction ? UIStrings.EndTurnButton : UIStrings.WaitingButton;
             }
         }
 
@@ -96,6 +92,9 @@ namespace BaoZuPo.UI
             {
                 image.color = new Color(0.16f, 0.35f, 0.19f, 0.94f);
             }
+
+            UIFontCatalog.ApplyToText(phaseText);
+            UIFontCatalog.ApplyToText(buttonText);
         }
 
         private static Button CreateRuntimeButton(Transform parent)
@@ -117,9 +116,7 @@ namespace BaoZuPo.UI
             labelRect.offsetMax = Vector2.zero;
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = TMP_Settings.defaultFontAsset != null
-                ? TMP_Settings.defaultFontAsset
-                : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            label.font = UIFontCatalog.GetPreferredFontAsset();
             label.fontSize = 24f;
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;

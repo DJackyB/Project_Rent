@@ -19,6 +19,7 @@ MonoBehaviour:
   rarity: 1
   cardArt: {fileID: 0}
   cost: 60
+  targetKind: 0
   preEffect: 
   instantEffect: AddEquipmentDurability;3
   settleEffect: 

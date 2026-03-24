@@ -28,6 +28,7 @@ namespace BaoZuPo.UI
             EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
 
         private void Start()
@@ -50,6 +51,7 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+            LocalizationManager.LanguageChanged -= OnLanguageChanged;
         }
 
         private void OnPhaseChanged(GameEvents.PhaseChanged e)
@@ -92,6 +94,14 @@ namespace BaoZuPo.UI
             cardDragController?.CancelCurrentDrag(true);
             HoverPreviewController.Instance.Hide();
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
+        }
+
+        private void OnLanguageChanged()
+        {
+            UIFontCatalog.ApplyToAllLoadedSceneTexts();
+            RefreshAll();
+            phasePanel?.UpdatePhase(CurrentPhase.ToString());
+            gameOverPanel?.RefreshLocalization();
         }
 
         public void RefreshAll()

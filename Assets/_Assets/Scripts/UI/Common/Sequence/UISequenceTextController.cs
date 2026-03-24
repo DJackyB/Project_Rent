@@ -237,9 +237,7 @@ namespace BaoZuPo.UI.Common.Sequence
             labelRect.offsetMax = panelPadding * -1f;
 
             _label = labelObject.GetComponent<TextMeshProUGUI>();
-            _label.font = TMP_Settings.defaultFontAsset != null
-                ? TMP_Settings.defaultFontAsset
-                : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            _label.font = UIFontCatalog.GetPreferredFontAsset();
             _label.color = defaultTextColor;
             _label.fontSize = 24f;
             _label.alignment = TextAlignmentOptions.Center;

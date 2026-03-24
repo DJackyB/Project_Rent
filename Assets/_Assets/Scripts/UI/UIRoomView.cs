@@ -47,11 +47,16 @@ namespace BaoZuPo.UI
             ClearContainer(container);
             _slotViews.Clear();
 
-            var tenantSlot = CreateSlot(container, "TenantSlot", CardViewContext.RoomTenant);
-            tenantSlot.Bind(_room != null ? _room.GetTenantAt(0) : null);
-            _slotViews.Add(tenantSlot);
+            int tenantCapacity = _room != null ? Mathf.Max(0, _room.TenantSlotCapacity) : 0;
+            for (int i = 0; i < tenantCapacity; i++)
+            {
+                var tenantSlot = CreateSlot(container, $"TenantSlot_{i}", CardViewContext.RoomTenant);
+                tenantSlot.Bind(_room != null ? _room.GetTenantAt(i) : null);
+                _slotViews.Add(tenantSlot);
+            }
 
-            for (int i = 0; i < 3; i++)
+            int equipmentCapacity = _room != null ? Mathf.Max(0, _room.EquipmentSlotCapacity) : 0;
+            for (int i = 0; i < equipmentCapacity; i++)
             {
                 var equipmentSlot = CreateSlot(container, $"EquipmentSlot_{i}", CardViewContext.RoomEquipment);
                 equipmentSlot.Bind(_room != null ? _room.GetEquipmentAt(i) : null);
@@ -71,12 +76,18 @@ namespace BaoZuPo.UI
 
         private void RefreshTitle()
         {
+            UIFontCatalog.ApplyToText(titleText);
             if (titleText == null || _room == null)
             {
                 return;
             }
 
-            titleText.text = $"Room {_room.RoomIndex + 1}  Tenant {_room.TenantCount}/{_room.TenantSlotCapacity}  Equip {_room.EquipmentCount}/{_room.EquipmentSlotCapacity}";
+            titleText.text = UIStrings.RoomSummary(
+                _room.RoomIndex + 1,
+                _room.TenantCount,
+                _room.TenantSlotCapacity,
+                _room.EquipmentCount,
+                _room.EquipmentSlotCapacity);
         }
 
         private void ConfigureDropZone()
@@ -152,9 +163,7 @@ namespace BaoZuPo.UI
                 rect.offsetMax = new Vector2(-12f, -8f);
 
                 titleText = titleObject.GetComponent<TextMeshProUGUI>();
-                titleText.font = TMP_Settings.defaultFontAsset != null
-                    ? TMP_Settings.defaultFontAsset
-                    : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+                titleText.font = UIFontCatalog.GetPreferredFontAsset();
                 titleText.fontSize = 20f;
                 titleText.color = Color.white;
                 titleText.alignment = TextAlignmentOptions.Left;

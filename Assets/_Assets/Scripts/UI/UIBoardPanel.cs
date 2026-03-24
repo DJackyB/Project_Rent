@@ -28,6 +28,7 @@ namespace BaoZuPo.UI
         public void RefreshBoard()
         {
             EnsurePlayAreaDropZone();
+            RefreshContractPanelLocalization();
 
             var cardPrefab = ResolveCardPrefab();
             if (cardPrefab == null)
@@ -97,10 +98,8 @@ namespace BaoZuPo.UI
                     labelRect.offsetMax = Vector2.zero;
 
                     var label = labelObject.GetComponent<TextMeshProUGUI>();
-                    label.font = TMP_Settings.defaultFontAsset != null
-                        ? TMP_Settings.defaultFontAsset
-                        : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
-                    label.text = "Play Area";
+                    label.font = UIFontCatalog.GetPreferredFontAsset();
+                    label.text = UIStrings.PlayArea;
                     label.fontSize = 24f;
                     label.alignment = TextAlignmentOptions.Center;
                     label.color = Color.white;
@@ -108,6 +107,13 @@ namespace BaoZuPo.UI
                 }
 
                 playAreaDropZone = zoneTransform.GetComponent<UICardDropZone>();
+            }
+
+            var zoneLabel = playAreaDropZone != null ? playAreaDropZone.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+            if (zoneLabel != null)
+            {
+                UIFontCatalog.ApplyToText(zoneLabel);
+                zoneLabel.text = UIStrings.PlayArea;
             }
 
             playAreaDropZone.ZoneKind = CardPlayTargetKind.PlayArea;
@@ -168,6 +174,8 @@ namespace BaoZuPo.UI
                 _contractViews.Add(cardView);
                 _contractLookup[contracts[i]] = cardView;
             }
+
+            RefreshContractPanelLocalization();
         }
 
         private GameObject ResolveCardPrefab()
@@ -184,6 +192,7 @@ namespace BaoZuPo.UI
         {
             if (_contractContainer != null)
             {
+                RefreshContractPanelLocalization();
                 return;
             }
 
@@ -213,10 +222,8 @@ namespace BaoZuPo.UI
             titleRect.offsetMax = new Vector2(-12f, -12f);
 
             var titleText = titleObject.GetComponent<TextMeshProUGUI>();
-            titleText.font = TMP_Settings.defaultFontAsset != null
-                ? TMP_Settings.defaultFontAsset
-                : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
-            titleText.text = "Contracts";
+            titleText.font = UIFontCatalog.GetPreferredFontAsset();
+            titleText.text = UIStrings.Contracts;
             titleText.fontSize = 22f;
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = Color.white;
@@ -244,6 +251,23 @@ namespace BaoZuPo.UI
             var fitter = listObject.GetComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            UIFontCatalog.ApplyToChildren(panelRoot.transform);
+        }
+
+        private void RefreshContractPanelLocalization()
+        {
+            if (_contractPanelRoot == null)
+            {
+                return;
+            }
+
+            UIFontCatalog.ApplyToChildren(_contractPanelRoot);
+            var titleText = _contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
+            if (titleText != null)
+            {
+                titleText.text = UIStrings.Contracts;
+            }
         }
 
         private static void ClearContainer(Transform container)

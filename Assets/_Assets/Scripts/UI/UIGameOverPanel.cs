@@ -13,8 +13,13 @@ namespace BaoZuPo.UI
         public TextMeshProUGUI infoText;
         public GameObject panel;
 
+        private bool _hasShownResult;
+        private int _lastTotalTurns;
+        private int _lastFinalMoney;
+
         private void Start()
         {
+            UIFontCatalog.ApplyToChildren(transform);
             if (panel != null)
             {
                 panel.SetActive(false);
@@ -23,19 +28,35 @@ namespace BaoZuPo.UI
 
         public void Show(int totalTurns, int finalMoney)
         {
+            _hasShownResult = true;
+            _lastTotalTurns = totalTurns;
+            _lastFinalMoney = finalMoney;
+
             if (panel != null)
             {
                 panel.SetActive(true);
             }
 
+            UIFontCatalog.ApplyToText(titleText);
+            UIFontCatalog.ApplyToText(infoText);
+
             if (titleText != null)
             {
-                titleText.text = "Game Over";
+                titleText.text = UIStrings.GameOverTitle;
             }
 
             if (infoText != null)
             {
-                infoText.text = $"You survived {totalTurns} turns\nFinal Money: {finalMoney}";
+                infoText.text = UIStrings.GameOverInfo(totalTurns, finalMoney);
+            }
+        }
+
+        public void RefreshLocalization()
+        {
+            UIFontCatalog.ApplyToChildren(transform);
+            if (_hasShownResult)
+            {
+                Show(_lastTotalTurns, _lastFinalMoney);
             }
         }
     }

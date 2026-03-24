@@ -1,3 +1,4 @@
+using BaoZuPo.GameFlow;
 using UnityEngine;
 
 namespace BaoZuPo.Card
@@ -34,6 +35,10 @@ namespace BaoZuPo.Card
 
         [Tooltip("\u57fa\u7840\u79df\u91d1 \u4ec5\u79df\u5ba2\u5361\u4f7f\u7528")]
         public int baseRent;
+
+        [Header("Play Target")]
+        [Tooltip("Tenant and Equipment cards always use Room. Event and Contract cards read this field.")]
+        public CardPlayTargetKind targetKind = CardPlayTargetKind.PlayArea;
 
         [Header("\u6548\u679c\u914d\u7f6e")]
         [Tooltip("\u51c6\u5907\u9636\u6bb5\u6548\u679c \u793a\u4f8b AddMoney;100")]

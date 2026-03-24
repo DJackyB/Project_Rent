@@ -175,6 +175,8 @@ namespace BaoZuPo.UI
 
         private void RefreshPresentation()
         {
+            UIFontCatalog.ApplyToChildren(transform);
+
             if (Card == null || Card.Data == null)
             {
                 ClearPresentation();
@@ -255,7 +257,7 @@ namespace BaoZuPo.UI
                 costText.gameObject.SetActive(showCost);
                 if (showCost)
                 {
-                    costText.text = $"Cost {Card.Data.cost}";
+                    costText.text = UIStrings.Cost(Card.Data.cost);
                 }
             }
 
@@ -335,7 +337,7 @@ namespace BaoZuPo.UI
             {
                 if (Card.Data.cardType == CardType.Tenant && Card.Data.baseRent > 0)
                 {
-                    lines.Add($"Base Rent {Card.Data.baseRent}");
+                    lines.Add(UIStrings.BaseRent(Card.Data.baseRent));
                 }
             }
 
@@ -347,7 +349,7 @@ namespace BaoZuPo.UI
 
             if (Card.Data.waitTurns > 0)
             {
-                lines.Add($"Wait {Card.CurrentWait}");
+                lines.Add(UIStrings.Wait(Card.CurrentWait));
             }
 
             if (CurrentContext == CardViewContext.RoomEquipment)
@@ -364,11 +366,11 @@ namespace BaoZuPo.UI
             {
                 if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.HoverPreview)
                 {
-                    return "Lease";
+                    return UIStrings.Lease;
                 }
             }
 
-            return "Durability";
+            return UIStrings.Durability;
         }
 
         private void UpdateHoverTrigger()
@@ -594,14 +596,7 @@ namespace BaoZuPo.UI
 
         private static string GetTypeLabel(CardType cardType)
         {
-            return cardType switch
-            {
-                CardType.Tenant => "Tenant",
-                CardType.Equipment => "Equipment",
-                CardType.Event => "Event",
-                CardType.Contract => "Contract",
-                _ => cardType.ToString()
-            };
+            return UIStrings.TypeLabel(cardType);
         }
 
         private static Sprite GetBuiltinSprite()
@@ -611,12 +606,7 @@ namespace BaoZuPo.UI
 
         private static TMP_FontAsset ResolveFont()
         {
-            if (TMP_Settings.defaultFontAsset != null)
-            {
-                return TMP_Settings.defaultFontAsset;
-            }
-
-            return Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            return UIFontCatalog.GetPreferredFontAsset();
         }
     }
 }

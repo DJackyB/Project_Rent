@@ -6,6 +6,7 @@ using BaoZuPo.Core;
 using BaoZuPo.Economy;
 using Martian.EventBus;
 using UnityEngine;
+using BaoZuPo.UI;
 
 namespace BaoZuPo.GameFlow
 {
@@ -65,29 +66,7 @@ namespace BaoZuPo.GameFlow
 
         public CardPlayTargetKind GetRequiredTargetKind(CardInstance card)
         {
-            if (card == null || card.Data == null)
-            {
-                return CardPlayTargetKind.PlayArea;
-            }
-
-            if (card.Data.cardType == CardType.Tenant || card.Data.cardType == CardType.Equipment)
-            {
-                return CardPlayTargetKind.Room;
-            }
-
-            string instant = card.Data.instantEffect ?? string.Empty;
-            string pre = card.Data.preEffect ?? string.Empty;
-            string settle = card.Data.settleEffect ?? string.Empty;
-            string destroy = card.Data.destroyEffect ?? string.Empty;
-            if (instant.Contains("SelectedRoom")
-                || pre.Contains("SelectedRoom")
-                || settle.Contains("SelectedRoom")
-                || destroy.Contains("SelectedRoom"))
-            {
-                return CardPlayTargetKind.Room;
-            }
-
-            return CardPlayTargetKind.PlayArea;
+            return CardTargeting.GetRequiredTargetKind(card != null ? card.Data : null);
         }
 
         public CardPlayValidationResult ValidatePlay(CardInstance card, RoomSlot targetRoom = null)
@@ -432,7 +411,7 @@ namespace BaoZuPo.GameFlow
             {
                 steps.Add(new GameEvents.SettlementStep
                 {
-                    Label = "Base",
+                    Label = UIStrings.SettlementBase,
                     Amount = baseAmount,
                     IsMultiplier = false
                 });
@@ -442,7 +421,7 @@ namespace BaoZuPo.GameFlow
             {
                 steps.Add(new GameEvents.SettlementStep
                 {
-                    Label = "Bonus",
+                    Label = UIStrings.SettlementBonus,
                     Amount = additiveAmount,
                     IsMultiplier = false
                 });
@@ -452,7 +431,7 @@ namespace BaoZuPo.GameFlow
             {
                 steps.Add(new GameEvents.SettlementStep
                 {
-                    Label = "Multiplier",
+                    Label = UIStrings.SettlementMultiplier,
                     Amount = Mathf.RoundToInt(multiplier * 100f),
                     IsMultiplier = true
                 });
@@ -460,7 +439,7 @@ namespace BaoZuPo.GameFlow
 
             steps.Add(new GameEvents.SettlementStep
             {
-                Label = "Final",
+                Label = UIStrings.SettlementFinal,
                 Amount = finalAmount,
                 IsMultiplier = false
             });
@@ -480,10 +459,10 @@ namespace BaoZuPo.GameFlow
         {
             return sourceKind switch
             {
-                GameEvents.SettlementSourceKind.Room when room != null => $"Room {room.RoomIndex + 1}",
+                GameEvents.SettlementSourceKind.Room when room != null => UIStrings.SettlementRoomTitle(room.RoomIndex + 1),
                 GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
                 GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
-                _ => "Settle"
+                _ => UIStrings.SettlementFallbackTitle
             };
         }
 

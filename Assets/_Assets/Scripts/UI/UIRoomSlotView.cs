@@ -120,6 +120,12 @@ namespace BaoZuPo.UI
             if (_placeholderObject != null)
             {
                 _placeholderObject.SetActive(true);
+                var existingLabel = _placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (existingLabel != null)
+                {
+                    UIFontCatalog.ApplyToText(existingLabel);
+                    existingLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+                }
                 return;
             }
 
@@ -147,7 +153,7 @@ namespace BaoZuPo.UI
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.font = ResolveFont();
-            label.text = slotContext == CardViewContext.RoomEquipment ? "Empty Equipment Slot" : "Empty Tenant Slot";
+            label.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
             label.alignment = TextAlignmentOptions.Center;
             label.fontSize = 20f;
             label.color = new Color(1f, 1f, 1f, 0.45f);
@@ -164,12 +170,7 @@ namespace BaoZuPo.UI
 
         private static TMP_FontAsset ResolveFont()
         {
-            if (TMP_Settings.defaultFontAsset != null)
-            {
-                return TMP_Settings.defaultFontAsset;
-            }
-
-            return Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            return UIFontCatalog.GetPreferredFontAsset();
         }
     }
 }

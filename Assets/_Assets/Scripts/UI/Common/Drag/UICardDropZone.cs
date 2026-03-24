@@ -214,25 +214,7 @@ namespace BaoZuPo.UI.Common.Drag
 
         private static bool RequiresRoomTarget(CardInstance card)
         {
-            if (card == null || card.Data == null)
-            {
-                return false;
-            }
-
-            if (card.Data.cardType == CardType.Tenant || card.Data.cardType == CardType.Equipment)
-            {
-                return true;
-            }
-
-            string instant = card.Data.instantEffect ?? string.Empty;
-            string pre = card.Data.preEffect ?? string.Empty;
-            string settle = card.Data.settleEffect ?? string.Empty;
-            string destroy = card.Data.destroyEffect ?? string.Empty;
-
-            return instant.Contains("SelectedRoom")
-                || pre.Contains("SelectedRoom")
-                || settle.Contains("SelectedRoom")
-                || destroy.Contains("SelectedRoom");
+            return CardTargeting.GetRequiredTargetKind(card != null ? card.Data : null) == CardPlayTargetKind.Room;
         }
     }
 }

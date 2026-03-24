@@ -1,28 +1,40 @@
-using UnityEngine;
 using BaoZuPo.Card;
-using BaoZuPo.Card.Effects;
+using BaoZuPo.GameFlow;
+using Martian.EventBus;
+using NodeCanvas.StateMachines;
+using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace BaoZuPo.Core
 {
-    /// <summary>
-    /// 全局游戏管理器
-    /// 负责初始化各个核心系统 并提供统一的游戏上下文
-    /// </summary>
     public class GameManager : Singleton<GameManager>
     {
-        [Header("配置")]
+        [Header("Config")]
         public GameConfig gameConfig;
 
-        /// <summary>传递给卡牌效果使用的游戏上下文</summary>
+        private FSMOwner _turnFlowFsm;
+
         public GameContext GameContext { get; private set; }
+
+        private void OnEnable()
+        {
+            EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+        }
 
         protected override void Awake()
         {
             base.Awake();
+            _turnFlowFsm = GetComponent<FSMOwner>();
 
             if (gameConfig == null)
             {
-                Debug.LogError("[GameManager] Inspector 中未绑定 GameConfig");
+                Debug.LogError("[GameManager] GameConfig is not assigned.");
                 return;
             }
 
@@ -31,17 +43,14 @@ namespace BaoZuPo.Core
 
         private void InitializeSystems()
         {
-            // 注册卡牌效果
-            RegisterCardEffects();
+            CardEffectRegistration.EnsureRegistered();
 
-            // 1 加载卡牌数据库
             CardDatabase.LoadAll();
+            ValidateLoadedCardEffects();
 
-            // 2 初始化经济系统
-            Debug.Log($"[GameManager] 读取配置 初始资金={gameConfig.startingMoney} 初始房间={gameConfig.initialRoomCount}");
+            Debug.Log($"[GameManager] Config loaded. Money={gameConfig.startingMoney}, Rooms={gameConfig.initialRoomCount}, LoanGrowth={gameConfig.loanGrowthFactor}");
             Economy.MoneyManager.Instance.Initialize(gameConfig.startingMoney);
 
-            // 3 初始化棋盘系统
             if (Board.BoardManager.Instance != null)
             {
                 Board.BoardManager.Instance.Initialize(
@@ -51,41 +60,72 @@ namespace BaoZuPo.Core
                 );
             }
 
-            // 4 初始化牌组系统
             if (Deck.DeckManager.Instance != null)
             {
-                // 从静态数据库中取出全部卡牌作为牌组来源
                 var allCards = CardDatabase.GetAll().Values;
                 Deck.DeckManager.Instance.Initialize(allCards, gameConfig.maxHandSize);
             }
 
-            // 5 构建游戏上下文
             GameContext = new GameContext
             {
                 MoneyManager = Economy.MoneyManager.Instance,
                 BoardManager = Board.BoardManager.Instance,
             };
 
-            Debug.Log("[GameManager] 所有系统初始化完成");
+            Debug.Log("[GameManager] All systems initialized.");
         }
 
-        private void RegisterCardEffects()
+        private void ValidateLoadedCardEffects()
         {
-            CardEffectFactory.Register("AddMoney", args => new AddMoneyEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("ReduceMoney", args => new ReduceMoneyEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("DrawCard", args => new DrawCardEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("ExpandSlot", args => new ExpandSlotEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddTenantDurability", args => new AddTenantDurabilityEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddEquipmentDurability", args => new AddEquipmentDurabilityEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddMoneyByEmptyRooms", args => new AddMoneyByEmptyRoomsEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddMoneyByRoomCount", args => new AddMoneyByRoomCountEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddTenantDurabilityInSelectedRoom", args => new AddTenantDurabilityInSelectedRoomEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("MoveTenantToEmptyRoom", _ => new MoveTenantToEmptyRoomEffect());
-            CardEffectFactory.Register("EvictTenantInSelectedRoom", _ => new EvictTenantInSelectedRoomEffect());
-            CardEffectFactory.Register("TriggerSelectedRoomSettle", _ => new TriggerSelectedRoomSettleEffect());
-            CardEffectFactory.Register("SpawnRandomTenantInSelectedRoom", _ => new SpawnRandomTenantInSelectedRoomEffect());
+            var errors = new List<string>();
 
-            Debug.Log("[GameManager] 卡牌效果注册完成");
+            foreach (var card in CardDatabase.GetAll().Values)
+            {
+                if (card == null)
+                {
+                    continue;
+                }
+
+                ValidateEffectString(card, "preEffect", card.preEffect, errors);
+                ValidateEffectString(card, "instantEffect", card.instantEffect, errors);
+                ValidateEffectString(card, "settleEffect", card.settleEffect, errors);
+                ValidateEffectString(card, "destroyEffect", card.destroyEffect, errors);
+                ValidateTargetKind(card, errors);
+            }
+
+            if (errors.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "[GameManager] Card validation failed:\n" + string.Join("\n", errors));
+            }
+        }
+
+        private static void ValidateEffectString(CardData card, string fieldName, string effectString, List<string> errors)
+        {
+            if (CardEffectFactory.TryValidate(effectString, out var error))
+            {
+                return;
+            }
+
+            errors.Add($"Invalid {fieldName} on card [{card.cardId}] {card.cardName}: {effectString}. {error}");
+        }
+
+        private static void ValidateTargetKind(CardData card, List<string> errors)
+        {
+            if (CardTargeting.TryValidateConfiguredTargetKind(card, out var warning))
+            {
+                return;
+            }
+
+            errors.Add($"Card [{card.cardId}] {card.cardName} target kind mismatch. {warning}");
+        }
+
+        private void OnGameOver(GameEvents.GameOver e)
+        {
+            if (_turnFlowFsm != null && _turnFlowFsm.isRunning)
+            {
+                _turnFlowFsm.StopBehaviour(false);
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ MonoBehaviour:
   startingMoney: 1000
   loanAmount: 500
   loanInterval: 5
+  loanGrowthFactor: 2
   firstTurnDrawCount: 5
   normalTurnDrawCount: 3
   maxHandSize: 7
