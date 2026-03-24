@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
 
@@ -73,19 +72,7 @@ namespace Martian.EventBus
 
             if (_eventTable.TryGetValue(eventType, out var existingDelegate))
             {
-                // 尝试转换为实际类型的委托
                 (existingDelegate as Action<T>)?.Invoke(eventData);
-
-                string targetName = existingDelegate.Target != null
-                    ? existingDelegate.Target.ToString()
-                    : $"<static:{existingDelegate.Method.DeclaringType.Name}>";
-
-                /*Debug.Log(
-                    $"{DebugHelperForEventBus.GetScriptNameWithColor()}" +
-                    $"由 {DebugHelperForEventBus.ApllyColorToString(targetName, "cyan")}" +
-                    $"发布事件 {DebugHelperForEventBus.ApllyColorToString(existingDelegate.Method.Name, "cyan")}"
-                );*/
-
             }
         }
 
@@ -96,6 +83,14 @@ namespace Martian.EventBus
         {
             _eventTable.Clear();
         }
-        
+
+        /// <summary>
+        /// 进入 Play Mode 时自动清空残留订阅，防止 Domain Reload 后旧回调引发异常。
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnDomainReload()
+        {
+            _eventTable.Clear();
+        }
     }
 }
