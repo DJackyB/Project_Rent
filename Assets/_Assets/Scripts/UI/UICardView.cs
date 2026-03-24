@@ -525,7 +525,7 @@ namespace BaoZuPo.UI
             label.fontSize = 18f;
             label.color = Color.white;
             label.alignment = alignment;
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.raycastTarget = false;
             return label;
         }

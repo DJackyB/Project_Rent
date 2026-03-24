@@ -1,12 +1,13 @@
 using BaoZuPo.UI.Common.Sequence;
 using DG.Tweening;
 using UnityEngine;
+using TweenSequence = DG.Tweening.Sequence;
 
 namespace BaoZuPo.UI.Common.Animation
 {
     public static class UIAnimationTweenUtility
     {
-        public static Sequence BuildFloatingStepSequence(
+        public static TweenSequence BuildFloatingStepSequence(
             RectTransform panelRoot,
             CanvasGroup panelGroup,
             Vector2 anchoredPosition,

@@ -110,8 +110,8 @@ namespace BaoZuPo.UI
             UIFontCatalog.ApplyToText(deckText);
             UIFontCatalog.ApplyToText(moneyText);
 
-            ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.CenterLeft);
-            ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.CenterRight);
+            ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
+            ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
             ApplyMoneyLayout(moneyText.rectTransform);
         }
 
@@ -127,7 +127,7 @@ namespace BaoZuPo.UI
             if (label != null)
             {
                 label.alignment = alignment;
-                label.enableWordWrapping = false;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.fontSize = 24f;
                 label.raycastTarget = false;
             }
@@ -145,7 +145,7 @@ namespace BaoZuPo.UI
             if (label != null)
             {
                 label.alignment = TextAlignmentOptions.BottomLeft;
-                label.enableWordWrapping = false;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.fontSize = 28f;
                 label.raycastTarget = false;
             }
@@ -159,7 +159,7 @@ namespace BaoZuPo.UI
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.font = UIFontCatalog.GetPreferredFontAsset();
             label.color = Color.white;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.fontSize = 24f;
             label.raycastTarget = false;
             return label;

@@ -4,6 +4,7 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using TweenSequence = DG.Tweening.Sequence;
 
 namespace BaoZuPo.UI.Common.Sequence
 {
@@ -19,7 +20,7 @@ namespace BaoZuPo.UI.Common.Sequence
         [SerializeField] private Color defaultTextColor = Color.white;
 
         private readonly Queue<UISequencePlaybackRequest> _queue = new();
-        private Sequence _activeSequence;
+        private TweenSequence _activeSequence;
         private bool _isPlaying;
 
         private Canvas _canvas;
@@ -114,7 +115,7 @@ namespace BaoZuPo.UI.Common.Sequence
             _activeSequence.Play();
         }
 
-        private Sequence BuildRequestSequence(UISequencePlaybackRequest request)
+        private TweenSequence BuildRequestSequence(UISequencePlaybackRequest request)
         {
             if (request == null || request.Steps == null || request.Steps.Count == 0)
             {
@@ -169,7 +170,7 @@ namespace BaoZuPo.UI.Common.Sequence
             _label.text = step.Text;
             _label.color = isFinalStep ? Color.Lerp(step.Color, Color.white, 0.16f) : step.Color;
             _label.alignment = TextAlignmentOptions.Center;
-            _label.enableWordWrapping = false;
+            _label.textWrappingMode = TextWrappingModes.NoWrap;
             _label.fontStyle = isFinalStep ? FontStyles.Bold : FontStyles.Normal;
             _label.fontSize = isFinalStep ? 26f : 24f;
 
@@ -241,7 +242,7 @@ namespace BaoZuPo.UI.Common.Sequence
             _label.color = defaultTextColor;
             _label.fontSize = 24f;
             _label.alignment = TextAlignmentOptions.Center;
-            _label.enableWordWrapping = false;
+            _label.textWrappingMode = TextWrappingModes.NoWrap;
             _label.raycastTarget = false;
         }
 

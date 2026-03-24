@@ -7,6 +7,7 @@ using BaoZuPo.UI;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 
 namespace BaoZuPo.Editor
 {
