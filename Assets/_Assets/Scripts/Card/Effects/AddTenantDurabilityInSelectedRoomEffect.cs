@@ -3,8 +3,8 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 给选中房间内所有租客加耐久
-    /// 格式：AddTenantDurabilityInSelectedRoom;数值
+    /// 为选中房间中的所有租客增加耐久。
+    /// 格式：AddTenantDurabilityInSelectedRoom;数量
     /// </summary>
     public class AddTenantDurabilityInSelectedRoomEffect : ICardEffect
     {
@@ -20,7 +20,7 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null)
             {
-                Debug.LogWarning($"[效果] {source.Data.cardName}: 未选择房间，效果跳过");
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: No room selected, effect skipped.");
                 return;
             }
 
@@ -32,7 +32,7 @@ namespace BaoZuPo.Card.Effects
                 affected++;
             }
 
-            Debug.Log($"[效果] {source.Data.cardName}: 房间{room.RoomIndex} 租客耐久 {_amount:+#;-#;0}（{affected} 张）");
+            Debug.Log($"[Effect] {source.Data.cardName}: Room {room.RoomIndex} tenant durability {_amount:+#;-#;0} ({affected} cards).");
         }
     }
 }

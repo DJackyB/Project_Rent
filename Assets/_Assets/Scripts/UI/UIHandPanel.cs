@@ -1,78 +1,77 @@
 using System.Collections.Generic;
-using UnityEngine;
 using BaoZuPo.Card;
 using BaoZuPo.Deck;
+using UnityEngine;
 
 namespace BaoZuPo.UI
 {
-    /// <summary>
-    /// 手牌区域面板
-    /// 管理手牌 UI 的生成和刷新。
-    /// </summary>
     public class UIHandPanel : MonoBehaviour
     {
-        [Header("配置")]
-        [Tooltip("卡牌 UI Prefab（挂 UICardView 脚本的 Prefab）")]
+        [Header("\u573A\u666F\u5F15\u7528")]
+        [Tooltip("\u624B\u724C\u5361\u724C prefab\uff0c\u9700\u8981\u6302\u8F7D UICardView")]
         public GameObject cardPrefab;
 
-        [Tooltip("手牌容器（带 HorizontalLayoutGroup）")]
+        [Tooltip("\u624B\u724C\u5BB9\u5668\uff1B\u5982\u679C\u4E3A\u7A7A\uff0C\u5F53\u524D\u5B9E\u73B0\u4F1A\u5728\u8FD0\u884C\u65F6\u4E34\u65F6\u521B\u5EFA")]
         public Transform handContainer;
 
-        private List<UICardView> _cardViews = new();
+        private readonly List<UICardView> _cardViews = new();
 
-        /// <summary>
-        /// 当前被选中的手牌
-        /// </summary>
-        public CardInstance SelectedCard { get; private set; }
-
-        /// <summary>
-        /// 刷新手牌显示
-        /// </summary>
         public void RefreshHand()
         {
-            // 清除旧的
-            foreach (var view in _cardViews)
+            var container = EnsureContainer();
+            if (cardPrefab == null)
             {
-                if (view != null)
-                    Destroy(view.gameObject);
+                Debug.LogError("[UIHandPanel] Missing cardPrefab.");
+                return;
             }
+
+            ClearContainer(container);
             _cardViews.Clear();
 
-            // 生成新的
             var hand = DeckManager.Instance.Hand;
             for (int i = 0; i < hand.Count; i++)
             {
-                var go = Instantiate(cardPrefab, handContainer);
-                var cardView = go.GetComponent<UICardView>();
-                cardView.Setup(hand[i], this);
+                var cardObject = Instantiate(cardPrefab, container);
+                var cardView = cardObject.GetComponent<UICardView>();
+                if (cardView == null)
+                {
+                    Debug.LogError("[UIHandPanel] Card prefab requires UICardView.");
+                    continue;
+                }
+
+                cardView.Setup(hand[i], CardViewContext.Hand, this);
                 _cardViews.Add(cardView);
             }
         }
 
-        /// <summary>
-        /// 选中一张手牌（由 UICardView 调用）
-        /// </summary>
-        public void SelectCard(CardInstance card)
+        private Transform EnsureContainer()
         {
-            SelectedCard = card;
-            Debug.Log($"[UI] 选中手牌: {card.Data.cardName}");
-
-            // 高亮选中的卡牌
-            foreach (var view in _cardViews)
+            if (handContainer != null)
             {
-                view.SetSelected(view.Card == card);
+                return handContainer;
             }
+
+            var containerTransform = transform.Find("HandContainer");
+            if (containerTransform == null)
+            {
+                containerTransform = new GameObject("HandContainer", typeof(RectTransform)).transform;
+                containerTransform.SetParent(transform, false);
+            }
+
+            handContainer = containerTransform;
+            return handContainer;
         }
 
-        /// <summary>
-        /// 取消选中
-        /// </summary>
-        public void DeselectCard()
+        private static void ClearContainer(Transform container)
         {
-            SelectedCard = null;
-            foreach (var view in _cardViews)
+            if (container == null)
             {
-                view.SetSelected(false);
+                return;
+            }
+
+            for (int i = container.childCount - 1; i >= 0; i--)
+            {
+                Destroy(container.GetChild(i).gameObject);
             }
         }
     }

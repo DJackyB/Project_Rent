@@ -1,10 +1,10 @@
-using UnityEngine;
 using BaoZuPo.Card;
+using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 额外抽牌效果
+    /// 抽取额外卡牌。
     /// 格式：DrawCard;数量
     /// </summary>
     public class DrawCardEffect : ICardEffect
@@ -19,7 +19,7 @@ namespace BaoZuPo.Card.Effects
         public void Execute(CardInstance card, GameContext context)
         {
             Deck.DeckManager.Instance.Draw(_count);
-            Debug.Log($"[效果] 额外抽牌 {_count} 张");
+            Debug.Log($"[Effect] Drew {_count} extra cards.");
         }
     }
 }

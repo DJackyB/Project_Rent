@@ -1,61 +1,50 @@
-using System.Collections.Generic;
-using UnityEngine;
-using BaoZuPo.Core;
-using BaoZuPo.Card;
+﻿using System.Collections.Generic;
+using System.Linq;
 using BaoZuPo.Board;
+using BaoZuPo.Card;
+using BaoZuPo.Core;
 using BaoZuPo.Economy;
 using Martian.EventBus;
-using System.Linq;
+using UnityEngine;
 
 namespace BaoZuPo.GameFlow
 {
-    /// <summary>
-    /// 回合管理器
-    /// 提供各阶段的核心逻辑，由 NodeCanvas FSM 的 Action 节点调用。
-    /// </summary>
     public class TurnManager : Singleton<TurnManager>
     {
-        [Header("运行时信息")]
-        [SerializeField] private int _currentTurn = 0;
-        [SerializeField] private bool _isGameOver = false;
-        [SerializeField] private int _loanPaymentCount = 0;
+        private const float DefaultSettlementMultiplier = 1f;
 
-        /// <summary>当前回合数</summary>
+        [Header("Debug")]
+        [SerializeField] private int _currentTurn;
+        [SerializeField] private bool _isGameOver;
+        [SerializeField] private int _loanPaymentCount;
+
         public int CurrentTurn => _currentTurn;
-
-        /// <summary>游戏是否已经结束</summary>
         public bool IsGameOver => _isGameOver;
-
-        /// <summary>玩家是否已结束行动阶段</summary>
+        public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
         public bool ActionPhaseEnded { get; set; }
 
-        // ==================== 准备阶段 ====================
-
-        /// <summary>
-        /// 执行准备阶段逻辑：
-        /// 1. 回合数 +1
-        /// 2. 触发场上卡牌前置效果（含合同）
-        /// 3. 抽牌（首回合与后续回合数量不同）
-        /// </summary>
         public void ExecutePreparePhase()
         {
-            if (_isGameOver) return;
+            if (_isGameOver)
+            {
+                return;
+            }
 
             _currentTurn++;
-            Debug.Log($"===== 第 {_currentTurn} 回合 · 准备阶段 =====");
-
             EventBus.Publish(new GameEvents.TurnStarted { TurnNumber = _currentTurn });
-            EventBus.Publish(new GameEvents.PhaseChanged { PhaseName = "Prepare" });
+            PublishPhaseChanged(GamePhase.Prepare);
 
-            // 先处理场上所有卡牌的前置效果（v0.6 规则，含合同）
             var fieldCards = BoardManager.Instance.GetAllFieldCards();
             foreach (var card in fieldCards)
             {
-                if (card.IsDestroyed) continue;
+                if (card == null || card.IsDestroyed)
+                {
+                    continue;
+                }
+
                 card.PreEffect?.Execute(card, GameManager.Instance.GameContext);
             }
 
-            // 再抽牌（首回合与后续回合数量不同）
             var config = GameManager.Instance.gameConfig;
             int drawCount = _currentTurn == 1 ? config.firstTurnDrawCount : config.normalTurnDrawCount;
             Deck.DeckManager.Instance.Draw(drawCount);
@@ -63,134 +52,190 @@ namespace BaoZuPo.GameFlow
             BoardManager.Instance.CleanupDestroyedCards();
         }
 
-        // ==================== 行动阶段 ====================
-
-        /// <summary>
-        /// 开始行动阶段
-        /// 重置行动状态，等待玩家出牌。
-        /// </summary>
         public void StartActionPhase()
         {
-            if (_isGameOver) return;
+            if (_isGameOver)
+            {
+                return;
+            }
 
-            Debug.Log($"===== 第 {_currentTurn} 回合 · 行动阶段 =====");
             ActionPhaseEnded = false;
-
-            EventBus.Publish(new GameEvents.PhaseChanged { PhaseName = "Action" });
+            PublishPhaseChanged(GamePhase.Action);
         }
 
-        /// <summary>
-        /// 玩家打出一张牌到指定房间
-        /// </summary>
-        public bool PlayCard(CardInstance card, RoomSlot targetRoom)
+        public CardPlayTargetKind GetRequiredTargetKind(CardInstance card)
         {
-            if (_isGameOver) return false;
-            if (card == null || card.IsDestroyed) return false;
+            if (card == null || card.Data == null)
+            {
+                return CardPlayTargetKind.PlayArea;
+            }
 
+            if (card.Data.cardType == CardType.Tenant || card.Data.cardType == CardType.Equipment)
+            {
+                return CardPlayTargetKind.Room;
+            }
+
+            string instant = card.Data.instantEffect ?? string.Empty;
+            string pre = card.Data.preEffect ?? string.Empty;
+            string settle = card.Data.settleEffect ?? string.Empty;
+            string destroy = card.Data.destroyEffect ?? string.Empty;
+            if (instant.Contains("SelectedRoom")
+                || pre.Contains("SelectedRoom")
+                || settle.Contains("SelectedRoom")
+                || destroy.Contains("SelectedRoom"))
+            {
+                return CardPlayTargetKind.Room;
+            }
+
+            return CardPlayTargetKind.PlayArea;
+        }
+
+        public CardPlayValidationResult ValidatePlay(CardInstance card, RoomSlot targetRoom = null)
+        {
+            CardPlayTargetKind requiredTargetKind = GetRequiredTargetKind(card);
+
+            if (_isGameOver)
+            {
+                return CardPlayValidationResult.Failure(CardPlayBlockReason.GameOver, requiredTargetKind, targetRoom);
+            }
+
+            if (card == null || card.Data == null || card.IsDestroyed)
+            {
+                return CardPlayValidationResult.Failure(CardPlayBlockReason.InvalidTarget, requiredTargetKind, targetRoom);
+            }
+
+            if (CurrentPhase != GamePhase.Action || ActionPhaseEnded)
+            {
+                return CardPlayValidationResult.Failure(CardPlayBlockReason.NotActionPhase, requiredTargetKind, targetRoom);
+            }
+
+            if (!MoneyManager.Instance.CanAfford(card.Data.cost))
+            {
+                return CardPlayValidationResult.Failure(CardPlayBlockReason.InsufficientMoney, requiredTargetKind, targetRoom);
+            }
+
+            if (requiredTargetKind == CardPlayTargetKind.Room)
+            {
+                if (targetRoom == null)
+                {
+                    return CardPlayValidationResult.Failure(CardPlayBlockReason.MissingTarget, requiredTargetKind);
+                }
+
+                if (card.Data.cardType == CardType.Tenant)
+                {
+                    if (!targetRoom.CanPlaceTenant)
+                    {
+                        return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
+                    }
+                }
+                else if (card.Data.cardType == CardType.Equipment)
+                {
+                    if (!targetRoom.CanPlaceEquipment)
+                    {
+                        return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
+                    }
+                }
+            }
+
+            return CardPlayValidationResult.Success(requiredTargetKind, targetRoom);
+        }
+
+        public bool PlayCard(CardInstance card, RoomSlot targetRoom = null)
+        {
+            var validation = ValidatePlay(card, targetRoom);
+            if (!validation.IsValid)
+            {
+                return false;
+            }
+
+            targetRoom = validation.TargetRoom;
             var context = GameManager.Instance.GameContext;
             context.EffectContext.SelectedRoom = targetRoom;
 
-            // 检查费用
-            if (!MoneyManager.Instance.CanAfford(card.Data.cost))
-            {
-                Debug.LogWarning($"[TurnManager] 无法支付 {card.Data.cardName} 的费用: {card.Data.cost}");
-                return false;
-            }
-
-            // 事件卡不需要放置到房间
             if (card.Data.cardType == CardType.Event)
             {
-                return ResolveCardAfterPlay(card, context, null, "事件卡");
+                return ResolveCardAfterPlay(card, context, null, null);
             }
 
-            // 合同卡生效后常驻，不占用房间槽位
             if (card.Data.cardType == CardType.Contract)
             {
-                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), "合同卡");
+                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), null);
             }
 
-            // 放置到房间
             if (targetRoom == null || !targetRoom.PlaceCard(card))
             {
-                Debug.LogWarning($"[TurnManager] 无法放置卡牌到房间: {card}");
+                Debug.LogWarning($"[TurnManager] Failed to place {card}");
                 return false;
             }
 
-            return ResolveCardAfterPlay(card, context, null, $"卡牌 -> 房间 {targetRoom.RoomIndex}");
+            return ResolveCardAfterPlay(card, context, null, targetRoom);
         }
 
         public bool CardNeedsRoomTarget(CardInstance card)
         {
-            if (card == null || card.Data == null) return false;
-            if (card.Data.cardType == CardType.Tenant || card.Data.cardType == CardType.Equipment)
-                return true;
-
-            string instant = card.Data.instantEffect ?? "";
-            return instant.Contains("SelectedRoom");
+            return GetRequiredTargetKind(card) == CardPlayTargetKind.Room;
         }
 
-        private bool ResolveCardAfterPlay(CardInstance card, GameContext context, System.Action<CardInstance> afterInstant, string tag)
-        {
-            MoneyManager.Instance.ReduceMoney(card.Data.cost);
-            card.InstantEffect?.Execute(card, context);
-            afterInstant?.Invoke(card);
-            Deck.DeckManager.Instance.RemoveFromHand(card);
-
-            EventBus.Publish(new GameEvents.CardPlayed { Card = card });
-            Debug.Log($"[TurnManager] 打出{tag}: {card.Data.cardName}");
-            return true;
-        }
-
-        /// <summary>
-        /// 结束行动阶段（玩家手动点击结束）
-        /// </summary>
         public void EndActionPhase()
         {
-            if (_isGameOver) return;
+            if (_isGameOver)
+            {
+                return;
+            }
 
             ActionPhaseEnded = true;
-            Debug.Log("[TurnManager] 玩家结束行动阶段");
         }
 
-        // ==================== 结算阶段 ====================
-
-        /// <summary>
-        /// 执行结算阶段逻辑：
-        /// 1. 房间结算（有租客房间）+ 房间耐久结算
-        /// 2. 合同结算 + 合同耐久结算
-        /// 3. 等待倒计时（场上 + 手牌）
-        /// 4. 扣款判定（指数增长）
-        /// 5. 新牌入库（三选一）
-        /// </summary>
         public void ExecuteSettlePhase()
         {
-            if (_isGameOver) return;
+            if (_isGameOver)
+            {
+                return;
+            }
 
-            Debug.Log($"===== 第 {_currentTurn} 回合 · 结算阶段 =====");
-            EventBus.Publish(new GameEvents.PhaseChanged { PhaseName = "Settle" });
+            PublishPhaseChanged(GamePhase.Settle);
 
             var context = GameManager.Instance.GameContext;
             var toRemove = new List<CardInstance>();
             var toDestroy = new List<CardInstance>();
 
-            // 1) 收租：逐房间结算（仅有租客的房间结算）
             var rooms = BoardManager.Instance.GetAllRooms();
             foreach (var room in rooms)
             {
-                if (room.TenantCount <= 0) continue;
+                if (room.TenantCount <= 0)
+                {
+                    continue;
+                }
 
                 var roomCards = room.GetAllCards();
+                var tenant = room.GetTenantAt(0);
+
+                int baseRent = tenant != null ? Mathf.Max(0, tenant.Data.baseRent) : 0;
+                if (baseRent > 0)
+                {
+                    MoneyManager.Instance.AddMoney(baseRent);
+                }
+
+                int moneyBeforeEffects = MoneyManager.Instance.CurrentMoney;
                 foreach (var card in roomCards)
                 {
-                    if (card.IsDestroyed) continue;
+                    if (card == null || card.IsDestroyed)
+                    {
+                        continue;
+                    }
+
                     card.SettleEffect?.Execute(card, context);
                 }
 
-                // 房间结算后：耐久-1，耐久归零触发销毁效果
+                int additiveAmount = MoneyManager.Instance.CurrentMoney - moneyBeforeEffects;
+                PublishSettlementSequence(GameEvents.SettlementSourceKind.Room, room, tenant, baseRent, additiveAmount, DefaultSettlementMultiplier);
+
                 foreach (var card in roomCards)
                 {
-                    if (card.IsDestroyed) continue;
-                    if (card.Data.durability <= 0) continue; // 0 表示无限耐久
+                    if (card == null || card.IsDestroyed || card.Data.durability <= 0)
+                    {
+                        continue;
+                    }
 
                     card.CurrentDurability--;
                     if (card.CurrentDurability <= 0)
@@ -200,14 +245,24 @@ namespace BaoZuPo.GameFlow
                 }
             }
 
-            // 2) 合同牌结算与耐久
             var contracts = BoardManager.Instance.GetAllContracts();
             foreach (var contract in contracts)
             {
-                if (contract.IsDestroyed) continue;
-                contract.SettleEffect?.Execute(contract, context);
+                if (contract == null || contract.IsDestroyed)
+                {
+                    continue;
+                }
 
-                if (contract.Data.durability <= 0) continue;
+                int moneyBeforeContract = MoneyManager.Instance.CurrentMoney;
+                contract.SettleEffect?.Execute(contract, context);
+                int contractDelta = MoneyManager.Instance.CurrentMoney - moneyBeforeContract;
+                PublishSettlementSequence(GameEvents.SettlementSourceKind.Contract, null, contract, 0, contractDelta, DefaultSettlementMultiplier);
+
+                if (contract.Data.durability <= 0)
+                {
+                    continue;
+                }
+
                 contract.CurrentDurability--;
                 if (contract.CurrentDurability <= 0)
                 {
@@ -215,29 +270,28 @@ namespace BaoZuPo.GameFlow
                 }
             }
 
-            // 3) 场上等待倒计时（等待归零移除，不触发销毁效果）
             var fieldCards = BoardManager.Instance.GetAllFieldCards();
             foreach (var card in fieldCards)
             {
-                if (card.IsDestroyed) continue;
-
-                // 等待倒计时 -1（0 表示无等待）
-                if (card.Data.waitTurns > 0)
+                if (card == null || card.IsDestroyed || card.Data.waitTurns <= 0)
                 {
-                    card.CurrentWait--;
-                    if (card.CurrentWait <= 0)
-                    {
-                        toRemove.Add(card);
-                    }
+                    continue;
+                }
+
+                card.CurrentWait--;
+                if (card.CurrentWait <= 0)
+                {
+                    toRemove.Add(card);
                 }
             }
 
-            // 处理耐久归零销毁（触发销毁效果）
             foreach (var card in toDestroy)
             {
-                if (card.IsDestroyed) continue;
+                if (card == null || card.IsDestroyed)
+                {
+                    continue;
+                }
 
-                Debug.Log($"[TurnManager] 卡牌耐久归零销毁: {card}");
                 card.DestroyEffect?.Execute(card, context);
                 card.MarkDestroyed();
                 EventBus.Publish(new GameEvents.CardDestroyed
@@ -247,12 +301,13 @@ namespace BaoZuPo.GameFlow
                 });
             }
 
-            // 等待归零的卡牌：移除但不触发销毁效果
             foreach (var card in toRemove)
             {
-                if (card.IsDestroyed) continue;
+                if (card == null || card.IsDestroyed)
+                {
+                    continue;
+                }
 
-                Debug.Log($"[TurnManager] 卡牌等待归零移除: {card}");
                 card.MarkDestroyed();
                 EventBus.Publish(new GameEvents.CardDestroyed
                 {
@@ -262,11 +317,8 @@ namespace BaoZuPo.GameFlow
             }
 
             BoardManager.Instance.CleanupDestroyedCards();
-
-            // 回合结束：处理手牌等待倒计时，归零进入弃牌堆
             Deck.DeckManager.Instance.ResolveHandWaitAndDiscardExpired();
 
-            // 还贷判定
             var config = GameManager.Instance.gameConfig;
             if (config.loanInterval > 0 && _currentTurn % config.loanInterval == 0)
             {
@@ -280,7 +332,6 @@ namespace BaoZuPo.GameFlow
 
                 if (!paid)
                 {
-                    Debug.LogError($"[TurnManager] 还贷失败！游戏结束！");
                     _isGameOver = true;
                     EventBus.Publish(new GameEvents.GameOver
                     {
@@ -294,7 +345,6 @@ namespace BaoZuPo.GameFlow
                 }
             }
 
-            // 4) 新牌入库（三选一）- 当前为无 UI 的自动选择实现
             if (!_isGameOver)
             {
                 bool boosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
@@ -302,6 +352,139 @@ namespace BaoZuPo.GameFlow
             }
 
             EventBus.Publish(new GameEvents.TurnEnded { TurnNumber = _currentTurn });
+        }
+
+        private bool ResolveCardAfterPlay(
+            CardInstance card,
+            GameContext context,
+            System.Action<CardInstance> afterInstant,
+            RoomSlot targetRoom)
+        {
+            if (!MoneyManager.Instance.ReduceMoney(card.Data.cost))
+            {
+                if (targetRoom != null && card != null && card.Data != null && card.Data.cardType != CardType.Event && card.Data.cardType != CardType.Contract)
+                {
+                    targetRoom.RemoveCard(card);
+                }
+
+                return false;
+            }
+
+            int moneyBeforeInstant = MoneyManager.Instance.CurrentMoney;
+            card.InstantEffect?.Execute(card, context);
+            int instantMoneyDelta = MoneyManager.Instance.CurrentMoney - moneyBeforeInstant;
+
+            afterInstant?.Invoke(card);
+            Deck.DeckManager.Instance.RemoveFromHand(card);
+
+            EventBus.Publish(new GameEvents.CardPlayed { Card = card });
+            PublishPlaySequence(card, targetRoom ?? card.PlacedRoom, instantMoneyDelta);
+            return true;
+        }
+
+        private void PublishPlaySequence(CardInstance card, RoomSlot targetRoom, int moneyDelta)
+        {
+            if (card == null || moneyDelta == 0)
+            {
+                return;
+            }
+
+            var sourceKind = card.Data.cardType switch
+            {
+                CardType.Contract => GameEvents.SettlementSourceKind.Contract,
+                CardType.Event => GameEvents.SettlementSourceKind.Event,
+                _ when targetRoom != null => GameEvents.SettlementSourceKind.Room,
+                _ => GameEvents.SettlementSourceKind.Event
+            };
+
+            PublishSettlementSequence(sourceKind, targetRoom, card, 0, moneyDelta, DefaultSettlementMultiplier);
+        }
+
+        private void PublishPhaseChanged(GamePhase phase)
+        {
+            CurrentPhase = phase;
+            EventBus.Publish(new GameEvents.PhaseChanged
+            {
+                Phase = phase,
+                PhaseName = phase.ToString()
+            });
+        }
+
+        private void PublishSettlementSequence(
+            GameEvents.SettlementSourceKind sourceKind,
+            RoomSlot room,
+            CardInstance card,
+            int baseAmount,
+            int additiveAmount,
+            float multiplier)
+        {
+            int preMultiplier = baseAmount + additiveAmount;
+            int finalAmount = Mathf.RoundToInt(preMultiplier * multiplier);
+            bool hasMultiplier = !Mathf.Approximately(multiplier, 1f);
+
+            if (baseAmount == 0 && additiveAmount == 0 && !hasMultiplier && finalAmount == 0)
+            {
+                return;
+            }
+
+            var steps = new List<GameEvents.SettlementStep>(4);
+            if (baseAmount != 0)
+            {
+                steps.Add(new GameEvents.SettlementStep
+                {
+                    Label = "Base",
+                    Amount = baseAmount,
+                    IsMultiplier = false
+                });
+            }
+
+            if (additiveAmount != 0)
+            {
+                steps.Add(new GameEvents.SettlementStep
+                {
+                    Label = "Bonus",
+                    Amount = additiveAmount,
+                    IsMultiplier = false
+                });
+            }
+
+            if (hasMultiplier)
+            {
+                steps.Add(new GameEvents.SettlementStep
+                {
+                    Label = "Multiplier",
+                    Amount = Mathf.RoundToInt(multiplier * 100f),
+                    IsMultiplier = true
+                });
+            }
+
+            steps.Add(new GameEvents.SettlementStep
+            {
+                Label = "Final",
+                Amount = finalAmount,
+                IsMultiplier = false
+            });
+
+            EventBus.Publish(new GameEvents.SettlementSequenceQueued
+            {
+                SourceKind = sourceKind,
+                Room = room,
+                Card = card,
+                Title = ResolveSettlementTitle(sourceKind, room, card),
+                Steps = steps.ToArray(),
+                FinalAmount = finalAmount
+            });
+        }
+
+        private static string ResolveSettlementTitle(GameEvents.SettlementSourceKind sourceKind, RoomSlot room, CardInstance card)
+        {
+            return sourceKind switch
+            {
+                GameEvents.SettlementSourceKind.Room when room != null => $"Room {room.RoomIndex + 1}",
+                GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
+                GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
+                _ => "Settle"
+            };
         }
 
         private int CalculateCurrentLoanPayment(int baseAmount, float growthFactor)
@@ -321,22 +504,18 @@ namespace BaoZuPo.GameFlow
 
             if (source.Count == 0)
             {
-                Debug.LogWarning("[TurnManager] 三选一奖励池为空，跳过本回合新牌入库");
+                Debug.LogWarning("[TurnManager] No reward cards available.");
                 return;
             }
 
             var options = new List<CardData>();
             for (int i = 0; i < 3; i++)
             {
-                var picked = source[Random.Range(0, source.Count)];
-                options.Add(picked);
+                options.Add(source[Random.Range(0, source.Count)]);
             }
 
-            // 暂无三选一 UI，先随机选择一张加入手牌
             var chosen = options[Random.Range(0, options.Count)];
             Deck.DeckManager.Instance.AddCardToHand(chosen);
-
-            Debug.Log($"[TurnManager] 三选一（自动）获得卡牌: {chosen.cardName}（boosted={boosted}）");
         }
     }
 }

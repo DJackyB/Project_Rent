@@ -1,26 +1,29 @@
 using System.Collections.Generic;
-using UnityEngine;
-using BaoZuPo.Core;
 using BaoZuPo.Card;
+using BaoZuPo.Core;
+using UnityEngine;
 
 namespace BaoZuPo.Board
 {
     /// <summary>
-    /// 棋盘管理器
-    /// 管理所有房间的创建、查询，以及遍历场上所有卡牌。
+    /// Board manager that owns all rooms and contracts.
     /// </summary>
     public class BoardManager : Singleton<BoardManager>
     {
-        [Header("调试信息")]
+        [Header("Debug Info")]
         [SerializeField] private List<RoomSlot> _rooms = new();
         [SerializeField] private List<CardInstance> _contracts = new();
+
         private Transform _roomRoot;
 
-        /// <summary>当前房间数量</summary>
+        /// <summary>Current room count.</summary>
         public int RoomCount => _rooms.Count;
 
+        /// <summary>Current contract count.</summary>
+        public int ContractCount => _contracts.Count;
+
         /// <summary>
-        /// 初始化棋盘（由 GameManager 调用）
+        /// Initialize the board.
         /// </summary>
         public void Initialize(int roomCount, int tenantSlots, int equipmentSlots)
         {
@@ -38,11 +41,11 @@ namespace BaoZuPo.Board
                 AddRoom(tenantSlots, equipmentSlots);
             }
 
-            Debug.Log($"[BoardManager] 初始化完成，创建了 {roomCount} 个房间");
+            Debug.Log($"[BoardManager] Initialized {roomCount} rooms.");
         }
 
         /// <summary>
-        /// 动态新增一个房间
+        /// Add a new room dynamically.
         /// </summary>
         public RoomSlot AddRoom(int tenantSlots = 1, int equipmentSlots = 3)
         {
@@ -53,30 +56,31 @@ namespace BaoZuPo.Board
             room.Initialize(_rooms.Count, tenantSlots, equipmentSlots);
             _rooms.Add(room);
 
-            Debug.Log($"[BoardManager] 新增房间: {room.RoomIndex}");
+            Debug.Log($"[BoardManager] Added room: {room.RoomIndex}");
             return room;
         }
 
         /// <summary>
-        /// 获取指定索引的房间
+        /// Get a room by index.
         /// </summary>
         public RoomSlot GetRoom(int index)
         {
             if (index < 0 || index >= _rooms.Count)
             {
-                Debug.LogError($"[BoardManager] 房间索引越界: {index}");
+                Debug.LogError($"[BoardManager] Room index out of range: {index}");
                 return null;
             }
+
             return _rooms[index];
         }
 
         /// <summary>
-        /// 获取所有房间
+        /// Get all rooms.
         /// </summary>
         public IReadOnlyList<RoomSlot> GetAllRooms() => _rooms;
 
         /// <summary>
-        /// 查找第一个能放置指定类型卡牌的房间
+        /// Find the first room that can accept the given card type.
         /// </summary>
         public RoomSlot FindAvailableRoom(CardType cardType)
         {
@@ -90,11 +94,12 @@ namespace BaoZuPo.Board
                         return room;
                 }
             }
+
             return null;
         }
 
         /// <summary>
-        /// 获取场上所有卡牌（房间卡 + 合同卡）
+        /// Get all field cards, including room cards and contracts.
         /// </summary>
         public List<CardInstance> GetAllFieldCards()
         {
@@ -103,26 +108,48 @@ namespace BaoZuPo.Board
             {
                 allCards.AddRange(room.GetAllCards());
             }
+
             allCards.AddRange(_contracts);
             return allCards;
         }
 
         /// <summary>
-        /// 新增一张合同牌（不占用房间）
+        /// Add a contract card.
         /// </summary>
         public void AddContract(CardInstance contract)
         {
-            if (contract == null || contract.IsDestroyed) return;
+            if (contract == null || contract.IsDestroyed)
+            {
+                return;
+            }
+
             _contracts.Add(contract);
         }
 
         /// <summary>
-        /// 获取所有已生效的合同牌
+        /// Get all contracts.
         /// </summary>
         public IReadOnlyList<CardInstance> GetAllContracts() => _contracts;
 
+        public CardInstance GetContractAt(int index)
+        {
+            return TryGetContract(index, out var contract) ? contract : null;
+        }
+
+        public bool TryGetContract(int index, out CardInstance contract)
+        {
+            if (index >= 0 && index < _contracts.Count)
+            {
+                contract = _contracts[index];
+                return true;
+            }
+
+            contract = null;
+            return false;
+        }
+
         /// <summary>
-        /// 清理所有房间中已销毁的卡牌
+        /// Remove destroyed cards.
         /// </summary>
         public void CleanupDestroyedCards()
         {
@@ -130,19 +157,20 @@ namespace BaoZuPo.Board
             {
                 room.CleanupDestroyedCards();
             }
+
             _contracts.RemoveAll(c => c == null || c.IsDestroyed);
         }
 
-        /// <summary>
-        /// 清除所有房间
-        /// </summary>
         private void ClearAllRooms()
         {
             foreach (var room in _rooms)
             {
                 if (room != null)
+                {
                     Destroy(room.gameObject);
+                }
             }
+
             _rooms.Clear();
         }
     }

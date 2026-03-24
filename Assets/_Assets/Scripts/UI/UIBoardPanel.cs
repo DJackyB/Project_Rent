@@ -1,88 +1,261 @@
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using BaoZuPo.UI.Common.Drag;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
-    /// <summary>
-    /// 房间/棋盘面板
-    /// 显示所有房间及其中的卡牌。点击房间 = 放置选中的手牌。
-    /// </summary>
     public class UIBoardPanel : MonoBehaviour
     {
-        [Header("配置")]
-        [Tooltip("房间 UI Prefab")]
+        [Header("Optional Scene References")]
         public GameObject roomPrefab;
-
-        [Tooltip("房间内卡牌条目 Prefab（简单的文本条目）")]
-        public GameObject roomCardEntryPrefab;
-
-        [Tooltip("房间容器")]
         public Transform roomContainer;
+        public GameObject roomCardEntryPrefab;
+        public UICardDropZone playAreaDropZone;
 
-        private List<UIRoomView> _roomViews = new();
+        private readonly List<UIRoomView> _roomViews = new();
+        private readonly List<UICardView> _contractViews = new();
+        private readonly Dictionary<RoomSlot, UIRoomView> _roomLookup = new();
+        private readonly Dictionary<CardInstance, UICardView> _contractLookup = new();
 
-        /// <summary>
-        /// 刷新棋盘显示
-        /// </summary>
+        private Transform _contractPanelRoot;
+        private Transform _contractContainer;
+
         public void RefreshBoard()
         {
-            var rooms = BoardManager.Instance.GetAllRooms();
+            EnsurePlayAreaDropZone();
 
-            // Destroy ALL children of the container (to remove placeholders)
-            foreach (Transform child in roomContainer)
+            var cardPrefab = ResolveCardPrefab();
+            if (cardPrefab == null)
             {
-                Destroy(child.gameObject);
+                Debug.LogError("[UIBoardPanel] Missing card prefab.");
+                return;
             }
-            _roomViews.Clear();
 
-            // Spawn new UI elements
+            RefreshRooms(cardPrefab);
+            RefreshContracts(cardPrefab);
+        }
+
+        public RectTransform ResolveRoomAnchor(RoomSlot room)
+        {
+            if (room != null && _roomLookup.TryGetValue(room, out var roomView))
+            {
+                return roomView.DropAnchor;
+            }
+
+            return roomContainer as RectTransform ?? transform as RectTransform;
+        }
+
+        public RectTransform ResolveContractAnchor(CardInstance card)
+        {
+            if (card != null && _contractLookup.TryGetValue(card, out var contractView))
+            {
+                return contractView.HoverAnchor;
+            }
+
+            return _contractContainer as RectTransform ?? transform as RectTransform;
+        }
+
+        public RectTransform ResolvePlayAreaAnchor()
+        {
+            return playAreaDropZone != null ? playAreaDropZone.DropAnchor : transform as RectTransform;
+        }
+
+        private void EnsurePlayAreaDropZone()
+        {
+            if (playAreaDropZone == null)
+            {
+                var zoneTransform = transform.Find("PlayAreaDropZone");
+                if (zoneTransform == null)
+                {
+                    var zoneObject = new GameObject("PlayAreaDropZone", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(UICardDropZone));
+                    zoneObject.transform.SetParent(transform, false);
+                    zoneTransform = zoneObject.transform;
+
+                    var zoneRect = zoneTransform as RectTransform;
+                    zoneRect.anchorMin = new Vector2(0.5f, 0f);
+                    zoneRect.anchorMax = new Vector2(0.5f, 0f);
+                    zoneRect.pivot = new Vector2(0.5f, 0f);
+                    zoneRect.anchoredPosition = new Vector2(0f, 24f);
+                    zoneRect.sizeDelta = new Vector2(280f, 72f);
+
+                    var zoneImage = zoneObject.GetComponent<Image>();
+                    zoneImage.color = new Color(0.18f, 0.26f, 0.33f, 0.36f);
+                    zoneImage.type = Image.Type.Sliced;
+
+                    var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+                    labelObject.transform.SetParent(zoneTransform, false);
+
+                    var labelRect = labelObject.GetComponent<RectTransform>();
+                    labelRect.anchorMin = Vector2.zero;
+                    labelRect.anchorMax = Vector2.one;
+                    labelRect.offsetMin = Vector2.zero;
+                    labelRect.offsetMax = Vector2.zero;
+
+                    var label = labelObject.GetComponent<TextMeshProUGUI>();
+                    label.font = TMP_Settings.defaultFontAsset != null
+                        ? TMP_Settings.defaultFontAsset
+                        : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+                    label.text = "Play Area";
+                    label.fontSize = 24f;
+                    label.alignment = TextAlignmentOptions.Center;
+                    label.color = Color.white;
+                    label.raycastTarget = false;
+                }
+
+                playAreaDropZone = zoneTransform.GetComponent<UICardDropZone>();
+            }
+
+            playAreaDropZone.ZoneKind = CardPlayTargetKind.PlayArea;
+            playAreaDropZone.BindRoom(null);
+            playAreaDropZone.AssignRuntimeReferences(playAreaDropZone.transform as RectTransform, null);
+            playAreaDropZone.SetHighlighted(false, true);
+        }
+
+        private void RefreshRooms(GameObject cardPrefab)
+        {
+            var container = roomContainer != null ? roomContainer : transform;
+            ClearContainer(container);
+            _roomViews.Clear();
+            _roomLookup.Clear();
+
+            var rooms = BoardManager.Instance.GetAllRooms();
             for (int i = 0; i < rooms.Count; i++)
             {
                 if (roomPrefab == null)
                 {
-                    Debug.LogError("[UIBoardPanel] roomPrefab 未在 Inspector 中赋值！");
+                    Debug.LogError("[UIBoardPanel] Missing room prefab.");
                     break;
                 }
-                
-                var go = Instantiate(roomPrefab, roomContainer);
-                var roomView = go.GetComponent<UIRoomView>();
-                if (roomView != null)
+
+                var roomObject = Instantiate(roomPrefab, container);
+                var roomView = roomObject.GetComponent<UIRoomView>();
+                if (roomView == null)
                 {
-                    roomView.Setup(rooms[i], roomCardEntryPrefab, this);
-                    _roomViews.Add(roomView);
+                    Debug.LogError("[UIBoardPanel] roomPrefab requires UIRoomView.");
+                    continue;
                 }
-                else
-                {
-                    Debug.LogError("[UIBoardPanel] roomPrefab 缺少 UIRoomView 组件！");
-                }
+
+                roomView.Setup(rooms[i], cardPrefab, this);
+                _roomViews.Add(roomView);
+                _roomLookup[rooms[i]] = roomView;
             }
-            
         }
 
-        /// <summary>
-        /// 尝试将选中的手牌放入指定房间（由 UIRoomView 调用）
-        /// </summary>
-        public void TryPlaceCard(RoomSlot room)
+        private void RefreshContracts(GameObject cardPrefab)
         {
-            var handPanel = UIManager.Instance.handPanel;
-            var card = handPanel?.SelectedCard;
+            EnsureContractPanel();
+            ClearContainer(_contractContainer);
+            _contractViews.Clear();
+            _contractLookup.Clear();
 
-            if (card == null)
+            var contracts = BoardManager.Instance.GetAllContracts();
+            for (int i = 0; i < contracts.Count; i++)
             {
-                Debug.LogWarning("[UI] Please select a card first.");
+                var contractObject = Instantiate(cardPrefab, _contractContainer);
+                var cardView = contractObject.GetComponent<UICardView>();
+                if (cardView == null)
+                {
+                    Debug.LogError("[UIBoardPanel] Card prefab requires UICardView.");
+                    continue;
+                }
+
+                cardView.Setup(contracts[i], CardViewContext.Contract, null);
+                _contractViews.Add(cardView);
+                _contractLookup[contracts[i]] = cardView;
+            }
+        }
+
+        private GameObject ResolveCardPrefab()
+        {
+            if (UIManager.Instance != null && UIManager.Instance.handPanel != null)
+            {
+                return UIManager.Instance.handPanel.cardPrefab;
+            }
+
+            return roomCardEntryPrefab;
+        }
+
+        private void EnsureContractPanel()
+        {
+            if (_contractContainer != null)
+            {
                 return;
             }
 
-            bool success = TurnManager.Instance.PlayCard(card, room);
-            if (success)
+            var panelRoot = new GameObject("ContractPanel", typeof(RectTransform), typeof(Image));
+            panelRoot.transform.SetParent(transform, false);
+            _contractPanelRoot = panelRoot.transform;
+
+            var panelRect = panelRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 1f);
+            panelRect.anchorMax = new Vector2(1f, 1f);
+            panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-24f, -72f);
+            panelRect.sizeDelta = new Vector2(240f, 420f);
+
+            var panelImage = panelRoot.GetComponent<Image>();
+            panelImage.color = new Color(0.10f, 0.12f, 0.15f, 0.72f);
+            panelImage.raycastTarget = false;
+
+            var titleObject = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            titleObject.transform.SetParent(panelRoot.transform, false);
+
+            var titleRect = titleObject.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.offsetMin = new Vector2(12f, -40f);
+            titleRect.offsetMax = new Vector2(-12f, -12f);
+
+            var titleText = titleObject.GetComponent<TextMeshProUGUI>();
+            titleText.font = TMP_Settings.defaultFontAsset != null
+                ? TMP_Settings.defaultFontAsset
+                : Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            titleText.text = "Contracts";
+            titleText.fontSize = 22f;
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = Color.white;
+            titleText.raycastTarget = false;
+
+            var listObject = new GameObject("ContractContainer", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            listObject.transform.SetParent(panelRoot.transform, false);
+            _contractContainer = listObject.transform;
+
+            var listRect = listObject.GetComponent<RectTransform>();
+            listRect.anchorMin = new Vector2(0f, 0f);
+            listRect.anchorMax = new Vector2(1f, 1f);
+            listRect.pivot = new Vector2(0.5f, 1f);
+            listRect.offsetMin = new Vector2(12f, 12f);
+            listRect.offsetMax = new Vector2(-12f, -48f);
+
+            var layout = listObject.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            var fitter = listObject.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private static void ClearContainer(Transform container)
+        {
+            if (container == null)
             {
-                handPanel.DeselectCard();
-                UIManager.Instance.RefreshAll();
+                return;
+            }
+
+            for (int i = container.childCount - 1; i >= 0; i--)
+            {
+                Destroy(container.GetChild(i).gameObject);
             }
         }
     }

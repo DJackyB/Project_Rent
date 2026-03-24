@@ -1,20 +1,19 @@
-using System;
 using System.IO;
-using UnityEditor;
-using UnityEngine;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using UnityEditor;
+using UnityEngine;
 
 public static class ModifyExcelScript
 {
-    [MenuItem("Tools/包租婆/修复卡牌表表头（一次性使用）")]
+    [MenuItem("Tools/BaoZuPo/Fix Card Excel Header")]
     public static void ModifyExcel()
     {
-        string excelPath = "Assets/_Assets/Data/Excel/CardData.xlsx";
-        
+        const string excelPath = "Assets/_Assets/Data/Excel/CardData.xlsx";
+
         if (!File.Exists(excelPath))
         {
-            Debug.LogError($"[脚本] 找不到这表: {excelPath}");
+            Debug.LogError($"[ModifyExcelScript] File not found: {excelPath}");
             return;
         }
 
@@ -26,47 +25,82 @@ public static class ModifyExcelScript
 
         ISheet sheet = workbook.GetSheetAt(0);
 
-        // 插入两行：在第一行（索引0，中文）之后，我们需要插入两行。
-        // 所以我们把第 1行（索引1，原来是数据）及之后的行往下推 2 行。
         int lastRow = sheet.LastRowNum;
-        if (lastRow >= 1) {
+        if (lastRow >= 1)
+        {
             sheet.ShiftRows(1, lastRow, 2);
         }
 
-        IRow headerRowCh = sheet.GetRow(0); // 中文表头
-        
-        // 创建第二行：英文字段名
+        IRow headerRowCh = sheet.GetRow(0);
         IRow headerRowEn = sheet.CreateRow(1);
-        
-        // 创建第三行：字段类型
         IRow headerRowType = sheet.CreateRow(2);
 
-        // 建立一个映射，根据中文名称写入英文名和类型
         for (int col = headerRowCh.FirstCellNum; col < headerRowCh.LastCellNum; col++)
         {
             ICell cellCh = headerRowCh.GetCell(col);
-            if (cellCh == null) continue;
-            
+            if (cellCh == null)
+            {
+                continue;
+            }
+
             string chName = cellCh.ToString().Trim();
-            string enName = "";
+            string enName = chName;
             string typeName = "string";
 
             switch (chName)
             {
-                case "卡牌ID": enName = "cardId"; typeName = "int"; break;
-                case "卡牌名称": enName = "cardName"; typeName = "string"; break;
-                case "卡牌说明": enName = "description"; typeName = "string"; break;
-                case "卡牌类型": enName = "cardType"; typeName = "enum"; break;
-                case "卡牌稀有度": enName = "rarity"; typeName = "int"; break;
-                case "卡面插图": enName = "cardArt"; typeName = "string"; break;
-                case "花费": enName = "cost"; typeName = "int"; break;
-                case "等待": enName = "waitTurns"; typeName = "int"; break;
-                case "耐久": enName = "durability"; typeName = "int"; break;
-                case "前置效果": enName = "preEffect"; typeName = "string"; break;
-                case "即时效果": enName = "instantEffect"; typeName = "string"; break;
-                case "结算效果": enName = "settleEffect"; typeName = "string"; break;
-                case "销毁效果": enName = "destroyEffect"; typeName = "string"; break;
-                default: enName = chName; break; // 如果有未知的，沿用旧的
+                case "CardID":
+                    enName = "cardId";
+                    typeName = "int";
+                    break;
+                case "CardName":
+                    enName = "cardName";
+                    typeName = "string";
+                    break;
+                case "Description":
+                    enName = "description";
+                    typeName = "string";
+                    break;
+                case "CardType":
+                    enName = "cardType";
+                    typeName = "enum";
+                    break;
+                case "Rarity":
+                    enName = "rarity";
+                    typeName = "int";
+                    break;
+                case "CardArt":
+                    enName = "cardArt";
+                    typeName = "string";
+                    break;
+                case "Cost":
+                    enName = "cost";
+                    typeName = "int";
+                    break;
+                case "Wait":
+                    enName = "waitTurns";
+                    typeName = "int";
+                    break;
+                case "Durability":
+                    enName = "durability";
+                    typeName = "int";
+                    break;
+                case "PreEffect":
+                    enName = "preEffect";
+                    typeName = "string";
+                    break;
+                case "InstantEffect":
+                    enName = "instantEffect";
+                    typeName = "string";
+                    break;
+                case "SettleEffect":
+                    enName = "settleEffect";
+                    typeName = "string";
+                    break;
+                case "DestroyEffect":
+                    enName = "destroyEffect";
+                    typeName = "string";
+                    break;
             }
 
             headerRowEn.CreateCell(col).SetCellValue(enName);
@@ -77,7 +111,7 @@ public static class ModifyExcelScript
         {
             workbook.Write(stream);
         }
-        
-        Debug.Log("[脚本] 成功在第二行和第三行插入了英文字段和类型！请打开 Excel 查看。");
+
+        Debug.Log("[ModifyExcelScript] Inserted English headers and type row.");
     }
 }

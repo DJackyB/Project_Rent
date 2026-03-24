@@ -1,45 +1,47 @@
 using System.Collections.Generic;
-using UnityEngine;
 using BaoZuPo.Card;
+using UnityEngine;
 
 namespace BaoZuPo.Board
 {
     /// <summary>
-    /// 单个房间槽位
-    /// 管理该房间内的租客和装备卡牌。
+    /// A single room slot container for tenant and equipment cards.
     /// </summary>
     public class RoomSlot : MonoBehaviour
     {
-        [Header("房间配置")]
-        [Tooltip("租客槽位上限（默认1，可通过装备扩展）")]
+        [Header("Room Config")]
+        [Tooltip("Tenant slot capacity. Default: 1.")]
         [SerializeField] private int _maxTenantSlots = 1;
 
-        [Tooltip("装备槽位上限（默认3）")]
+        [Tooltip("Equipment slot capacity. Default: 3.")]
         [SerializeField] private int _maxEquipmentSlots = 3;
 
-        /// <summary>当前放置的租客卡牌</summary>
-        private List<CardInstance> _tenants = new();
+        private readonly List<CardInstance> _tenants = new();
+        private readonly List<CardInstance> _equipments = new();
 
-        /// <summary>当前放置的装备卡牌</summary>
-        private List<CardInstance> _equipments = new();
-
-        /// <summary>房间索引（由 BoardManager 分配）</summary>
+        /// <summary>Room index assigned by BoardManager.</summary>
         public int RoomIndex { get; set; }
 
-        /// <summary>当前租客数量</summary>
+        /// <summary>Tenant slot capacity.</summary>
+        public int TenantSlotCapacity => _maxTenantSlots;
+
+        /// <summary>Equipment slot capacity.</summary>
+        public int EquipmentSlotCapacity => _maxEquipmentSlots;
+
+        /// <summary>Current tenant count.</summary>
         public int TenantCount => _tenants.Count;
 
-        /// <summary>当前装备数量</summary>
+        /// <summary>Current equipment count.</summary>
         public int EquipmentCount => _equipments.Count;
 
-        /// <summary>是否还能放租客</summary>
+        /// <summary>Whether another tenant can be placed.</summary>
         public bool CanPlaceTenant => _tenants.Count < _maxTenantSlots;
 
-        /// <summary>是否还能放装备</summary>
+        /// <summary>Whether another equipment can be placed.</summary>
         public bool CanPlaceEquipment => _equipments.Count < _maxEquipmentSlots;
 
         /// <summary>
-        /// 初始化房间（由 BoardManager 调用）
+        /// Initialize the room slot.
         /// </summary>
         public void Initialize(int index, int tenantSlots, int equipmentSlots)
         {
@@ -49,59 +51,69 @@ namespace BaoZuPo.Board
         }
 
         /// <summary>
-        /// 放置卡牌到房间
+        /// Place a card into this room.
         /// </summary>
-        /// <returns>是否放置成功</returns>
         public bool PlaceCard(CardInstance card)
         {
-            if (card == null || card.IsDestroyed) return false;
+            if (card == null || card.IsDestroyed)
+            {
+                return false;
+            }
 
             switch (card.Data.cardType)
             {
                 case CardType.Tenant:
                     if (!CanPlaceTenant)
                     {
-                        Debug.LogWarning($"[RoomSlot] 房间{RoomIndex} 租客已满（{_tenants.Count}/{_maxTenantSlots}）");
+                        Debug.LogWarning($"[RoomSlot] Room {RoomIndex} tenant slots are full ({_tenants.Count}/{_maxTenantSlots}).");
                         return false;
                     }
+
                     _tenants.Add(card);
                     card.PlacedRoom = this;
-                    Debug.Log($"[RoomSlot] 房间{RoomIndex} 放置租客: {card}");
+                    Debug.Log($"[RoomSlot] Room {RoomIndex} placed tenant: {card}");
                     return true;
 
                 case CardType.Equipment:
                     if (!CanPlaceEquipment)
                     {
-                        Debug.LogWarning($"[RoomSlot] 房间{RoomIndex} 装备已满（{_equipments.Count}/{_maxEquipmentSlots}）");
+                        Debug.LogWarning($"[RoomSlot] Room {RoomIndex} equipment slots are full ({_equipments.Count}/{_maxEquipmentSlots}).");
                         return false;
                     }
+
                     _equipments.Add(card);
                     card.PlacedRoom = this;
-                    Debug.Log($"[RoomSlot] 房间{RoomIndex} 放置装备: {card}");
+                    Debug.Log($"[RoomSlot] Room {RoomIndex} placed equipment: {card}");
                     return true;
 
                 default:
-                    Debug.LogWarning($"[RoomSlot] 事件卡不能放入房间: {card}");
+                    Debug.LogWarning($"[RoomSlot] Event cards cannot be placed in a room: {card}");
                     return false;
             }
         }
 
         /// <summary>
-        /// 从房间移除卡牌
+        /// Remove a card from the room.
         /// </summary>
         public bool RemoveCard(CardInstance card)
         {
+            if (card == null)
+            {
+                return false;
+            }
+
             bool removed = _tenants.Remove(card) || _equipments.Remove(card);
             if (removed)
             {
                 card.PlacedRoom = null;
-                Debug.Log($"[RoomSlot] 房间{RoomIndex} 移除卡牌: {card}");
+                Debug.Log($"[RoomSlot] Room {RoomIndex} removed card: {card}");
             }
+
             return removed;
         }
 
         /// <summary>
-        /// 获取房间内所有卡牌（租客 + 装备）
+        /// Get all cards in this room.
         /// </summary>
         public List<CardInstance> GetAllCards()
         {
@@ -111,28 +123,60 @@ namespace BaoZuPo.Board
             return all;
         }
 
-        /// <summary>获取所有租客</summary>
         public IReadOnlyList<CardInstance> GetTenants() => _tenants;
 
-        /// <summary>获取所有装备</summary>
         public IReadOnlyList<CardInstance> GetEquipments() => _equipments;
 
-        /// <summary>
-        /// 移除所有已销毁的卡牌（清理用）
-        /// </summary>
-        public void CleanupDestroyedCards()
+        public CardInstance GetTenantAt(int index)
         {
-            _tenants.RemoveAll(c => c.IsDestroyed);
-            _equipments.RemoveAll(c => c.IsDestroyed);
+            return TryGetTenant(index, out var tenant) ? tenant : null;
+        }
+
+        public CardInstance GetEquipmentAt(int index)
+        {
+            return TryGetEquipment(index, out var equipment) ? equipment : null;
+        }
+
+        public bool TryGetTenant(int index, out CardInstance tenant)
+        {
+            if (index >= 0 && index < _tenants.Count)
+            {
+                tenant = _tenants[index];
+                return true;
+            }
+
+            tenant = null;
+            return false;
+        }
+
+        public bool TryGetEquipment(int index, out CardInstance equipment)
+        {
+            if (index >= 0 && index < _equipments.Count)
+            {
+                equipment = _equipments[index];
+                return true;
+            }
+
+            equipment = null;
+            return false;
         }
 
         /// <summary>
-        /// 扩展租客槽位（通过装备卡效果调用）
+        /// Remove destroyed cards from the room.
+        /// </summary>
+        public void CleanupDestroyedCards()
+        {
+            _tenants.RemoveAll(c => c == null || c.IsDestroyed);
+            _equipments.RemoveAll(c => c == null || c.IsDestroyed);
+        }
+
+        /// <summary>
+        /// Increase tenant capacity.
         /// </summary>
         public void ExpandTenantSlots(int extraSlots)
         {
             _maxTenantSlots += extraSlots;
-            Debug.Log($"[RoomSlot] 房间{RoomIndex} 租客槽位扩展至 {_maxTenantSlots}");
+            Debug.Log($"[RoomSlot] Room {RoomIndex} tenant capacity expanded to {_maxTenantSlots}.");
         }
     }
 }

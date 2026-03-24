@@ -3,7 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 立即结算一次选中房间（不扣耐久）
+    /// 对选中房间额外触发一次结算，但不扣减耐久。
     /// 格式：TriggerSelectedRoomSettle
     /// </summary>
     public class TriggerSelectedRoomSettleEffect : ICardEffect
@@ -13,13 +13,13 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null)
             {
-                Debug.LogWarning($"[效果] {source.Data.cardName}: 未选择房间，效果跳过");
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: No room selected, effect skipped.");
                 return;
             }
 
             if (room.TenantCount <= 0)
             {
-                Debug.LogWarning($"[效果] {source.Data.cardName}: 房间{room.RoomIndex}无租客，不触发结算");
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: Room {room.RoomIndex} has no tenant, settle skipped.");
                 return;
             }
 
@@ -29,7 +29,7 @@ namespace BaoZuPo.Card.Effects
                 card.SettleEffect?.Execute(card, context);
             }
 
-            Debug.Log($"[效果] {source.Data.cardName}: 房间{room.RoomIndex} 立即结算一次");
+            Debug.Log($"[Effect] {source.Data.cardName}: Triggered settle once for room {room.RoomIndex}.");
         }
     }
 }

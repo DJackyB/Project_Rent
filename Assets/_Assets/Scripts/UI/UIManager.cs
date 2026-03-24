@@ -1,21 +1,25 @@
-using UnityEngine;
 using BaoZuPo.Core;
+using BaoZuPo.GameFlow;
+using BaoZuPo.UI.Common.Hover;
+using BaoZuPo.UI.Settlement;
 using Martian.EventBus;
+using UnityEngine;
 
 namespace BaoZuPo.UI
 {
-    /// <summary>
-    /// UI 总管理器
-    /// 挂在 Canvas 上，持有所有 UI 面板引用，监听事件刷新 UI。
-    /// </summary>
     public class UIManager : Singleton<UIManager>
     {
-        [Header("UI 面板引用")]
+        [Header("Panel References")]
         public UITopBar topBar;
         public UIHandPanel handPanel;
         public UIBoardPanel boardPanel;
         public UIPhasePanel phasePanel;
         public UIGameOverPanel gameOverPanel;
+        public UICardDragController cardDragController;
+
+        public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
+
+        private UISettlementSequenceController _settlementSequenceController;
 
         private void OnEnable()
         {
@@ -28,7 +32,14 @@ namespace BaoZuPo.UI
 
         private void Start()
         {
-            // 初始刷新
+            if (TurnManager.Instance != null)
+            {
+                CurrentPhase = TurnManager.Instance.CurrentPhase;
+            }
+
+            EnsureCardDragController();
+            _ = HoverPreviewController.Instance;
+            EnsureSettlementSequenceController();
             RefreshAll();
         }
 
@@ -43,39 +54,105 @@ namespace BaoZuPo.UI
 
         private void OnPhaseChanged(GameEvents.PhaseChanged e)
         {
-            phasePanel?.UpdatePhase(e.PhaseName);
+            CurrentPhase = e.Phase;
+            if (!string.IsNullOrWhiteSpace(e.PhaseName) && System.Enum.TryParse(e.PhaseName, true, out GamePhase parsedPhase))
+            {
+                CurrentPhase = parsedPhase;
+            }
+
+            cardDragController?.CancelCurrentDrag(true);
+            HoverPreviewController.Instance.Hide();
+            phasePanel?.UpdatePhase(string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName);
             RefreshAll();
         }
 
         private void OnMoneyChanged(GameEvents.MoneyChanged e)
         {
             topBar?.RefreshMoney(e.NewValue);
+            topBar?.RefreshSummary();
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed e)
         {
+            cardDragController?.CancelCurrentDrag(true);
+            HoverPreviewController.Instance.Hide();
             RefreshAll();
         }
 
         private void OnTurnStarted(GameEvents.TurnStarted e)
         {
+            cardDragController?.CancelCurrentDrag(true);
+            HoverPreviewController.Instance.Hide();
             topBar?.RefreshTurn(e.TurnNumber);
             RefreshAll();
         }
 
         private void OnGameOver(GameEvents.GameOver e)
         {
+            cardDragController?.CancelCurrentDrag(true);
+            HoverPreviewController.Instance.Hide();
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
-        /// <summary>
-        /// 全量刷新所有面板
-        /// </summary>
         public void RefreshAll()
         {
+            cardDragController?.CancelCurrentDrag(true);
+            HoverPreviewController.Instance.Hide();
             topBar?.Refresh();
             handPanel?.RefreshHand();
             boardPanel?.RefreshBoard();
+        }
+
+        private void EnsureCardDragController()
+        {
+            if (cardDragController != null)
+            {
+                return;
+            }
+
+            var controllerTransform = transform.Find("CardDragController");
+            if (controllerTransform == null)
+            {
+                var controllerObject = new GameObject("CardDragController", typeof(RectTransform));
+                controllerObject.transform.SetParent(transform, false);
+
+                var rect = controllerObject.GetComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+
+                controllerTransform = controllerObject.transform;
+            }
+
+            cardDragController = controllerTransform.GetComponent<UICardDragController>();
+            if (cardDragController == null)
+            {
+                cardDragController = controllerTransform.gameObject.AddComponent<UICardDragController>();
+            }
+
+            cardDragController.BindDragLayer(null);
+        }
+
+        private void EnsureSettlementSequenceController()
+        {
+            if (_settlementSequenceController != null)
+            {
+                return;
+            }
+
+            var controllerTransform = transform.Find("SettlementSequenceController");
+            if (controllerTransform == null)
+            {
+                controllerTransform = new GameObject("SettlementSequenceController", typeof(RectTransform)).transform;
+                controllerTransform.SetParent(transform, false);
+            }
+
+            _settlementSequenceController = controllerTransform.GetComponent<UISettlementSequenceController>();
+            if (_settlementSequenceController == null)
+            {
+                _settlementSequenceController = controllerTransform.gameObject.AddComponent<UISettlementSequenceController>();
+            }
         }
     }
 }

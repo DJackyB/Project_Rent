@@ -5,15 +5,15 @@ using BaoZuPo.Card.Effects;
 namespace BaoZuPo.Core
 {
     /// <summary>
-    /// Global Game Manager
-    /// Entry point of the game, handles initialization of all sub-systems.
+    /// 全局游戏管理器
+    /// 负责初始化各个核心系统 并提供统一的游戏上下文
     /// </summary>
     public class GameManager : Singleton<GameManager>
     {
-        [Header("Configuration")]
+        [Header("配置")]
         public GameConfig gameConfig;
 
-        /// <summary>Game context passed to card effects</summary>
+        /// <summary>传递给卡牌效果使用的游戏上下文</summary>
         public GameContext GameContext { get; private set; }
 
         protected override void Awake()
@@ -22,7 +22,7 @@ namespace BaoZuPo.Core
 
             if (gameConfig == null)
             {
-                Debug.LogError("[GameManager] GameConfig is not assigned in the Inspector!");
+                Debug.LogError("[GameManager] Inspector 中未绑定 GameConfig");
                 return;
             }
 
@@ -31,17 +31,17 @@ namespace BaoZuPo.Core
 
         private void InitializeSystems()
         {
-            // Register card effects
+            // 注册卡牌效果
             RegisterCardEffects();
 
-            // 1. Load card database
+            // 1 加载卡牌数据库
             CardDatabase.LoadAll();
 
-            // 2. 初始化经济系统
-            Debug.Log($"[GameManager] 读取配置: 初始资金={gameConfig.startingMoney}, 初始房间={gameConfig.initialRoomCount}");
+            // 2 初始化经济系统
+            Debug.Log($"[GameManager] 读取配置 初始资金={gameConfig.startingMoney} 初始房间={gameConfig.initialRoomCount}");
             Economy.MoneyManager.Instance.Initialize(gameConfig.startingMoney);
 
-            // 3. 初始化棋盘系统
+            // 3 初始化棋盘系统
             if (Board.BoardManager.Instance != null)
             {
                 Board.BoardManager.Instance.Initialize(
@@ -51,15 +51,15 @@ namespace BaoZuPo.Core
                 );
             }
 
-            // 4. 初始化牌组系统
+            // 4 初始化牌组系统
             if (Deck.DeckManager.Instance != null)
             {
-                // Take values from the static database
+                // 从静态数据库中取出全部卡牌作为牌组来源
                 var allCards = CardDatabase.GetAll().Values;
                 Deck.DeckManager.Instance.Initialize(allCards, gameConfig.maxHandSize);
             }
 
-            // 5. Build game context
+            // 5 构建游戏上下文
             GameContext = new GameContext
             {
                 MoneyManager = Economy.MoneyManager.Instance,

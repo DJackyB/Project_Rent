@@ -1,69 +1,87 @@
+using BaoZuPo.Board;
+using BaoZuPo.GameFlow;
+
 namespace BaoZuPo.Core
 {
     /// <summary>
-    /// 游戏事件定义
-    /// 配合 EventBus 使用：EventBus.Publish(new GameEvents.MoneyChanged { ... })
+    /// Shared game and UI event definitions.
     /// </summary>
     public static class GameEvents
     {
-        /// <summary>金钱变化事件</summary>
+        public enum SettlementSourceKind
+        {
+            Room,
+            Contract,
+            Event
+        }
+
+        public struct SettlementStep
+        {
+            public string Label;
+            public int Amount;
+            public bool IsMultiplier;
+        }
+
         public struct MoneyChanged
         {
             public int OldValue;
             public int NewValue;
-            public int Delta; // 正数=增加，负数=减少
+            public int Delta;
         }
 
-        /// <summary>余额不足事件（尝试扣款但钱不够）</summary>
         public struct MoneyInsufficient
         {
             public int CurrentMoney;
             public int RequiredAmount;
         }
 
-        /// <summary>回合开始事件</summary>
         public struct TurnStarted
         {
             public int TurnNumber;
         }
 
-        /// <summary>回合结束事件</summary>
         public struct TurnEnded
         {
             public int TurnNumber;
         }
 
-        /// <summary>阶段切换事件</summary>
         public struct PhaseChanged
         {
+            public GamePhase Phase;
             public string PhaseName;
         }
 
-        /// <summary>卡牌被打出事件</summary>
         public struct CardPlayed
         {
             public Card.CardInstance Card;
         }
 
-        /// <summary>卡牌被销毁事件</summary>
         public struct CardDestroyed
         {
             public Card.CardInstance Card;
-            public bool TriggeredByDurability; // true=耐久归零, false=等待归零
+            public bool TriggeredByDurability;
         }
 
-        /// <summary>还贷事件</summary>
         public struct LoanPayment
         {
             public int Amount;
             public int RemainingMoney;
         }
 
-        /// <summary>游戏结束事件</summary>
         public struct GameOver
         {
             public int FinalMoney;
             public int TotalTurns;
+        }
+
+        public struct SettlementSequenceQueued
+        {
+            public SettlementSourceKind SourceKind;
+            public RoomSlot Room;
+            public Card.CardInstance Card;
+            public string Title;
+            public SettlementStep[] Steps;
+            public int FinalAmount;
         }
     }
 }

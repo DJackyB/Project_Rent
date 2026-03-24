@@ -5,41 +5,45 @@ using Martian.EventBus;
 namespace BaoZuPo.Economy
 {
     /// <summary>
-    /// 金钱管理器
-    /// 管理游戏中唯一的资源——金钱。
+    /// Money manager.
     /// </summary>
     public class MoneyManager : Singleton<MoneyManager>
     {
-        [Header("调试信息（运行时只读）")]
+        [Header("Debug Info (Read Only)")]
         [SerializeField] private int _currentMoney;
+        [SerializeField] private int _totalSpent;
 
-        /// <summary>当前金钱</summary>
+        /// <summary>Current money.</summary>
         public int CurrentMoney => _currentMoney;
 
+        /// <summary>Total spent money.</summary>
+        public int TotalSpent => _totalSpent;
+
         /// <summary>
-        /// 初始化金钱（由 GameManager 调用）
+        /// Initialize money.
         /// </summary>
         public void Initialize(int startingMoney)
         {
             _currentMoney = startingMoney;
-            Debug.Log($"[MoneyManager] 初始化金钱: {_currentMoney}");
+            _totalSpent = 0;
+            Debug.Log($"[MoneyManager] Initialized money: {_currentMoney}");
         }
 
         /// <summary>
-        /// 增加金钱
+        /// Add money.
         /// </summary>
         public void AddMoney(int amount)
         {
             if (amount <= 0)
             {
-                Debug.LogWarning($"[MoneyManager] AddMoney 收到非正数: {amount}");
+                Debug.LogWarning($"[MoneyManager] AddMoney received non-positive amount: {amount}");
                 return;
             }
 
             int oldValue = _currentMoney;
             _currentMoney += amount;
 
-            Debug.Log($"[MoneyManager] 金钱 +{amount} ({oldValue} → {_currentMoney})");
+            Debug.Log($"[MoneyManager] Money +{amount} ({oldValue} -> {_currentMoney})");
 
             EventBus.Publish(new GameEvents.MoneyChanged
             {
@@ -50,20 +54,20 @@ namespace BaoZuPo.Economy
         }
 
         /// <summary>
-        /// 减少金钱
+        /// Reduce money.
         /// </summary>
-        /// <returns>是否成功扣款（余额充足则扣款成功）</returns>
+        /// <returns>Whether the payment succeeded.</returns>
         public bool ReduceMoney(int amount)
         {
             if (amount <= 0)
             {
-                Debug.LogWarning($"[MoneyManager] ReduceMoney 收到非正数: {amount}");
+                Debug.LogWarning($"[MoneyManager] ReduceMoney received non-positive amount: {amount}");
                 return true;
             }
 
             if (_currentMoney < amount)
             {
-                Debug.LogWarning($"[MoneyManager] 余额不足！当前: {_currentMoney}, 需要: {amount}");
+                Debug.LogWarning($"[MoneyManager] Insufficient money. Current: {_currentMoney}, Required: {amount}");
 
                 EventBus.Publish(new GameEvents.MoneyInsufficient
                 {
@@ -76,8 +80,9 @@ namespace BaoZuPo.Economy
 
             int oldValue = _currentMoney;
             _currentMoney -= amount;
+            _totalSpent += amount;
 
-            Debug.Log($"[MoneyManager] 金钱 -{amount} ({oldValue} → {_currentMoney})");
+            Debug.Log($"[MoneyManager] Money -{amount} ({oldValue} -> {_currentMoney})");
 
             EventBus.Publish(new GameEvents.MoneyChanged
             {
@@ -90,7 +95,7 @@ namespace BaoZuPo.Economy
         }
 
         /// <summary>
-        /// 判断是否能支付指定金额
+        /// Check whether current money can afford amount.
         /// </summary>
         public bool CanAfford(int amount)
         {

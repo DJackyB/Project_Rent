@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 在选中房间生成一名随机租客（从卡库租客池）
+    /// 从卡牌数据库中随机生成一张租客卡，放入选中房间。
     /// 格式：SpawnRandomTenantInSelectedRoom
     /// </summary>
     public class SpawnRandomTenantInSelectedRoomEffect : ICardEffect
@@ -14,7 +14,7 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null || !room.CanPlaceTenant)
             {
-                Debug.LogWarning($"[效果] {source.Data.cardName}: 目标房间不可入住");
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: Target room cannot accept tenants.");
                 return;
             }
 
@@ -27,7 +27,7 @@ namespace BaoZuPo.Card.Effects
 
             if (pool.Count == 0)
             {
-                Debug.LogWarning($"[效果] {source.Data.cardName}: 租客池为空");
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: Tenant pool is empty.");
                 return;
             }
 
@@ -35,7 +35,7 @@ namespace BaoZuPo.Card.Effects
             var tenant = new CardInstance(pick);
             room.PlaceCard(tenant);
             tenant.InstantEffect?.Execute(tenant, context);
-            Debug.Log($"[效果] {source.Data.cardName}: 房间{room.RoomIndex} 新入住 {tenant.Data.cardName}");
+            Debug.Log($"[Effect] {source.Data.cardName}: Spawned tenant {tenant.Data.cardName} in room {room.RoomIndex}.");
         }
     }
 }

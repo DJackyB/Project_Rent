@@ -1,0 +1,229 @@
+using BaoZuPo.Card;
+using DG.Tweening;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace BaoZuPo.UI.Common.Drag
+{
+    [RequireComponent(typeof(UICardView))]
+    [RequireComponent(typeof(CanvasGroup))]
+    public class UICardDragHandler : MonoBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
+    {
+        [Header("Hand Motion")]
+        [SerializeField] private float hoverLift = 18f;
+        [SerializeField] private float hoverScale = 1.05f;
+        [SerializeField] private float hoverDuration = 0.12f;
+        [SerializeField] private float dragScale = 1.08f;
+        [SerializeField] private float dragScaleDuration = 0.1f;
+
+        private UICardView _cardView;
+        private CanvasGroup _canvasGroup;
+        private LayoutElement _layoutElement;
+        private RectTransform _rectTransform;
+        private Tween _hoverMoveTween;
+        private Tween _hoverScaleTween;
+        private Vector2 _idleAnchoredPosition;
+        private bool _isBound;
+
+        public UICardView CardView => _cardView != null ? _cardView : GetComponent<UICardView>();
+        public CanvasGroup CanvasGroup => _canvasGroup;
+        public LayoutElement LayoutElement => _layoutElement;
+        public RectTransform RectTransform => _rectTransform;
+
+        private void Awake()
+        {
+            CacheReferences();
+            ResetToIdleVisual(false);
+        }
+
+        private void OnDisable()
+        {
+            StopTweens();
+            if (UICardDragController.Instance != null)
+            {
+                UICardDragController.Instance.NotifySourceDisabled(this);
+            }
+        }
+
+        public void Bind(UICardView cardView)
+        {
+            _cardView = cardView;
+            CacheReferences();
+            _idleAnchoredPosition = _rectTransform.anchoredPosition;
+            _isBound = _cardView != null && _cardView.CurrentContext == CardViewContext.Hand && _cardView.Card != null;
+            enabled = _isBound;
+            ResetToIdleVisual(false);
+        }
+
+        public void Unbind()
+        {
+            _isBound = false;
+            enabled = false;
+            ResetToIdleVisual(false);
+        }
+
+        public void OnInitializePotentialDrag(PointerEventData eventData)
+        {
+            if (_isBound)
+            {
+                eventData.useDragThreshold = false;
+            }
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (!_isBound || CardView == null)
+            {
+                return;
+            }
+
+            UICardDragController.Instance?.BeginDrag(this, eventData);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_isBound)
+            {
+                return;
+            }
+
+            UICardDragController.Instance?.UpdateDrag(eventData);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!_isBound)
+            {
+                return;
+            }
+
+            UICardDragController.Instance?.EndDrag(eventData);
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (!_isBound || IsDragging())
+            {
+                return;
+            }
+
+            AnimateHover(true);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (!_isBound || IsDragging())
+            {
+                return;
+            }
+
+            AnimateHover(false);
+        }
+
+        public void SetDragVisualState(bool dragging)
+        {
+            StopTweens();
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            if (dragging)
+            {
+                _hoverMoveTween = _rectTransform.DOAnchorPos(_rectTransform.anchoredPosition, 0f).SetUpdate(true);
+                _hoverScaleTween = _rectTransform.DOScale(Vector3.one * dragScale, dragScaleDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+                return;
+            }
+
+            ResetToIdleVisual(true);
+        }
+
+        public void ResetToIdleVisual(bool animate)
+        {
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            StopTweens();
+            Vector2 targetPosition = _idleAnchoredPosition == default ? _rectTransform.anchoredPosition : _idleAnchoredPosition;
+
+            if (!animate)
+            {
+                _rectTransform.anchoredPosition = targetPosition;
+                _rectTransform.localScale = Vector3.one;
+                return;
+            }
+
+            _hoverMoveTween = _rectTransform.DOAnchorPos(targetPosition, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+            _hoverScaleTween = _rectTransform.DOScale(Vector3.one, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+        }
+
+        private void AnimateHover(bool hovered)
+        {
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            StopTweens();
+            if (hovered)
+            {
+                _idleAnchoredPosition = _rectTransform.anchoredPosition;
+            }
+
+            Vector2 targetPosition = hovered
+                ? _idleAnchoredPosition + new Vector2(0f, hoverLift)
+                : _idleAnchoredPosition;
+            Vector3 targetScale = hovered ? Vector3.one * hoverScale : Vector3.one;
+
+            _hoverMoveTween = _rectTransform.DOAnchorPos(targetPosition, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+            _hoverScaleTween = _rectTransform.DOScale(targetScale, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+        }
+
+        private bool IsDragging()
+        {
+            return UICardDragController.Instance != null && UICardDragController.Instance.IsDragging(this);
+        }
+
+        private void CacheReferences()
+        {
+            if (_cardView == null)
+            {
+                _cardView = GetComponent<UICardView>();
+            }
+
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null)
+                {
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+
+            if (_layoutElement == null)
+            {
+                _layoutElement = GetComponent<LayoutElement>();
+                if (_layoutElement == null)
+                {
+                    _layoutElement = gameObject.AddComponent<LayoutElement>();
+                }
+            }
+
+            if (_rectTransform == null)
+            {
+                _rectTransform = transform as RectTransform;
+            }
+        }
+
+        private void StopTweens()
+        {
+            _hoverMoveTween?.Kill(false);
+            _hoverScaleTween?.Kill(false);
+            _hoverMoveTween = null;
+            _hoverScaleTween = null;
+        }
+    }
+}

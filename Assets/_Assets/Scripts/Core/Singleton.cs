@@ -3,8 +3,8 @@ using UnityEngine;
 namespace BaoZuPo.Core
 {
     /// <summary>
-    /// 泛型单例基类（MonoBehaviour）
-    /// 子类只需继承即可自动拥有单例功能，例如：
+    /// 泛型单例基类（MonoBehaviour）。
+    /// 子类只需继承即可自动拥有单例能力，例如：
     ///     public class GameManager : Singleton<GameManager> { }
     /// </summary>
     public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
