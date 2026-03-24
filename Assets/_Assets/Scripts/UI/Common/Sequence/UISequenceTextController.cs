@@ -223,7 +223,7 @@ namespace BaoZuPo.UI.Common.Sequence
             _panelGroup.interactable = false;
             _panelGroup.blocksRaycasts = false;
 
-            _panelImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            _panelImage.sprite = UIRuntimeSpriteUtility.GetWhiteSprite();
             _panelImage.type = Image.Type.Sliced;
             _panelImage.color = panelColor;
             _panelImage.raycastTarget = false;

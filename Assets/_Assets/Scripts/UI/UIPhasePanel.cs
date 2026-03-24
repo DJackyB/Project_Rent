@@ -103,7 +103,7 @@ namespace BaoZuPo.UI
             buttonObject.transform.SetParent(parent, false);
 
             var image = buttonObject.GetComponent<Image>();
-            image.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            image.sprite = UIRuntimeSpriteUtility.GetWhiteSprite();
             image.type = Image.Type.Sliced;
 
             var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));

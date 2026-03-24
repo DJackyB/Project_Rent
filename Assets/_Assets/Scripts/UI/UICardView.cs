@@ -601,7 +601,7 @@ namespace BaoZuPo.UI
 
         private static Sprite GetBuiltinSprite()
         {
-            return Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            return UIRuntimeSpriteUtility.GetWhiteSprite();
         }
 
         private static TMP_FontAsset ResolveFont()
