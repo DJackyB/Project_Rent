@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Drag;
@@ -13,19 +13,28 @@ namespace BaoZuPo.UI
     [RequireComponent(typeof(Image))]
     public class UICardView : MonoBehaviour, IHoverPreviewSource
     {
-        [Header("\u53ef\u9009\u573a\u666f\u5f15\u7528")]
-        public TextMeshProUGUI nameText;
-        public TextMeshProUGUI costText;
-        public TextMeshProUGUI typeText;
-        public TextMeshProUGUI descText;
-        public TextMeshProUGUI statsText;
-        public Button cardButton;
-        public Image background;
+        [Header("Main Text References")]
+        [SerializeField] private TextMeshProUGUI nameText;
+        [SerializeField] private TextMeshProUGUI costText;
+        [SerializeField] private TextMeshProUGUI descText;
 
-        [Header("\u76ae\u80a4\u914d\u7f6e")]
+        [Header("Badge References")]
+        [SerializeField] private GameObject typeBadgeRoot;
+        [SerializeField] private GameObject durabilityBadgeRoot;
+        [SerializeField] private GameObject waitBadgeRoot;
+
+        [Header("Component References")]
+        [SerializeField] private Button cardButton;
+        [SerializeField] private Image background;
+
+        [Header("Prefab Visual References")]
+        [SerializeField] private Image frameImage;
+        [SerializeField] private Image artImage;
+
+        [Header("Skin Configuration")]
         [SerializeField] private CardSkinDatabase skinDatabase;
 
-        [Header("\u7f3a\u7701\u989c\u8272")]
+        [Header("Fallback Colors")]
         [SerializeField] private Color normalTint = new Color(0.22f, 0.22f, 0.24f, 0.96f);
         [SerializeField] private Color selectedTint = new Color(0.38f, 0.58f, 0.88f, 1f);
         [SerializeField] private Color tenantTint = new Color(0.24f, 0.56f, 0.33f, 0.96f);
@@ -36,16 +45,15 @@ namespace BaoZuPo.UI
         private static CardSkinDatabase _cachedSkinDatabase;
         private static bool _skinLookupAttempted;
 
-        private UIHandPanel _handPanel;
+        private TextMeshProUGUI typeText;
+        private TextMeshProUGUI durabilityText;
+        private TextMeshProUGUI waitText;
         private HoverPreviewTrigger _hoverTrigger;
         private UICardDragHandler _dragHandler;
-        private CanvasGroup _canvasGroup;
-        private LayoutElement _layoutElement;
-        private Image _frameImage;
-        private Image _artImage;
-        private TextMeshProUGUI _runtimeTypeText;
-        private TextMeshProUGUI _runtimeStatsText;
         private bool _selected;
+        private bool _loggedMissingVisualReferences;
+        private bool _loggedMissingHoverTrigger;
+        private bool _loggedMissingDragHandler;
 
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
@@ -57,14 +65,14 @@ namespace BaoZuPo.UI
         private void Awake()
         {
             CacheReferences();
-            EnsureRuntimeVisuals();
+            ValidateVisualConfiguration();
             RefreshPresentation();
         }
 
         private void OnEnable()
         {
             CacheReferences();
-            EnsureRuntimeVisuals();
+            ValidateVisualConfiguration();
             RefreshPresentation();
             UpdateHoverTrigger();
             UpdateButtonState();
@@ -73,15 +81,8 @@ namespace BaoZuPo.UI
 
         private void OnDisable()
         {
-            if (_hoverTrigger != null)
-            {
-                _hoverTrigger.Unbind(this);
-            }
-
-            if (_dragHandler != null)
-            {
-                _dragHandler.Unbind();
-            }
+            DisableHoverTrigger();
+            _dragHandler?.Unbind();
         }
 
         public void Setup(CardInstance card, UIHandPanel panel)
@@ -93,10 +94,9 @@ namespace BaoZuPo.UI
         {
             Card = card;
             CurrentContext = context;
-            _handPanel = panel;
 
             CacheReferences();
-            EnsureRuntimeVisuals();
+            ValidateVisualConfiguration();
             RefreshPresentation();
             UpdateHoverTrigger();
             UpdateButtonState();
@@ -121,56 +121,113 @@ namespace BaoZuPo.UI
                 cardButton = GetComponent<Button>();
             }
 
-            if (_canvasGroup == null)
+            if (_hoverTrigger == null)
             {
-                _canvasGroup = GetComponent<CanvasGroup>();
+                _hoverTrigger = GetComponent<HoverPreviewTrigger>();
             }
 
-            if (_layoutElement == null)
+            if (_dragHandler == null)
             {
-                _layoutElement = GetComponent<LayoutElement>();
+                _dragHandler = GetComponent<UICardDragHandler>();
             }
-        }
 
-        private void EnsureRuntimeVisuals()
-        {
             if (background != null)
             {
                 background.raycastTarget = true;
             }
 
-            if (_frameImage == null)
+            typeText = ResolveBadgeText(typeBadgeRoot, typeText);
+            durabilityText = ResolveBadgeText(durabilityBadgeRoot, durabilityText);
+            waitText = ResolveBadgeText(waitBadgeRoot, waitText);
+
+            if (typeText != null)
             {
-                _frameImage = CreateRuntimeImage("Frame", new Vector2(6f, 6f), new Vector2(-6f, -6f), 0);
+                typeText.raycastTarget = false;
             }
 
-            if (_artImage == null)
+            if (durabilityText != null)
             {
-                _artImage = CreateRuntimeImage("Illustration", new Vector2(14f, 62f), new Vector2(-14f, -82f), 1);
-                _artImage.preserveAspect = true;
+                durabilityText.raycastTarget = false;
             }
 
-            if (_runtimeTypeText == null)
+            if (waitText != null)
             {
-                _runtimeTypeText = CreateRuntimeLabel(
-                    "TypeLabel",
-                    new Vector2(1f, 1f),
-                    new Vector2(1f, 1f),
-                    new Vector2(-12f, -12f),
-                    new Vector2(118f, 26f),
-                    TextAlignmentOptions.TopRight);
+                waitText.raycastTarget = false;
             }
 
-            if (_runtimeStatsText == null)
+            if (nameText != null)
             {
-                _runtimeStatsText = CreateRuntimeLabel(
-                    "StatsLabel",
-                    new Vector2(0f, 0f),
-                    new Vector2(0f, 0f),
-                    new Vector2(12f, 12f),
-                    new Vector2(180f, 72f),
-                    TextAlignmentOptions.BottomLeft);
+                nameText.raycastTarget = false;
             }
+
+            if (costText != null)
+            {
+                costText.raycastTarget = false;
+            }
+
+            if (descText != null)
+            {
+                descText.raycastTarget = false;
+            }
+
+            if (typeBadgeRoot != null)
+            {
+                DisableBadgeRaycast(typeBadgeRoot);
+            }
+
+            if (durabilityBadgeRoot != null)
+            {
+                DisableBadgeRaycast(durabilityBadgeRoot);
+            }
+
+            if (waitBadgeRoot != null)
+            {
+                DisableBadgeRaycast(waitBadgeRoot);
+            }
+
+            if (frameImage != null)
+            {
+                frameImage.raycastTarget = false;
+            }
+
+            if (artImage != null)
+            {
+                artImage.raycastTarget = false;
+            }
+        }
+
+        private void ValidateVisualConfiguration()
+        {
+            if (_loggedMissingVisualReferences)
+            {
+                return;
+            }
+
+            var missing = new List<string>(13);
+            if (nameText == null) missing.Add(nameof(nameText));
+            if (costText == null) missing.Add(nameof(costText));
+            if (typeBadgeRoot == null) missing.Add(nameof(typeBadgeRoot));
+            if (typeBadgeRoot != null && typeText == null) missing.Add($"{nameof(typeBadgeRoot)} child TMP");
+            if (descText == null) missing.Add(nameof(descText));
+            if (durabilityBadgeRoot == null) missing.Add(nameof(durabilityBadgeRoot));
+            if (durabilityBadgeRoot != null && durabilityText == null) missing.Add($"{nameof(durabilityBadgeRoot)} child TMP");
+            if (waitBadgeRoot == null) missing.Add(nameof(waitBadgeRoot));
+            if (waitBadgeRoot != null && waitText == null) missing.Add($"{nameof(waitBadgeRoot)} child TMP");
+            if (cardButton == null) missing.Add(nameof(cardButton));
+            if (background == null) missing.Add(nameof(background));
+            if (frameImage == null) missing.Add(nameof(frameImage));
+            if (artImage == null) missing.Add(nameof(artImage));
+
+            if (missing.Count == 0)
+            {
+                return;
+            }
+
+            _loggedMissingVisualReferences = true;
+            Debug.LogError(
+                $"[UICardView] Card prefab is missing references: {string.Join(", ", missing)}. " +
+                "Please configure Card.prefab instead of relying on runtime-generated UI.",
+                this);
         }
 
         private void RefreshPresentation()
@@ -193,25 +250,30 @@ namespace BaoZuPo.UI
 
         private void ApplyContextOffsets()
         {
-            if (_artImage == null)
+            if (artImage == null)
             {
                 return;
             }
 
             if (CurrentContext == CardViewContext.RoomEquipment)
             {
-                _artImage.rectTransform.offsetMin = new Vector2(10f, 38f);
-                _artImage.rectTransform.offsetMax = new Vector2(-10f, -56f);
+                artImage.rectTransform.offsetMin = new Vector2(10f, 38f);
+                artImage.rectTransform.offsetMax = new Vector2(-10f, -56f);
             }
             else
             {
-                _artImage.rectTransform.offsetMin = new Vector2(14f, 62f);
-                _artImage.rectTransform.offsetMax = new Vector2(-14f, -82f);
+                artImage.rectTransform.offsetMin = new Vector2(14f, 62f);
+                artImage.rectTransform.offsetMax = new Vector2(-14f, -82f);
             }
         }
 
         private void UpdateBackground()
         {
+            if (Card == null || Card.Data == null)
+            {
+                return;
+            }
+
             var skins = ResolveSkinDatabase();
             Sprite faceSprite = skins != null ? skins.GetFaceSprite(Card.Data.cardType) : null;
             Sprite frameSprite = skins != null ? skins.GetFrameSprite(Card.Data.rarity) : null;
@@ -223,28 +285,33 @@ namespace BaoZuPo.UI
                 background.color = ResolveFaceTint(faceSprite != null);
             }
 
-            if (_frameImage != null)
+            if (frameImage != null)
             {
-                _frameImage.sprite = frameSprite != null ? frameSprite : GetBuiltinSprite();
-                _frameImage.type = frameSprite != null ? Image.Type.Simple : Image.Type.Sliced;
-                _frameImage.color = frameSprite != null ? Color.white : ResolveRarityTint(Card.Data.rarity);
+                frameImage.sprite = frameSprite != null ? frameSprite : GetBuiltinSprite();
+                frameImage.type = frameSprite != null ? Image.Type.Simple : Image.Type.Sliced;
+                frameImage.color = frameSprite != null ? Color.white : ResolveRarityTint(Card.Data.rarity);
             }
         }
 
         private void UpdateArt()
         {
-            if (_artImage == null)
+            if (artImage == null || Card == null || Card.Data == null)
             {
                 return;
             }
 
-            _artImage.sprite = Card.Data.cardArt;
-            _artImage.enabled = Card.Data.cardArt != null;
-            _artImage.color = Card.Data.cardArt != null ? Color.white : Color.clear;
+            artImage.sprite = Card.Data.cardArt;
+            artImage.enabled = Card.Data.cardArt != null;
+            artImage.color = Card.Data.cardArt != null ? Color.white : Color.clear;
         }
 
         private void UpdateMainText()
         {
+            if (Card == null || Card.Data == null)
+            {
+                return;
+            }
+
             if (nameText != null)
             {
                 nameText.text = Card.Data.cardName ?? string.Empty;
@@ -261,7 +328,10 @@ namespace BaoZuPo.UI
                 }
             }
 
-            bool showDescription = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.HoverPreview || CurrentContext == CardViewContext.Contract;
+            bool showDescription = CurrentContext == CardViewContext.Hand
+                || CurrentContext == CardViewContext.HoverPreview
+                || CurrentContext == CardViewContext.Contract;
+
             if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.RoomEquipment)
             {
                 showDescription = false;
@@ -279,95 +349,53 @@ namespace BaoZuPo.UI
 
         private void UpdateContextualText()
         {
+            if (Card == null || Card.Data == null)
+            {
+                return;
+            }
+
             string typeLabel = GetTypeLabel(Card.Data.cardType);
             bool showType = CurrentContext != CardViewContext.RoomEquipment;
+            SetBadge(typeBadgeRoot, typeText, showType, typeLabel);
 
-            if (typeText != null)
-            {
-                typeText.gameObject.SetActive(showType);
-                if (showType)
-                {
-                    typeText.text = typeLabel;
-                }
-            }
+            string durability = BuildDurabilityText();
+            bool showDurability = !string.IsNullOrEmpty(durability);
+            SetBadge(durabilityBadgeRoot, durabilityText, showDurability, durability);
 
-            if (_runtimeTypeText != null)
-            {
-                bool useRuntimeType = typeText == null && showType;
-                _runtimeTypeText.gameObject.SetActive(useRuntimeType);
-                if (useRuntimeType)
-                {
-                    _runtimeTypeText.text = typeLabel;
-                }
-            }
-
-            string stats = BuildStatsText();
-            bool showStats = !string.IsNullOrEmpty(stats);
-
-            if (statsText != null)
-            {
-                statsText.gameObject.SetActive(showStats);
-                if (showStats)
-                {
-                    statsText.text = stats;
-                }
-            }
-
-            if (_runtimeStatsText != null)
-            {
-                bool useRuntimeStats = statsText == null && showStats;
-                _runtimeStatsText.gameObject.SetActive(useRuntimeStats);
-                if (useRuntimeStats)
-                {
-                    _runtimeStatsText.text = stats;
-                }
-            }
+            string wait = BuildWaitText();
+            bool showWait = !string.IsNullOrEmpty(wait);
+            SetBadge(waitBadgeRoot, waitText, showWait, wait);
         }
 
-        private string BuildStatsText()
+        private string BuildDurabilityText()
         {
-            if (Card == null || Card.Data == null)
+            if (Card == null || Card.Data == null || Card.Data.durability <= 0)
             {
                 return string.Empty;
             }
 
-            var lines = new List<string>(4);
+            string durabilityLabel = ResolveDurabilityLabel();
+            return $"{durabilityLabel} {Card.CurrentDurability}";
+        }
 
-            if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.HoverPreview)
+        private string BuildWaitText()
+        {
+            if (Card == null || Card.Data == null || Card.Data.waitTurns <= 0)
             {
-                if (Card.Data.cardType == CardType.Tenant && Card.Data.baseRent > 0)
-                {
-                    lines.Add(UIStrings.BaseRent(Card.Data.baseRent));
-                }
+                return string.Empty;
             }
 
-            if (Card.Data.durability > 0)
-            {
-                string durabilityLabel = ResolveDurabilityLabel();
-                lines.Add($"{durabilityLabel} {Card.CurrentDurability}");
-            }
-
-            if (Card.Data.waitTurns > 0)
-            {
-                lines.Add(UIStrings.Wait(Card.CurrentWait));
-            }
-
-            if (CurrentContext == CardViewContext.RoomEquipment)
-            {
-                return lines.Count > 0 ? string.Join("\n", lines) : string.Empty;
-            }
-
-            return lines.Count > 0 ? string.Join("\n", lines) : string.Empty;
+            return UIStrings.Wait(Card.CurrentWait);
         }
 
         private string ResolveDurabilityLabel()
         {
-            if (Card != null && Card.Data != null && Card.Data.cardType == CardType.Tenant)
+            if (Card != null
+                && Card.Data != null
+                && Card.Data.cardType == CardType.Tenant
+                && (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.HoverPreview))
             {
-                if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.HoverPreview)
-                {
-                    return UIStrings.Lease;
-                }
+                return UIStrings.Lease;
             }
 
             return UIStrings.Durability;
@@ -377,41 +405,36 @@ namespace BaoZuPo.UI
         {
             if (CurrentContext == CardViewContext.RoomEquipment && GetComponent<UIEquipmentCardView>() != null)
             {
-                if (_hoverTrigger != null)
-                {
-                    _hoverTrigger.Unbind(this);
-                    _hoverTrigger.enabled = false;
-                }
-
+                DisableHoverTrigger();
                 return;
             }
 
-            bool allowHover = Card != null
-                && CurrentContext != CardViewContext.Hand
-                && CurrentContext != CardViewContext.HoverPreview;
-
+            bool allowHover = Card != null && CurrentContext != CardViewContext.HoverPreview;
             if (!allowHover)
             {
-                if (_hoverTrigger != null)
-                {
-                    _hoverTrigger.Unbind(this);
-                    _hoverTrigger.enabled = false;
-                }
-
+                DisableHoverTrigger();
                 return;
             }
 
             if (_hoverTrigger == null)
             {
-                _hoverTrigger = GetComponent<HoverPreviewTrigger>();
-                if (_hoverTrigger == null)
-                {
-                    _hoverTrigger = gameObject.AddComponent<HoverPreviewTrigger>();
-                }
+                LogMissingHoverTriggerOnce();
+                return;
             }
 
             _hoverTrigger.enabled = true;
             _hoverTrigger.Bind(this);
+        }
+
+        private void DisableHoverTrigger()
+        {
+            if (_hoverTrigger == null)
+            {
+                return;
+            }
+
+            _hoverTrigger.Unbind(this);
+            _hoverTrigger.enabled = false;
         }
 
         private void UpdateButtonState()
@@ -430,21 +453,14 @@ namespace BaoZuPo.UI
         {
             if (Card == null || CurrentContext != CardViewContext.Hand)
             {
-                if (_dragHandler != null)
-                {
-                    _dragHandler.Unbind();
-                }
-
+                _dragHandler?.Unbind();
                 return;
             }
 
             if (_dragHandler == null)
             {
-                _dragHandler = GetComponent<UICardDragHandler>();
-                if (_dragHandler == null)
-                {
-                    _dragHandler = gameObject.AddComponent<UICardDragHandler>();
-                }
+                LogMissingDragHandlerOnce();
+                return;
             }
 
             _dragHandler.Bind(this);
@@ -452,18 +468,45 @@ namespace BaoZuPo.UI
 
         private void ClearPresentation()
         {
-            if (nameText != null) nameText.text = string.Empty;
-            if (costText != null) costText.text = string.Empty;
-            if (typeText != null) typeText.text = string.Empty;
-            if (descText != null) descText.text = string.Empty;
-            if (statsText != null) statsText.text = string.Empty;
-            if (_runtimeTypeText != null) _runtimeTypeText.text = string.Empty;
-            if (_runtimeStatsText != null) _runtimeStatsText.text = string.Empty;
-
-            if (_artImage != null)
+            if (nameText != null)
             {
-                _artImage.sprite = null;
-                _artImage.enabled = false;
+                nameText.text = string.Empty;
+            }
+
+            if (costText != null)
+            {
+                costText.text = string.Empty;
+                costText.gameObject.SetActive(false);
+            }
+
+            if (typeText != null)
+            {
+                typeText.text = string.Empty;
+            }
+            HideBadge(typeBadgeRoot, typeText);
+
+            if (descText != null)
+            {
+                descText.text = string.Empty;
+                descText.gameObject.SetActive(false);
+            }
+
+            if (durabilityText != null)
+            {
+                durabilityText.text = string.Empty;
+            }
+            HideBadge(durabilityBadgeRoot, durabilityText);
+
+            if (waitText != null)
+            {
+                waitText.text = string.Empty;
+            }
+            HideBadge(waitBadgeRoot, waitText);
+
+            if (artImage != null)
+            {
+                artImage.sprite = null;
+                artImage.enabled = false;
             }
 
             if (background != null)
@@ -473,61 +516,40 @@ namespace BaoZuPo.UI
                 background.color = normalTint;
             }
 
-            if (_frameImage != null)
+            if (frameImage != null)
             {
-                _frameImage.sprite = GetBuiltinSprite();
-                _frameImage.type = Image.Type.Sliced;
-                _frameImage.color = ResolveRarityTint(CardRarity.Common);
+                frameImage.sprite = GetBuiltinSprite();
+                frameImage.type = Image.Type.Sliced;
+                frameImage.color = ResolveRarityTint(CardRarity.Common);
             }
         }
 
-        private Image CreateRuntimeImage(string name, Vector2 offsetMin, Vector2 offsetMax, int siblingIndex)
+        private void LogMissingHoverTriggerOnce()
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(transform, false);
+            if (_loggedMissingHoverTrigger)
+            {
+                return;
+            }
 
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
-
-            var image = go.GetComponent<Image>();
-            image.sprite = GetBuiltinSprite();
-            image.type = Image.Type.Sliced;
-            image.color = Color.white;
-            image.raycastTarget = false;
-
-            go.transform.SetSiblingIndex(siblingIndex);
-            return image;
+            _loggedMissingHoverTrigger = true;
+            Debug.LogError(
+                "[UICardView] Hover preview requires HoverPreviewTrigger on Card.prefab. " +
+                "Please configure the prefab instead of relying on AddComponent.",
+                this);
         }
 
-        private TextMeshProUGUI CreateRuntimeLabel(
-            string name,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Vector2 anchoredPosition,
-            Vector2 size,
-            TextAlignmentOptions alignment)
+        private void LogMissingDragHandlerOnce()
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            go.transform.SetParent(transform, false);
+            if (_loggedMissingDragHandler)
+            {
+                return;
+            }
 
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.pivot = anchorMax;
-            rect.sizeDelta = size;
-            rect.anchoredPosition = anchoredPosition;
-
-            var label = go.GetComponent<TextMeshProUGUI>();
-            label.font = ResolveFont();
-            label.fontSize = 18f;
-            label.color = Color.white;
-            label.alignment = alignment;
-            label.textWrappingMode = TextWrappingModes.Normal;
-            label.raycastTarget = false;
-            return label;
+            _loggedMissingDragHandler = true;
+            Debug.LogError(
+                "[UICardView] Hand drag requires UICardDragHandler on Card.prefab. " +
+                "Please configure the prefab instead of relying on AddComponent.",
+                this);
         }
 
         private Color ResolveFaceTint(bool hasSprite)
@@ -568,6 +590,79 @@ namespace BaoZuPo.UI
             };
         }
 
+        private static void SetBadge(GameObject badgeRoot, TextMeshProUGUI badgeText, bool visible, string value)
+        {
+            GameObject target = badgeRoot != null ? badgeRoot : badgeText != null ? badgeText.gameObject : null;
+            if (target != null)
+            {
+                target.SetActive(visible);
+            }
+
+            if (badgeText != null)
+            {
+                badgeText.text = visible ? value : string.Empty;
+            }
+        }
+
+        private static void HideBadge(GameObject badgeRoot, TextMeshProUGUI badgeText)
+        {
+            SetBadge(badgeRoot, badgeText, false, string.Empty);
+        }
+
+        private static void DisableBadgeRaycast(GameObject badgeRoot)
+        {
+            Image badgeImage = badgeRoot.GetComponent<Image>();
+            if (badgeImage != null)
+            {
+                badgeImage.raycastTarget = false;
+            }
+        }
+
+        private TextMeshProUGUI ResolveBadgeText(GameObject badgeRoot, TextMeshProUGUI currentText)
+        {
+            if (badgeRoot == null)
+            {
+                return null;
+            }
+
+            if (currentText != null && currentText.transform.IsChildOf(badgeRoot.transform))
+            {
+                return currentText;
+            }
+
+            TextMeshProUGUI[] texts = badgeRoot.GetComponentsInChildren<TextMeshProUGUI>(true);
+            TextMeshProUGUI resolved = null;
+            int childTextCount = 0;
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] == null || texts[i].gameObject == badgeRoot)
+                {
+                    continue;
+                }
+
+                childTextCount++;
+                if (resolved == null)
+                {
+                    resolved = texts[i];
+                }
+            }
+
+            if (childTextCount == 1)
+            {
+                return resolved;
+            }
+
+            if (!_loggedMissingVisualReferences)
+            {
+                Debug.LogError(
+                    $"[UICardView] '{badgeRoot.name}' must contain exactly one child TextMeshProUGUI, but found {childTextCount}.",
+                    this);
+            }
+
+            return null;
+        }
+
         private CardSkinDatabase ResolveSkinDatabase()
         {
             if (skinDatabase != null)
@@ -602,11 +697,6 @@ namespace BaoZuPo.UI
         private static Sprite GetBuiltinSprite()
         {
             return UIRuntimeSpriteUtility.GetWhiteSprite();
-        }
-
-        private static TMP_FontAsset ResolveFont()
-        {
-            return UIFontCatalog.GetPreferredFontAsset();
         }
     }
 }

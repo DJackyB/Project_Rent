@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eee0da00528041cd9cdcf8e54012f600, type: 3}
+  m_Name: CardSkinDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardSkinDatabase
+  defaultFaceSprite: {fileID: 21300000, guid: 1364dd1357b946e4780ec394ca17eaba, type: 3}
+  defaultFrameSprite: {fileID: 21300000, guid: 51497eb274545c44f9ae9f360612449e, type: 3}
+  typeSkins:
+  - cardType: 0
+    faceSprite: {fileID: 21300000, guid: 1364dd1357b946e4780ec394ca17eaba, type: 3}
+  - cardType: 1
+    faceSprite: {fileID: 21300000, guid: 37e7b3d0e3850d8498a8a835c76c68f3, type: 3}
+  - cardType: 2
+    faceSprite: {fileID: 21300000, guid: bab61100e0b98bf4cb8f600577815475, type: 3}
+  - cardType: 3
+    faceSprite: {fileID: 21300000, guid: 37959678b47fdb0448b5cf7d10ffa419, type: 3}
+  raritySkins:
+  - rarity: 0
+    frameSprite: {fileID: 21300000, guid: 51497eb274545c44f9ae9f360612449e, type: 3}
+  - rarity: 1
+    frameSprite: {fileID: 21300000, guid: bc9c891041d96a64fad475b471b9dba6, type: 3}
+  - rarity: 2
+    frameSprite: {fileID: 21300000, guid: 683bf197db8b1604681bf47cfb68922f, type: 3}

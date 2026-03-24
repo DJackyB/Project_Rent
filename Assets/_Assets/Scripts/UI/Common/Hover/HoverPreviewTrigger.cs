@@ -27,7 +27,7 @@ namespace BaoZuPo.UI.Common.Hover
                 return;
             }
 
-            HoverPreviewController.Instance.Show(_source);
+            HoverPreviewController.Instance?.Show(_source, eventData.position);
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -37,14 +37,14 @@ namespace BaoZuPo.UI.Common.Hover
                 return;
             }
 
-            HoverPreviewController.Instance.HideIfCurrent(_source);
+            HoverPreviewController.Instance?.HideIfCurrent(_source);
         }
 
         private void OnDisable()
         {
             if (_source != null)
             {
-                HoverPreviewController.Instance.HideIfCurrent(_source);
+                HoverPreviewController.Instance?.HideIfCurrent(_source);
             }
         }
     }

@@ -108,7 +108,7 @@ namespace BaoZuPo.UI
                 CancelActiveDrag(true);
             }
 
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
 
             _activeHandler = handler;
             _activeRect = handler.RectTransform;

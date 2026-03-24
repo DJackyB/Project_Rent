@@ -63,7 +63,7 @@ namespace BaoZuPo.UI
             }
 
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
             phasePanel?.UpdatePhase(string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName);
             RefreshAll();
         }
@@ -77,14 +77,14 @@ namespace BaoZuPo.UI
         private void OnCardPlayed(GameEvents.CardPlayed e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
             RefreshAll();
         }
 
         private void OnTurnStarted(GameEvents.TurnStarted e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
             topBar?.RefreshTurn(e.TurnNumber);
             RefreshAll();
         }
@@ -92,7 +92,7 @@ namespace BaoZuPo.UI
         private void OnGameOver(GameEvents.GameOver e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
@@ -107,7 +107,7 @@ namespace BaoZuPo.UI
         public void RefreshAll()
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance.Hide();
+            HoverPreviewController.Instance?.Hide();
             topBar?.Refresh();
             handPanel?.RefreshHand();
             boardPanel?.RefreshBoard();

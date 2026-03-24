@@ -1,4 +1,5 @@
 using BaoZuPo.Card;
+using BaoZuPo.UI.Common.Drag;
 using BaoZuPo.UI.Common.Hover;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,6 +8,8 @@ namespace BaoZuPo.UI
 {
     public class CardHoverPreviewPresenter : MonoBehaviour, IHoverPreviewPresenter
     {
+        [SerializeField] private Vector2 previewSize = new Vector2(260f, 360f);
+
         private RectTransform _root;
         private GameObject _previewInstance;
 
@@ -32,8 +35,6 @@ namespace BaoZuPo.UI
             _previewInstance.name = $"{sourceObject.name}_HoverPreview";
             _root = _previewInstance.transform as RectTransform;
 
-            DisableInteraction(_previewInstance);
-
             var cardView = _previewInstance.GetComponent<UICardView>();
             if (cardView != null)
             {
@@ -41,6 +42,7 @@ namespace BaoZuPo.UI
                 cardView.SetSelected(false);
             }
 
+            DisableInteraction(_previewInstance);
             ApplyPreviewSizing();
             _previewInstance.SetActive(true);
             Canvas.ForceUpdateCanvases();
@@ -60,6 +62,11 @@ namespace BaoZuPo.UI
 
         private static void DisableInteraction(GameObject previewObject)
         {
+            foreach (var graphic in previewObject.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.raycastTarget = false;
+            }
+
             foreach (var button in previewObject.GetComponentsInChildren<Button>(true))
             {
                 button.interactable = false;
@@ -80,14 +87,23 @@ namespace BaoZuPo.UI
                 trigger.enabled = false;
             }
 
-            var canvasGroup = previewObject.GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
+            foreach (var dragHandler in previewObject.GetComponentsInChildren<UICardDragHandler>(true))
             {
-                canvasGroup = previewObject.AddComponent<CanvasGroup>();
+                dragHandler.enabled = false;
             }
 
-            canvasGroup.blocksRaycasts = false;
-            canvasGroup.interactable = false;
+            var canvasGroup = previewObject.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.blocksRaycasts = false;
+                canvasGroup.interactable = false;
+                return;
+            }
+
+            Debug.LogError(
+                "[CardHoverPreviewPresenter] Card prefab requires CanvasGroup for hover previews. " +
+                "Please configure Card.prefab instead of relying on AddComponent.",
+                previewObject);
         }
 
         private void ApplyPreviewSizing()
@@ -100,7 +116,7 @@ namespace BaoZuPo.UI
             _root.anchorMin = new Vector2(0f, 1f);
             _root.anchorMax = new Vector2(0f, 1f);
             _root.pivot = new Vector2(0f, 1f);
-            _root.sizeDelta = new Vector2(260f, 360f);
+            _root.sizeDelta = previewSize;
 
             var layoutElement = _root.GetComponent<LayoutElement>();
             if (layoutElement != null)

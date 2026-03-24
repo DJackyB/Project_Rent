@@ -8,6 +8,7 @@ namespace BaoZuPo.UI.Common.Drag
 {
     [RequireComponent(typeof(UICardView))]
     [RequireComponent(typeof(CanvasGroup))]
+    [RequireComponent(typeof(LayoutElement))]
     public class UICardDragHandler : MonoBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
     {
         [Header("Hand Motion")]
@@ -25,6 +26,10 @@ namespace BaoZuPo.UI.Common.Drag
         private Tween _hoverScaleTween;
         private Vector2 _idleAnchoredPosition;
         private bool _isBound;
+        private bool _loggedMissingCardView;
+        private bool _loggedMissingCanvasGroup;
+        private bool _loggedMissingLayoutElement;
+        private bool _loggedMissingRectTransform;
 
         public UICardView CardView => _cardView != null ? _cardView : GetComponent<UICardView>();
         public CanvasGroup CanvasGroup => _canvasGroup;
@@ -50,6 +55,14 @@ namespace BaoZuPo.UI.Common.Drag
         {
             _cardView = cardView;
             CacheReferences();
+
+            if (_cardView == null || _canvasGroup == null || _layoutElement == null || _rectTransform == null)
+            {
+                _isBound = false;
+                enabled = false;
+                return;
+            }
+
             _idleAnchoredPosition = _rectTransform.anchoredPosition;
             _isBound = _cardView != null && _cardView.CurrentContext == CardViewContext.Hand && _cardView.Card != null;
             enabled = _isBound;
@@ -192,29 +205,47 @@ namespace BaoZuPo.UI.Common.Drag
             if (_cardView == null)
             {
                 _cardView = GetComponent<UICardView>();
+                if (_cardView == null && !_loggedMissingCardView)
+                {
+                    _loggedMissingCardView = true;
+                    Debug.LogError("[UICardDragHandler] Missing UICardView on Card.prefab.", this);
+                }
             }
 
             if (_canvasGroup == null)
             {
                 _canvasGroup = GetComponent<CanvasGroup>();
-                if (_canvasGroup == null)
+                if (_canvasGroup == null && !_loggedMissingCanvasGroup)
                 {
-                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                    _loggedMissingCanvasGroup = true;
+                    Debug.LogError(
+                        "[UICardDragHandler] Missing CanvasGroup on Card.prefab. " +
+                        "Please configure the prefab instead of relying on AddComponent.",
+                        this);
                 }
             }
 
             if (_layoutElement == null)
             {
                 _layoutElement = GetComponent<LayoutElement>();
-                if (_layoutElement == null)
+                if (_layoutElement == null && !_loggedMissingLayoutElement)
                 {
-                    _layoutElement = gameObject.AddComponent<LayoutElement>();
+                    _loggedMissingLayoutElement = true;
+                    Debug.LogError(
+                        "[UICardDragHandler] Missing LayoutElement on Card.prefab. " +
+                        "Please configure the prefab instead of relying on AddComponent.",
+                        this);
                 }
             }
 
             if (_rectTransform == null)
             {
                 _rectTransform = transform as RectTransform;
+                if (_rectTransform == null && !_loggedMissingRectTransform)
+                {
+                    _loggedMissingRectTransform = true;
+                    Debug.LogError("[UICardDragHandler] Missing RectTransform on draggable card.", this);
+                }
             }
         }
 

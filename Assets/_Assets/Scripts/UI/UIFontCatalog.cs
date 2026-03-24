@@ -13,24 +13,34 @@ namespace BaoZuPo.UI
         public const string GeneratedFontResourcePath = "Fonts/BaoZuPoChineseDynamic";
 
         private static TMP_FontAsset _cachedFontAsset;
+        private static bool _loggedBrokenGeneratedFont;
+        private static bool _loggedRuntimeFontCreationFailure;
 
         public static TMP_FontAsset GetPreferredFontAsset()
         {
-            if (_cachedFontAsset != null)
+            if (IsFontAssetUsable(_cachedFontAsset))
             {
                 return _cachedFontAsset;
             }
 
             _cachedFontAsset = Resources.Load<TMP_FontAsset>(GeneratedFontResourcePath);
-            if (_cachedFontAsset != null)
+            if (IsFontAssetUsable(_cachedFontAsset))
             {
                 return _cachedFontAsset;
+            }
+
+            if (_cachedFontAsset != null && !_loggedBrokenGeneratedFont)
+            {
+                _loggedBrokenGeneratedFont = true;
+                Debug.LogWarning(
+                    $"[UIFontCatalog] Generated TMP font '{GeneratedFontResourcePath}' is invalid " +
+                    "(missing material or atlas). Falling back to a runtime-created font asset.");
             }
 
             var sourceFont = Resources.Load<Font>(SourceFontResourcePath);
             if (sourceFont != null)
             {
-                _cachedFontAsset = TMP_FontAsset.CreateFontAsset(
+                TMP_FontAsset runtimeFont = TMP_FontAsset.CreateFontAsset(
                     sourceFont,
                     90,
                     9,
@@ -39,15 +49,24 @@ namespace BaoZuPo.UI
                     1024,
                     AtlasPopulationMode.Dynamic);
 
-                if (_cachedFontAsset != null)
+                if (IsFontAssetUsable(runtimeFont))
                 {
-                    _cachedFontAsset.name = "BaoZuPoChineseRuntime";
+                    runtimeFont.name = "BaoZuPoChineseRuntime";
+                    _cachedFontAsset = runtimeFont;
                     return _cachedFontAsset;
+                }
+
+                if (!_loggedRuntimeFontCreationFailure)
+                {
+                    _loggedRuntimeFontCreationFailure = true;
+                    Debug.LogWarning(
+                        $"[UIFontCatalog] Failed to create a valid runtime TMP font from '{SourceFontResourcePath}'. " +
+                        "Falling back to default TMP font.");
                 }
             }
 
             _cachedFontAsset = TMP_Settings.defaultFontAsset;
-            if (_cachedFontAsset != null)
+            if (IsFontAssetUsable(_cachedFontAsset))
             {
                 return _cachedFontAsset;
             }
@@ -64,12 +83,22 @@ namespace BaoZuPo.UI
             }
 
             TMP_FontAsset preferredFont = GetPreferredFontAsset();
-            if (preferredFont == null || text.font == preferredFont)
+            if (!IsFontAssetUsable(preferredFont))
             {
                 return;
             }
 
-            text.font = preferredFont;
+            if (text.font != preferredFont)
+            {
+                text.font = preferredFont;
+            }
+
+            Material preferredMaterial = preferredFont.material;
+            if (preferredMaterial != null && text.fontSharedMaterial != preferredMaterial)
+            {
+                text.fontSharedMaterial = preferredMaterial;
+            }
+
             text.UpdateMeshPadding();
         }
 
@@ -103,6 +132,42 @@ namespace BaoZuPo.UI
 
                 ApplyToText(text);
             }
+        }
+
+        private static bool IsFontAssetUsable(TMP_FontAsset fontAsset)
+        {
+            if (fontAsset == null)
+            {
+                return false;
+            }
+
+            Material material;
+            Texture[] atlasTextures;
+
+            try
+            {
+                material = fontAsset.material;
+                atlasTextures = fontAsset.atlasTextures;
+            }
+            catch
+            {
+                return false;
+            }
+
+            if (material == null || atlasTextures == null || atlasTextures.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < atlasTextures.Length; i++)
+            {
+                if (atlasTextures[i] != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

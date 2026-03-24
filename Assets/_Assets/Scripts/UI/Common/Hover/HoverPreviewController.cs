@@ -1,17 +1,23 @@
 using UnityEngine;
-using UnityEngine.UI;
+using BaoZuPo.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace BaoZuPo.UI.Common.Hover
 {
     public class HoverPreviewController : MonoBehaviour
     {
         private static HoverPreviewController _instance;
+        private static bool _loggedMissingInstance;
 
-        private Canvas _canvas;
-        private RectTransform _canvasRect;
-        private IHoverPreviewPresenter _presenter;
+        [SerializeField] private RectTransform canvasRect;
+        [SerializeField] private CardHoverPreviewPresenter presenter;
+        [SerializeField] private Vector2 previewOffset = new Vector2(24f, -24f);
+
         private IHoverPreviewSource _currentSource;
-        private Vector2 _currentOffset = new Vector2(24f, -24f);
+        private bool _loggedMissingConfiguration;
+        private Vector2 _lastPointerPosition;
 
         public static HoverPreviewController Instance
         {
@@ -19,9 +25,14 @@ namespace BaoZuPo.UI.Common.Hover
             {
                 if (_instance == null)
                 {
-                    var controllerObject = new GameObject("HoverPreviewController");
-                    DontDestroyOnLoad(controllerObject);
-                    _instance = controllerObject.AddComponent<HoverPreviewController>();
+                    _instance = Object.FindFirstObjectByType<HoverPreviewController>();
+                    if (_instance == null && !_loggedMissingInstance)
+                    {
+                        _loggedMissingInstance = true;
+                        Debug.LogError(
+                            "[HoverPreviewController] Missing scene HoverPreviewRoot. " +
+                            "Please configure SampleScene instead of relying on runtime bootstrap.");
+                    }
                 }
 
                 return _instance;
@@ -37,14 +48,21 @@ namespace BaoZuPo.UI.Common.Hover
             }
 
             _instance = this;
-            DontDestroyOnLoad(gameObject);
-            EnsureCanvas();
-            EnsurePresenter();
+            ResolveReferences();
+            ValidateConfiguration();
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
         }
 
         private void LateUpdate()
         {
-            if (_presenter == null || _presenter.Root == null || _currentSource == null)
+            if (presenter == null || presenter.Root == null || _currentSource == null || canvasRect == null)
             {
                 return;
             }
@@ -55,13 +73,14 @@ namespace BaoZuPo.UI.Common.Hover
                 return;
             }
 
-            var mousePosition = Input.mousePosition;
-            _presenter.Root.anchoredPosition = HoverPreviewPositioner.CalculateClampedPosition(
-                _canvasRect,
-                _presenter.Root,
+            var mousePosition = GetPointerPosition(_lastPointerPosition);
+            _lastPointerPosition = mousePosition;
+            presenter.Root.anchoredPosition = HoverPreviewPositioner.CalculateClampedPosition(
+                canvasRect,
+                presenter.Root,
                 mousePosition,
-                _currentOffset);
-            _presenter.Root.SetAsLastSibling();
+                previewOffset);
+            presenter.Root.SetAsLastSibling();
         }
 
         public void Show(IHoverPreviewSource source)
@@ -71,19 +90,39 @@ namespace BaoZuPo.UI.Common.Hover
                 return;
             }
 
-            EnsureCanvas();
-            EnsurePresenter();
+            ResolveReferences();
+            if (!ValidateConfiguration())
+            {
+                return;
+            }
+
+            Show(source, GetPointerPosition(_lastPointerPosition));
+        }
+
+        public void Show(IHoverPreviewSource source, Vector2 pointerPosition)
+        {
+            if (source == null || source.HoverSourceObject == null || !source.HoverSourceObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            ResolveReferences();
+            if (!ValidateConfiguration())
+            {
+                return;
+            }
 
             _currentSource = source;
-            _presenter.Show(new HoverPreviewRequest(source, Input.mousePosition));
+            _lastPointerPosition = pointerPosition;
+            presenter.Show(new HoverPreviewRequest(source, pointerPosition));
 
-            if (_presenter.Root != null)
+            if (presenter.Root != null)
             {
-                _presenter.Root.anchoredPosition = HoverPreviewPositioner.CalculateClampedPosition(
-                    _canvasRect,
-                    _presenter.Root,
-                    Input.mousePosition,
-                    _currentOffset);
+                presenter.Root.anchoredPosition = HoverPreviewPositioner.CalculateClampedPosition(
+                    canvasRect,
+                    presenter.Root,
+                    pointerPosition,
+                    previewOffset);
             }
         }
 
@@ -98,59 +137,70 @@ namespace BaoZuPo.UI.Common.Hover
         public void Hide()
         {
             _currentSource = null;
-            _presenter?.Hide();
+            presenter?.Hide();
         }
 
-        private void EnsureCanvas()
+        private void ResolveReferences()
         {
-            if (_canvas != null)
+            if (canvasRect == null)
             {
-                return;
+                var parentCanvas = GetComponentInParent<Canvas>();
+                if (parentCanvas != null)
+                {
+                    canvasRect = parentCanvas.transform as RectTransform;
+                }
             }
 
-            _canvas = GetComponent<Canvas>();
-            if (_canvas == null)
-            {
-                _canvas = gameObject.AddComponent<Canvas>();
-            }
-
-            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 5000;
-            _canvasRect = _canvas.transform as RectTransform;
-
-            if (GetComponent<CanvasScaler>() == null)
-            {
-                var scaler = gameObject.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            }
-
-            if (GetComponent<GraphicRaycaster>() == null)
-            {
-                gameObject.AddComponent<GraphicRaycaster>();
-            }
-        }
-
-        private void EnsurePresenter()
-        {
-            if (_presenter != null)
-            {
-                return;
-            }
-
-            var presenterTransform = transform.Find("CardHoverPreview");
-            if (presenterTransform == null)
-            {
-                presenterTransform = new GameObject("CardHoverPreview").transform;
-                presenterTransform.SetParent(transform, false);
-            }
-
-            var presenter = presenterTransform.GetComponent<CardHoverPreviewPresenter>();
             if (presenter == null)
             {
-                presenter = presenterTransform.gameObject.AddComponent<CardHoverPreviewPresenter>();
+                presenter = GetComponentInChildren<CardHoverPreviewPresenter>(true);
+            }
+        }
+
+        private bool ValidateConfiguration()
+        {
+            bool valid = true;
+            if (canvasRect == null)
+            {
+                valid = false;
             }
 
-            _presenter = presenter;
+            if (presenter == null)
+            {
+                valid = false;
+            }
+
+            if (!valid && !_loggedMissingConfiguration)
+            {
+                _loggedMissingConfiguration = true;
+                Debug.LogError(
+                    "[HoverPreviewController] Missing canvasRect or presenter reference. " +
+                    "Please configure HoverPreviewRoot in SampleScene.",
+                    this);
+            }
+
+            return valid;
+        }
+
+        private static Vector2 GetPointerPosition(Vector2 fallback)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Mouse.current != null)
+            {
+                return Mouse.current.position.ReadValue();
+            }
+
+            if (Pointer.current != null)
+            {
+                return Pointer.current.position.ReadValue();
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            return Input.mousePosition;
+#else
+            return fallback;
+#endif
         }
     }
 }

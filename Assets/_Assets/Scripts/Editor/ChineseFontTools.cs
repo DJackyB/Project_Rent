@@ -53,9 +53,15 @@ namespace BaoZuPo.Editor
             }
 
             TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(UIFontCatalog.GeneratedFontAssetPath);
-            if (fontAsset != null)
+            if (IsFontAssetUsable(fontAsset))
             {
                 return fontAsset;
+            }
+
+            if (fontAsset != null)
+            {
+                AssetDatabase.DeleteAsset(UIFontCatalog.GeneratedFontAssetPath);
+                AssetDatabase.Refresh();
             }
 
             fontAsset = TMP_FontAsset.CreateFontAsset(
@@ -78,6 +84,30 @@ namespace BaoZuPo.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return fontAsset;
+        }
+
+        private static bool IsFontAssetUsable(TMP_FontAsset fontAsset)
+        {
+            if (fontAsset == null || fontAsset.material == null)
+            {
+                return false;
+            }
+
+            var atlasTextures = fontAsset.atlasTextures;
+            if (atlasTextures == null || atlasTextures.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < atlasTextures.Length; i++)
+            {
+                if (atlasTextures[i] != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string CollectCharacters()
