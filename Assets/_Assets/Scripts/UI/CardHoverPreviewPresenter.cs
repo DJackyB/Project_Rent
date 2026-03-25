@@ -1,6 +1,7 @@
 using BaoZuPo.Card;
 using BaoZuPo.UI.Common.Drag;
 using BaoZuPo.UI.Common.Hover;
+using BaoZuPo.UI.Common.Tooltip;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -38,7 +39,7 @@ namespace BaoZuPo.UI
             var cardView = _previewInstance.GetComponent<UICardView>();
             if (cardView != null)
             {
-                cardView.Setup(card, CardViewContext.HoverPreview, null);
+                cardView.Setup(card, CardViewContext.TooltipPreview, null);
                 cardView.SetSelected(false);
             }
 
@@ -82,7 +83,7 @@ namespace BaoZuPo.UI
                 equipmentView.enabled = false;
             }
 
-            foreach (var trigger in previewObject.GetComponentsInChildren<HoverPreviewTrigger>(true))
+            foreach (var trigger in previewObject.GetComponentsInChildren<TooltipTrigger>(true))
             {
                 trigger.enabled = false;
             }

@@ -1,12 +1,11 @@
 using BaoZuPo.Card;
-using BaoZuPo.UI.Common.Hover;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
     [RequireComponent(typeof(UICardView))]
-    public class UIEquipmentCardView : MonoBehaviour, IHoverPreviewSource
+    public class UIEquipmentCardView : MonoBehaviour
     {
         [SerializeField] private Vector2 compactSize = new Vector2(170f, 238f);
 
@@ -14,10 +13,6 @@ namespace BaoZuPo.UI
         private LayoutElement _layoutElement;
 
         public CardInstance CurrentCard => _cardView != null ? _cardView.Card : null;
-
-        public GameObject HoverSourceObject => gameObject;
-        public RectTransform HoverAnchor => transform as RectTransform;
-        public object HoverPayload => CurrentCard;
 
         private void Awake()
         {
@@ -43,7 +38,6 @@ namespace BaoZuPo.UI
 
             _cardView.Setup(card, CardViewContext.RoomEquipment, null);
             ApplyCompactSizing();
-            BindHoverTrigger();
         }
 
         private void ApplyCompactSizing()
@@ -55,17 +49,6 @@ namespace BaoZuPo.UI
                 _layoutElement.flexibleWidth = 0f;
                 _layoutElement.flexibleHeight = 0f;
             }
-        }
-
-        private void BindHoverTrigger()
-        {
-            var trigger = GetComponent<HoverPreviewTrigger>();
-            if (trigger == null)
-            {
-                trigger = gameObject.AddComponent<HoverPreviewTrigger>();
-            }
-
-            trigger.Bind(this);
         }
     }
 }
