@@ -1,0 +1,14 @@
+{
+  "name": "Martian.Tooltip.EditModeTests",
+  "references": [
+    "Martian.Tooltip.Abstractions",
+    "Martian.Tooltip.Runtime",
+    "Martian.Tooltip.Presets"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

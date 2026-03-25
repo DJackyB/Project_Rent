@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Common.Drag;
-using BaoZuPo.UI.Common.Tooltip;
+using Martian.Tooltip;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -116,7 +117,10 @@ namespace BaoZuPo.UI
             request = new TooltipRequest(
                 this,
                 anchor,
-                new TooltipContent(TooltipContentKind.Card, Card));
+                new TooltipContent(
+                    BaoZuPoTooltipContentIds.CardPreview,
+                    Card,
+                    Card.Data != null ? Card.Data.cardName : null));
             return true;
         }
 

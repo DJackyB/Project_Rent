@@ -1,9 +1,9 @@
-using BaoZuPo.UI.Common.Tooltip;
+using Martian.Tooltip;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace BaoZuPo.Tests.UI.Tooltip
+namespace Martian.Tests.Tooltip
 {
     public class TooltipTriggerTests
     {
@@ -59,7 +59,7 @@ namespace BaoZuPo.Tests.UI.Tooltip
             {
                 var provider = go.AddComponent<FakeTooltipProvider>();
                 provider.ShouldSucceed = true;
-                provider.Request = new TooltipRequest(provider, null, new TooltipContent(TooltipContentKind.Card, new object()));
+                provider.Request = new TooltipRequest(provider, null, new TooltipContent("martian.tooltip.test", new object()));
 
                 var trigger = go.AddComponent<TooltipTrigger>();
                 trigger.Bind(provider);
@@ -87,7 +87,7 @@ namespace BaoZuPo.Tests.UI.Tooltip
             {
                 var provider = go.AddComponent<FakeTooltipProvider>();
                 provider.ShouldSucceed = true;
-                provider.Request = new TooltipRequest(provider, go.GetComponent<RectTransform>(), new TooltipContent(TooltipContentKind.Card, new object()));
+                provider.Request = new TooltipRequest(provider, go.GetComponent<RectTransform>(), new TooltipContent("martian.tooltip.test", new object()));
 
                 var trigger = go.AddComponent<TooltipTrigger>();
                 trigger.Bind(provider);

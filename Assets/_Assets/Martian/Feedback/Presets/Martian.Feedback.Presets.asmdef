@@ -1,0 +1,7 @@
+{
+  "name": "Martian.Feedback.Presets",
+  "references": [
+    "Martian.Feedback",
+    "Martian.Feedback.Runtime"
+  ]
+}

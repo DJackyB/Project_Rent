@@ -4,7 +4,7 @@ using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
 using BaoZuPo.Economy;
-using BaoZuPo.Feedback.Adapters.BaoZuPo;
+using BaoZuPo.Integration.Martian.Feedback;
 using Martian.EventBus;
 using UnityEngine;
 using BaoZuPo.UI;

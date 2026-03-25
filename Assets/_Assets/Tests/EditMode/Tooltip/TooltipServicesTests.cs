@@ -1,7 +1,7 @@
-using BaoZuPo.UI.Common.Tooltip;
+using Martian.Tooltip;
 using NUnit.Framework;
 
-namespace BaoZuPo.Tests.UI.Tooltip
+namespace Martian.Tests.Tooltip
 {
     public class TooltipServicesTests
     {

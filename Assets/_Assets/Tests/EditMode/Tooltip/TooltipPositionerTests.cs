@@ -1,8 +1,8 @@
-using BaoZuPo.UI.Common.Tooltip.Runtime;
+using Martian.Tooltip.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace BaoZuPo.Tests.UI.Tooltip
+namespace Martian.Tests.Tooltip
 {
     public class TooltipPositionerTests
     {

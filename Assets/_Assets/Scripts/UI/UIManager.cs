@@ -1,9 +1,11 @@
 using BaoZuPo.Core;
-using BaoZuPo.Feedback.Runtime;
 using BaoZuPo.GameFlow;
-using BaoZuPo.UI.Common.Tooltip;
+using BaoZuPo.Integration.Martian.Feedback;
+using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Settlement;
 using Martian.EventBus;
+using Martian.Feedback.Runtime;
+using Martian.Tooltip;
 using UnityEngine;
 
 namespace BaoZuPo.UI
@@ -40,6 +42,7 @@ namespace BaoZuPo.UI
                 CurrentPhase = TurnManager.Instance.CurrentPhase;
             }
 
+            BaoZuPoMartianTooltipIntegration.Install();
             EnsureFeedbackBootstrap();
             EnsureCardDragController();
             EnsureSettlementSequenceController();
@@ -164,7 +167,9 @@ namespace BaoZuPo.UI
                 }
             }
 
-            _feedbackBootstrap.Configure(GameManager.Instance != null ? GameManager.Instance.gameConfig : null);
+            BaoZuPoMartianFeedbackIntegration.Configure(
+                _feedbackBootstrap,
+                GameManager.Instance != null ? GameManager.Instance.gameConfig : null);
         }
 
         private void EnsureSettlementSequenceController()

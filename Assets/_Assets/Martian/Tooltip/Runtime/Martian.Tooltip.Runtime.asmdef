@@ -1,0 +1,6 @@
+{
+  "name": "Martian.Tooltip.Runtime",
+  "references": [
+    "Martian.Tooltip.Abstractions"
+  ]
+}

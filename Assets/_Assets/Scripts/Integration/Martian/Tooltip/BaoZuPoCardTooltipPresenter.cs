@@ -1,13 +1,13 @@
 using BaoZuPo.Card;
 using BaoZuPo.UI.Common.Drag;
-using BaoZuPo.UI.Common.Hover;
 using Martian.Tooltip;
+using Martian.Tooltip.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace BaoZuPo.UI
+namespace BaoZuPo.Integration.Martian.Tooltip
 {
-    public class CardHoverPreviewPresenter : MonoBehaviour, IHoverPreviewPresenter
+    public sealed class BaoZuPoCardTooltipPresenter : MonoBehaviour, ITooltipPresenter
     {
         [SerializeField] private Vector2 previewSize = new Vector2(260f, 360f);
 
@@ -16,33 +16,26 @@ namespace BaoZuPo.UI
 
         public RectTransform Root => _root;
 
-        public void Show(HoverPreviewRequest request)
+        public void Show(TooltipRequest request)
         {
             Hide();
 
-            if (request == null || request.Source == null)
+            if (request == null || request.Content == null || request.Content.ContentId != BaoZuPoTooltipContentIds.CardPreview)
             {
                 return;
             }
 
-            var card = request.Source.HoverPayload as CardInstance;
-            var sourceObject = request.Source.HoverSourceObject;
-            if (card == null || sourceObject == null)
+            var sourceObject = request.Anchor != null ? request.Anchor.gameObject : null;
+            if (sourceObject == null)
             {
                 return;
             }
 
             _previewInstance = Instantiate(sourceObject, transform, false);
-            _previewInstance.name = $"{sourceObject.name}_HoverPreview";
+            _previewInstance.name = $"{sourceObject.name}_TooltipPreview";
             _root = _previewInstance.transform as RectTransform;
 
-            var cardView = _previewInstance.GetComponent<UICardView>();
-            if (cardView != null)
-            {
-                cardView.Setup(card, CardViewContext.TooltipPreview, null);
-                cardView.SetSelected(false);
-            }
-
+            ConfigureClonedCardView(request.Content.Payload as CardInstance);
             DisableInteraction(_previewInstance);
             ApplyPreviewSizing();
             _previewInstance.SetActive(true);
@@ -59,6 +52,23 @@ namespace BaoZuPo.UI
             }
 
             _root = null;
+        }
+
+        private void ConfigureClonedCardView(CardInstance card)
+        {
+            if (_previewInstance == null || card == null)
+            {
+                return;
+            }
+
+            var cardView = _previewInstance.GetComponent<UICardView>();
+            if (cardView == null)
+            {
+                return;
+            }
+
+            cardView.Setup(card, CardViewContext.TooltipPreview, null);
+            cardView.SetSelected(false);
         }
 
         private static void DisableInteraction(GameObject previewObject)
@@ -102,7 +112,7 @@ namespace BaoZuPo.UI
             }
 
             Debug.LogError(
-                "[CardHoverPreviewPresenter] Card prefab requires CanvasGroup for hover previews. " +
+                "[CardTooltipPresenter] Card prefab requires CanvasGroup for tooltip previews. " +
                 "Please configure Card.prefab instead of relying on AddComponent.",
                 previewObject);
         }
@@ -124,6 +134,45 @@ namespace BaoZuPo.UI
             {
                 layoutElement.enabled = false;
             }
+        }
+    }
+
+    internal sealed class BaoZuPoCardTooltipPresenterFactory : ITooltipPresenterFactory
+    {
+        public bool CanPresent(TooltipContent content)
+        {
+            return content != null
+                && content.ContentId == BaoZuPoTooltipContentIds.CardPreview
+                && content.Payload is CardInstance;
+        }
+
+        public ITooltipPresenter Create(Transform parent)
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            var presenterObject = new GameObject(nameof(BaoZuPoCardTooltipPresenter), typeof(RectTransform), typeof(BaoZuPoCardTooltipPresenter));
+            presenterObject.transform.SetParent(parent, false);
+            return presenterObject.GetComponent<BaoZuPoCardTooltipPresenter>();
+        }
+    }
+
+    public static class BaoZuPoCardTooltipPresenterRegistration
+    {
+        private static readonly ITooltipPresenterFactory Factory = new BaoZuPoCardTooltipPresenterFactory();
+        private static bool _installed;
+
+        public static void Install()
+        {
+            if (_installed)
+            {
+                return;
+            }
+
+            TooltipPresenterRegistry.Register(Factory);
+            _installed = true;
         }
     }
 }
