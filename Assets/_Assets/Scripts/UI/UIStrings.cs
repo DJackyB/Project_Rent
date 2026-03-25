@@ -22,6 +22,8 @@ namespace BaoZuPo.UI
                 : $"Room {roomNumber}  Tenant {tenantCount}/{tenantCapacity}  Equip {equipmentCount}/{equipmentCapacity}";
 
         public static string Cost(int cost) => LocalizationManager.UseChinese ? $"费用 {cost}" : $"Cost {cost}";
+        public static string FeedbackCost(int cost) => LocalizationManager.UseChinese ? $"费用 -{cost}" : $"Cost -{cost}";
+        public static string FeedbackLoan(int amount) => LocalizationManager.UseChinese ? $"贷款 -{amount}" : $"Loan -{amount}";
         public static string BaseRent(int amount) => LocalizationManager.UseChinese ? $"基础租金 {amount}" : $"Base Rent {amount}";
         public static string Wait(int turns) => LocalizationManager.UseChinese ? $"等待 {turns}" : $"Wait {turns}";
         public static string Lease => LocalizationManager.UseChinese ? "租期" : "Lease";
@@ -111,6 +113,7 @@ namespace BaoZuPo.UI
             yield return "加成 +100";
             yield return "倍率 x2";
             yield return "最终 +200";
+            yield return "贷款 -999";
             yield return "Turn 99";
             yield return "Money 99999";
             yield return "Spent 99999";
@@ -118,7 +121,9 @@ namespace BaoZuPo.UI
             yield return "Contracts";
             yield return "Room 9  Tenant 9/9  Equip 9/9";
             yield return "Cost 999";
+            yield return "Cost -999";
             yield return "Base Rent 999";
+            yield return "Loan -999";
             yield return "Wait 9";
             yield return "Lease 9";
             yield return "Durability 9";
