@@ -1,0 +1,6 @@
+{
+  "name": "BaoZuPo.UI.Tooltip.Runtime",
+  "references": [
+    "BaoZuPo.UI.Tooltip.Abstractions"
+  ]
+}

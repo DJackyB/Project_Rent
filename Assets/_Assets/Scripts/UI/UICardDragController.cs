@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Drag;
-using BaoZuPo.UI.Common.Hover;
+using BaoZuPo.UI.Common.Tooltip;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -108,7 +108,7 @@ namespace BaoZuPo.UI
                 CancelActiveDrag(true);
             }
 
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
 
             _activeHandler = handler;
             _activeRect = handler.RectTransform;

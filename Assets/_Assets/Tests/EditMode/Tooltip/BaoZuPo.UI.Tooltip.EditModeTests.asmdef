@@ -1,0 +1,13 @@
+{
+  "name": "BaoZuPo.UI.Tooltip.EditModeTests",
+  "references": [
+    "BaoZuPo.UI.Tooltip.Abstractions",
+    "BaoZuPo.UI.Tooltip.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

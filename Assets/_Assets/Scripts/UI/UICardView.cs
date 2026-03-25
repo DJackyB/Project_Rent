@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Drag;
-using BaoZuPo.UI.Common.Hover;
+using BaoZuPo.UI.Common.Tooltip;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,7 +11,7 @@ namespace BaoZuPo.UI
 {
     [RequireComponent(typeof(Button))]
     [RequireComponent(typeof(Image))]
-    public class UICardView : MonoBehaviour, IHoverPreviewSource
+    public class UICardView : MonoBehaviour, ITooltipContentProvider
     {
         [Header("Main Text References")]
         [SerializeField] private TextMeshProUGUI nameText;
@@ -48,19 +48,15 @@ namespace BaoZuPo.UI
         private TextMeshProUGUI typeText;
         private TextMeshProUGUI durabilityText;
         private TextMeshProUGUI waitText;
-        private HoverPreviewTrigger _hoverTrigger;
+        private TooltipTrigger _tooltipTrigger;
         private UICardDragHandler _dragHandler;
         private bool _selected;
         private bool _loggedMissingVisualReferences;
-        private bool _loggedMissingHoverTrigger;
+        private bool _loggedMissingTooltipTrigger;
         private bool _loggedMissingDragHandler;
 
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
-
-        public GameObject HoverSourceObject => gameObject;
-        public RectTransform HoverAnchor => transform as RectTransform;
-        public object HoverPayload => Card;
 
         private void Awake()
         {
@@ -74,14 +70,14 @@ namespace BaoZuPo.UI
             CacheReferences();
             ValidateVisualConfiguration();
             RefreshPresentation();
-            UpdateHoverTrigger();
+            UpdateTooltipTrigger();
             UpdateButtonState();
             UpdateDragHandler();
         }
 
         private void OnDisable()
         {
-            DisableHoverTrigger();
+            DisableTooltipTrigger();
             _dragHandler?.Unbind();
         }
 
@@ -98,9 +94,30 @@ namespace BaoZuPo.UI
             CacheReferences();
             ValidateVisualConfiguration();
             RefreshPresentation();
-            UpdateHoverTrigger();
+            UpdateTooltipTrigger();
             UpdateButtonState();
             UpdateDragHandler();
+        }
+
+        public bool TryBuildTooltipRequest(out TooltipRequest request)
+        {
+            request = null;
+            if (!isActiveAndEnabled || Card == null || CurrentContext == CardViewContext.TooltipPreview)
+            {
+                return false;
+            }
+
+            var anchor = transform as RectTransform;
+            if (anchor == null)
+            {
+                return false;
+            }
+
+            request = new TooltipRequest(
+                this,
+                anchor,
+                new TooltipContent(TooltipContentKind.Card, Card));
+            return true;
         }
 
         public void SetSelected(bool selected)
@@ -121,9 +138,9 @@ namespace BaoZuPo.UI
                 cardButton = GetComponent<Button>();
             }
 
-            if (_hoverTrigger == null)
+            if (_tooltipTrigger == null)
             {
-                _hoverTrigger = GetComponent<HoverPreviewTrigger>();
+                _tooltipTrigger = GetComponent<TooltipTrigger>();
             }
 
             if (_dragHandler == null)
@@ -318,7 +335,7 @@ namespace BaoZuPo.UI
                 nameText.gameObject.SetActive(true);
             }
 
-            bool showCost = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.HoverPreview;
+            bool showCost = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.TooltipPreview;
             if (costText != null)
             {
                 costText.gameObject.SetActive(showCost);
@@ -329,7 +346,7 @@ namespace BaoZuPo.UI
             }
 
             bool showDescription = CurrentContext == CardViewContext.Hand
-                || CurrentContext == CardViewContext.HoverPreview
+                || CurrentContext == CardViewContext.TooltipPreview
                 || CurrentContext == CardViewContext.Contract;
 
             if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.RoomEquipment)
@@ -393,7 +410,7 @@ namespace BaoZuPo.UI
             if (Card != null
                 && Card.Data != null
                 && Card.Data.cardType == CardType.Tenant
-                && (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.HoverPreview))
+                && (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.TooltipPreview))
             {
                 return UIStrings.Lease;
             }
@@ -401,40 +418,34 @@ namespace BaoZuPo.UI
             return UIStrings.Durability;
         }
 
-        private void UpdateHoverTrigger()
+        private void UpdateTooltipTrigger()
         {
-            if (CurrentContext == CardViewContext.RoomEquipment && GetComponent<UIEquipmentCardView>() != null)
+            bool allowTooltip = Card != null && CurrentContext != CardViewContext.TooltipPreview;
+            if (!allowTooltip)
             {
-                DisableHoverTrigger();
+                DisableTooltipTrigger();
                 return;
             }
 
-            bool allowHover = Card != null && CurrentContext != CardViewContext.HoverPreview;
-            if (!allowHover)
+            if (_tooltipTrigger == null)
             {
-                DisableHoverTrigger();
+                LogMissingTooltipTriggerOnce();
                 return;
             }
 
-            if (_hoverTrigger == null)
-            {
-                LogMissingHoverTriggerOnce();
-                return;
-            }
-
-            _hoverTrigger.enabled = true;
-            _hoverTrigger.Bind(this);
+            _tooltipTrigger.enabled = true;
+            _tooltipTrigger.Bind(this);
         }
 
-        private void DisableHoverTrigger()
+        private void DisableTooltipTrigger()
         {
-            if (_hoverTrigger == null)
+            if (_tooltipTrigger == null)
             {
                 return;
             }
 
-            _hoverTrigger.Unbind(this);
-            _hoverTrigger.enabled = false;
+            _tooltipTrigger.Unbind(this);
+            _tooltipTrigger.enabled = false;
         }
 
         private void UpdateButtonState()
@@ -524,16 +535,16 @@ namespace BaoZuPo.UI
             }
         }
 
-        private void LogMissingHoverTriggerOnce()
+        private void LogMissingTooltipTriggerOnce()
         {
-            if (_loggedMissingHoverTrigger)
+            if (_loggedMissingTooltipTrigger)
             {
                 return;
             }
 
-            _loggedMissingHoverTrigger = true;
+            _loggedMissingTooltipTrigger = true;
             Debug.LogError(
-                "[UICardView] Hover preview requires HoverPreviewTrigger on Card.prefab. " +
+                "[UICardView] Tooltip requires TooltipTrigger on Card.prefab. " +
                 "Please configure the prefab instead of relying on AddComponent.",
                 this);
         }

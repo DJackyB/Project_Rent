@@ -1,7 +1,7 @@
 using BaoZuPo.Core;
 using BaoZuPo.Feedback.Runtime;
 using BaoZuPo.GameFlow;
-using BaoZuPo.UI.Common.Hover;
+using BaoZuPo.UI.Common.Tooltip;
 using BaoZuPo.UI.Settlement;
 using Martian.EventBus;
 using UnityEngine;
@@ -42,7 +42,6 @@ namespace BaoZuPo.UI
 
             EnsureFeedbackBootstrap();
             EnsureCardDragController();
-            _ = HoverPreviewController.Instance;
             EnsureSettlementSequenceController();
             RefreshAll();
         }
@@ -66,7 +65,7 @@ namespace BaoZuPo.UI
             }
 
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
             phasePanel?.UpdatePhase(string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName);
             RefreshAll();
         }
@@ -80,14 +79,14 @@ namespace BaoZuPo.UI
         private void OnCardPlayed(GameEvents.CardPlayed e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
             RefreshAll();
         }
 
         private void OnTurnStarted(GameEvents.TurnStarted e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
             topBar?.RefreshTurn(e.TurnNumber);
             RefreshAll();
         }
@@ -95,7 +94,7 @@ namespace BaoZuPo.UI
         private void OnGameOver(GameEvents.GameOver e)
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
@@ -110,7 +109,7 @@ namespace BaoZuPo.UI
         public void RefreshAll()
         {
             cardDragController?.CancelCurrentDrag(true);
-            HoverPreviewController.Instance?.Hide();
+            TooltipServices.Current.HideAll();
             topBar?.Refresh();
             handPanel?.RefreshHand();
             boardPanel?.RefreshBoard();
