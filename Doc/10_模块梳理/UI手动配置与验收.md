@@ -10,7 +10,7 @@
 
 - 主功能先跑通，允许少量运行时补节点。
 - 高频、易误配、排查成本高的引用，优先改为显式配置。
-- 玩家可见中文能力后续要补齐，但当前很多固定文案仍是英文。
+- Tooltip 已改为可选模块，缺失时必须只影响展示，不影响游戏流程。
 
 ## 1. 手牌区
 
@@ -32,6 +32,7 @@
 重点确认：
 
 - 手牌 prefab 挂有 `UICardView`
+- 手牌 prefab 挂有 `TooltipTrigger`
 - 拖拽时手牌布局不会塌陷
 
 ## 2. 棋盘区
@@ -68,14 +69,15 @@
 
 当前限制：
 
-- 代码仍固定生成 `1 个租客槽 + 3 个设备槽`
-- 如果房间容量变化，必须回归 UI 是否同步
+- 槽位数由 `RoomSlot` 容量驱动，不再建议依赖写死房间布局假设。
+- 如果房间容量变化，必须回归 UI 是否同步。
 
 ## 4. 卡牌 prefab
 
 目标脚本：
 
 - [UICardView.cs](../../Assets/_Assets/Scripts/UI/UICardView.cs)
+- [TooltipTrigger.cs](../../Assets/_Assets/Scripts/UI/Common/Tooltip/TooltipTrigger.cs)
 
 建议显式配置：
 
@@ -84,6 +86,9 @@
 - `descText`
 - `cardButton`
 - `background`
+- `TooltipTrigger`
+- `CanvasGroup`
+- `LayoutElement`
 
 允许运行时补齐：
 
@@ -106,41 +111,56 @@
 
 当前现状：
 
-- 缺失时会由代码创建可运行的最小版本
-- 这能加快原型速度，但会增加后续排错成本
+- 缺失时会由代码创建可运行的最小版本。
+- 这能加快原型速度，但会增加后续排错成本。
 
-## 6. Hover 与结算跳字
+## 6. Tooltip 与结算跳字
 
 目标脚本：
 
-- [HoverPreviewController.cs](../../Assets/_Assets/Scripts/UI/Common/Hover/HoverPreviewController.cs)
+- [TooltipServices.cs](../../Assets/_Assets/Scripts/UI/Common/Tooltip/TooltipServices.cs)
+- [TooltipRuntimeService.cs](../../Assets/_Assets/Scripts/UI/Common/Tooltip/Runtime/TooltipRuntimeService.cs)
+- [CardTooltipPresenter.cs](../../Assets/_Assets/Scripts/UI/Common/Tooltip/Runtime/CardTooltipPresenter.cs)
 - [UISettlementSequenceController.cs](../../Assets/_Assets/Scripts/UI/Settlement/UISettlementSequenceController.cs)
 
 当前现状：
 
-- 两者都使用独立 Overlay
-- 缺失时能运行时补齐
-- 更适合在表现稳定后再做完整场景显式化
+- Tooltip 不再要求场景里预先配置 `HoverPreviewRoot`。
+- Tooltip Root 会在首次显示时按所属 `Canvas` 运行时创建。
+- 移除 Tooltip 运行时模块后，宿主仍能通过 `NullTooltipService` 安全降级。
+- 结算跳字仍可保留独立表现容器。
 
 ## 7. 最短验收顺序
 
 1. 开局后能看到手牌、房间、顶栏和结束行动按钮。
-2. 租客拖到房间能成功。
-3. 设备拖到房间能成功。
-4. 事件拖到 `Play Area` 能成功。
-5. 非法释放会回弹。
-6. 场上卡 Hover 正常。
-7. 结算跳字按顺序播放。
-8. 顶栏资金和回合会更新。
+2. 手牌、房间租客、房间设备、合同区 Tooltip 正常。
+3. 租客拖到房间能成功。
+4. 设备拖到房间能成功。
+5. 事件拖到 `Play Area` 能成功。
+6. 非法释放会回弹。
+7. 拖拽开始、阶段切换、回合切换、GameOver 时 Tooltip 会自动关闭。
+8. 结算跳字按顺序播放。
+9. 顶栏资金和回合会更新。
 
-## 8. 什么时候优先改成显式配置
+## 8. Tooltip 模块缺席时的降级验收
+
+建议在一次验收中临时禁用 Tooltip 运行时模块，确认以下行为仍正常：
+
+1. 项目能正常进入场景。
+2. 手牌、房间、合同区仍能刷新显示。
+3. 拖拽出牌与合法性校验不受影响。
+4. 阶段切换、回合切换、GameOver 不报错。
+5. 唯一差异是 Tooltip 不再显示。
+
+## 9. 什么时候优先改成显式配置
 
 - 某个节点反复因为场景误配而出错。
 - 某个运行时补节点开始需要美术精修。
 - 某个 UI 结构已经稳定，不再频繁改版。
 
-## 9. 什么时候可以继续保留兜底
+## 10. 什么时候可以继续保留兜底
 
 - Overlay 类临时容器。
 - 原型期还在频繁改结构的 UI 层。
 - 只要缺失也不会改变玩法结果、只影响展示搭建效率的节点。
+- Tooltip 运行时模块的可选安装与 no-op 降级。
