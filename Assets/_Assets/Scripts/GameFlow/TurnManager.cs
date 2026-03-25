@@ -4,6 +4,7 @@ using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
 using BaoZuPo.Economy;
+using BaoZuPo.Feedback.Adapters.BaoZuPo;
 using Martian.EventBus;
 using UnityEngine;
 using BaoZuPo.UI;
@@ -321,6 +322,7 @@ namespace BaoZuPo.GameFlow
                 else
                 {
                     _loanPaymentCount++;
+                    BaoZuPoFeedbackAdapter.PublishLoanPayment(requiredPayment);
                 }
             }
 
@@ -357,6 +359,7 @@ namespace BaoZuPo.GameFlow
             Deck.DeckManager.Instance.RemoveFromHand(card);
 
             EventBus.Publish(new GameEvents.CardPlayed { Card = card });
+            BaoZuPoFeedbackAdapter.PublishPlayCost(card, targetRoom ?? card.PlacedRoom, card.Data.cost);
             PublishPlaySequence(card, targetRoom ?? card.PlacedRoom, instantMoneyDelta);
             return true;
         }
@@ -368,15 +371,7 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
-            var sourceKind = card.Data.cardType switch
-            {
-                CardType.Contract => GameEvents.SettlementSourceKind.Contract,
-                CardType.Event => GameEvents.SettlementSourceKind.Event,
-                _ when targetRoom != null => GameEvents.SettlementSourceKind.Room,
-                _ => GameEvents.SettlementSourceKind.Event
-            };
-
-            PublishSettlementSequence(sourceKind, targetRoom, card, 0, moneyDelta, DefaultSettlementMultiplier);
+            BaoZuPoFeedbackAdapter.PublishInstantMoneyDelta(card, targetRoom, moneyDelta);
         }
 
         private void PublishPhaseChanged(GamePhase phase)

@@ -1,4 +1,5 @@
 using BaoZuPo.Core;
+using BaoZuPo.Feedback.Runtime;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Hover;
 using BaoZuPo.UI.Settlement;
@@ -19,6 +20,7 @@ namespace BaoZuPo.UI
 
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
 
+        private FeedbackBootstrap _feedbackBootstrap;
         private UISettlementSequenceController _settlementSequenceController;
 
         private void OnEnable()
@@ -38,6 +40,7 @@ namespace BaoZuPo.UI
                 CurrentPhase = TurnManager.Instance.CurrentPhase;
             }
 
+            EnsureFeedbackBootstrap();
             EnsureCardDragController();
             _ = HoverPreviewController.Instance;
             EnsureSettlementSequenceController();
@@ -142,6 +145,27 @@ namespace BaoZuPo.UI
             }
 
             cardDragController.BindDragLayer(null);
+        }
+
+        private void EnsureFeedbackBootstrap()
+        {
+            if (_feedbackBootstrap == null)
+            {
+                var bootstrapTransform = transform.Find("FeedbackBootstrap");
+                if (bootstrapTransform == null)
+                {
+                    bootstrapTransform = new GameObject("FeedbackBootstrap", typeof(RectTransform)).transform;
+                    bootstrapTransform.SetParent(transform, false);
+                }
+
+                _feedbackBootstrap = bootstrapTransform.GetComponent<FeedbackBootstrap>();
+                if (_feedbackBootstrap == null)
+                {
+                    _feedbackBootstrap = bootstrapTransform.gameObject.AddComponent<FeedbackBootstrap>();
+                }
+            }
+
+            _feedbackBootstrap.Configure(GameManager.Instance != null ? GameManager.Instance.gameConfig : null);
         }
 
         private void EnsureSettlementSequenceController()
