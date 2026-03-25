@@ -37,5 +37,15 @@ namespace BaoZuPo.Core
 
         [Tooltip("\u6bcf\u4e2a\u623f\u95f4\u9ed8\u8ba4\u88c5\u5907\u69fd\u4f4d\u6570")]
         public int defaultEquipmentSlots = 3;
+
+        [Header("\u8df3\u5b57\u53cd\u9988")]
+        [Tooltip("\u662f\u5426\u542f\u7528\u901a\u7528\u8df3\u5b57\u53cd\u9988\u6a21\u5757")]
+        public bool enableFeedback = true;
+
+        [Tooltip("\u662f\u5426\u542f\u7528\u8d44\u91d1\u53d8\u5316\u7684\u8df3\u5b57\u53cd\u9988")]
+        public bool enableMoneyFeedback = true;
+
+        [Tooltip("\u662f\u5426\u8f93\u51fa\u8df3\u5b57\u53cd\u9988\u6a21\u5757\u8c03\u8bd5\u65e5\u5fd7")]
+        public bool enableFeedbackLogs = true;
     }
 }
