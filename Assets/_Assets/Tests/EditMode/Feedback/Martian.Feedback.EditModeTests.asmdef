@@ -1,0 +1,14 @@
+{
+  "name": "Martian.Feedback.EditModeTests",
+  "references": [
+    "Martian.Feedback",
+    "Martian.Feedback.Runtime",
+    "Martian.Feedback.Presets"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

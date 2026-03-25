@@ -1,7 +1,7 @@
 using BaoZuPo.Core;
-using BaoZuPo.Feedback.Adapters.BaoZuPo;
-using BaoZuPo.Feedback.Runtime;
+using BaoZuPo.Integration.Martian.Feedback;
 using Martian.EventBus;
+using Martian.Feedback.Runtime;
 using UnityEngine;
 
 namespace BaoZuPo.UI.Settlement
