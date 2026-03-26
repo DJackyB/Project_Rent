@@ -148,7 +148,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9342d411c2b0748448711c5aa8255671, type: 3}
-  m_Name: 
+  m_Name: ''
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.UIGameOverPanel
   titleText: {fileID: 0}
   infoText: {fileID: 0}
@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name: ''
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0.392}
@@ -261,11 +261,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4f74522965bd7074fa435bc66738df0e, type: 3}
-  m_Name: 
+  m_Name: ''
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.UITopBar
   turnText: {fileID: 1338090631}
   moneyText: {fileID: 616991567}
   deckText: {fileID: 772026244}
+  moneyTargetAnchor: {fileID: 616991566}
 --- !u!1 &192986874
 GameObject:
   m_ObjectHideFlags: 0
@@ -313,7 +314,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name: ''
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.509434, g: 0.509434, b: 0.509434, a: 1}
@@ -611,7 +612,9 @@ MonoBehaviour:
   boardPanel: {fileID: 268654952}
   phasePanel: {fileID: 1301725120}
   gameOverPanel: {fileID: 76606867}
-  cardDragController: {fileID: 1504261779}
+  cardDragController: {fileID: 554379329}
+  _feedbackBootstrap: {fileID: 800451236}
+  _settlementSequenceController: {fileID: 1542138120}
 --- !u!114 &406429157
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -692,8 +695,11 @@ RectTransform:
   - {fileID: 268654951}
   - {fileID: 1301725119}
   - {fileID: 76606870}
-  - {fileID: 1504261780}
   - {fileID: 970503291}
+  - {fileID: 554379330}
+  - {fileID: 800451237}
+  - {fileID: 1542138121}
+  - {fileID: 445031890}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -701,6 +707,41 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1 &445031889
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 445031890}
+  m_Layer: 5
+  m_Name: DragLayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &445031890
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445031889}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 406429160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0.000015259}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -975,6 +1016,91 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 535505798}
   m_CullTransparentMesh: 1
+--- !u!1 &554379328
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 554379330}
+  - component: {fileID: 554379329}
+  m_Layer: 5
+  m_Name: CardDragController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &554379329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554379328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c57b14ddba281844a7e2c8bb184b31c, type: 3}
+  m_Name: ''
+  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.UICardDragController
+  dragLayer: {fileID: 445031890}
+  playAreaDropZone: {fileID: 0}
+  returnDuration: 0.18
+  successDuration: 0.18
+  invalidShakeDuration: 0.14
+  invalidShakeStrength: 18
+--- !u!224 &554379330
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554379328}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 406429160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &598384247
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 598384248}
+  m_Layer: 0
+  m_Name: RoomRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &598384248
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 598384247}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2034256049}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &616991565
 GameObject:
   m_ObjectHideFlags: 0
@@ -1333,6 +1459,80 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 772026242}
   m_CullTransparentMesh: 1
+--- !u!1 &800451235
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 800451237}
+  - component: {fileID: 800451236}
+  m_Layer: 5
+  m_Name: FeedbackBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &800451236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 800451235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99f155ab538c4b1386716c94b8887c88, type: 3}
+  m_Name: ''
+  m_EditorClassIdentifier: Martian.Feedback.Runtime::Martian.Feedback.Runtime.FeedbackBootstrap
+  options:
+    EnableFeedback: 1
+    EnableMoneyFeedback: 1
+    EnableLogs: 0
+    SortingOrder: 6000
+    DefaultScreenOffset: {x: 0, y: 96}
+    SequenceScreenOffset: {x: 0, y: 96}
+    PanelSize: {x: 280, y: 90}
+    PanelPadding: {x: 44, y: 20}
+    PanelColor: {r: 0, g: 0, b: 0, a: 0.56}
+    TextColor: {r: 1, g: 1, b: 1, a: 1}
+    PositiveColor: {r: 0.58, g: 1, b: 0.62, a: 1}
+    CostColor: {r: 1, g: 0.58, b: 0.42, a: 1}
+    LoanColor: {r: 1, g: 0.48, b: 0.36, a: 1}
+    FinalColor: {r: 1, g: 0.86, b: 0.32, a: 1}
+    MultiplierColor: {r: 0.82, g: 0.76, b: 1, a: 1}
+    SingleHoldSeconds: 0.6
+    NormalHoldSeconds: 0.55
+    FinalHoldSeconds: 0.75
+    SingleFadeInSeconds: 0.12
+    SingleFadeOutSeconds: 0.14
+    SingleScale: 1.05
+    FinalScale: 1.08
+    SequenceGapSeconds: 0.06
+    SequenceFadeInSeconds: 0.12
+    SequenceFadeOutSeconds: 0.14
+--- !u!224 &800451237
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 800451235}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 406429160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &970503289
 GameObject:
   m_ObjectHideFlags: 0
@@ -1343,6 +1543,7 @@ GameObject:
   m_Component:
   - component: {fileID: 970503291}
   - component: {fileID: 970503290}
+  - component: {fileID: 970503292}
   m_Layer: 5
   m_Name: SettlementPanel
   m_TagString: Untagged
@@ -1357,12 +1558,23 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 970503289}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 35dbbb0cd579ced4baa2443e350d4887, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Settlement.UISettlementSequenceController
-  sequencePlayer: {fileID: 0}
+--- !u!225 &970503292
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 970503289}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!224 &970503291
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1380,7 +1592,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 260, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1086903855
 GameObject:
@@ -1798,7 +2010,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1338090629}
   m_CullTransparentMesh: 1
---- !u!1 &1504261778
+--- !u!1 &1542138119
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1806,40 +2018,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1504261780}
-  - component: {fileID: 1504261779}
+  - component: {fileID: 1542138121}
+  - component: {fileID: 1542138120}
   m_Layer: 5
-  m_Name: CardDragLayer
+  m_Name: SettlementSequenceController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1504261779
+--- !u!114 &1542138120
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1504261778}
+  m_GameObject: {fileID: 1542138119}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c57b14ddba281844a7e2c8bb184b31c, type: 3}
+  m_Script: {fileID: 11500000, guid: 35dbbb0cd579ced4baa2443e350d4887, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.UICardDragController
-  dragLayer: {fileID: 1504261780}
-  playAreaDropZone: {fileID: 0}
-  returnDuration: 0.18
-  successDuration: 0.18
-  invalidShakeDuration: 0.14
-  invalidShakeStrength: 18
---- !u!224 &1504261780
+  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Settlement.UISettlementSequenceController
+  transferLayerRoot: {fileID: 970503291}
+  transferLayerGroup: {fileID: 970503292}
+  transferLabel: {fileID: 0}
+  transferTextColor: {r: 1, g: 0.86, b: 0.32, a: 1}
+  transferMoveSeconds: 0.25
+  transferFadeInSeconds: 0.08
+  transferFadeOutSeconds: 0.08
+  transferScale: 1.02
+--- !u!224 &1542138121
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1504261778}
+  m_GameObject: {fileID: 1542138119}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
@@ -1863,7 +2077,7 @@ GameObject:
   - component: {fileID: 1745911704}
   - component: {fileID: 1745911705}
   m_Layer: 5
-  m_Name: Cards
+  m_Name: CardContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2208,7 +2422,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 598384248}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2034256050
@@ -2224,6 +2439,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Board.BoardManager
   _rooms: []
+  _roomRoot: {fileID: 598384248}
 --- !u!114 &2034256051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2410,6 +2626,10 @@ PrefabInstance:
     - target: {fileID: 5722183524143619616, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8304121863094406636, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -5.399994
       objectReference: {fileID: 0}
     - target: {fileID: 8437351133603453310, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
       propertyPath: m_AnchoredPosition.y

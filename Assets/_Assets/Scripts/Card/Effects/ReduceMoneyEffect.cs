@@ -3,8 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 减少金钱效果
-    /// 配置格式：ReduceMoney;100（减少100金钱）
+    /// Reduce a fixed amount of money.
     /// </summary>
     public class ReduceMoneyEffect : ICardEffect
     {
@@ -18,7 +17,12 @@ namespace BaoZuPo.Card.Effects
         public void Execute(CardInstance source, GameContext context)
         {
             bool success = context.MoneyManager.ReduceMoney(_amount);
-            Debug.Log($"[效果] {source.Data.cardName} 触发 ReduceMoney({_amount}), 成功: {success}");
+            if (success)
+            {
+                context?.SettlementCapture?.RecordDelta(-_amount);
+            }
+
+            Debug.Log($"[镜像效果] {source.Data.cardName} 触发 ReduceMoney({_amount}), 成功: {success}");
         }
     }
 }

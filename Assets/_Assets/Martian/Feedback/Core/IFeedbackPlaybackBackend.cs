@@ -10,8 +10,8 @@ namespace Martian.Feedback.Runtime
 
         void Attach(Transform host);
         void Configure(FeedbackRuntimeOptions options);
-        void Publish(FeedbackRequest request);
-        void PublishSequence(FeedbackSequenceRequest request);
+        FeedbackPlaybackHandle Publish(FeedbackRequest request);
+        FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request);
         void Clear();
     }
 }

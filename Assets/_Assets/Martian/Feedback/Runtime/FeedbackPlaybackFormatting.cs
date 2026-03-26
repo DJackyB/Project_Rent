@@ -16,6 +16,7 @@ namespace Martian.Feedback.Runtime
             var playback = new FeedbackPlaybackRequest
             {
                 DebugLabel = request.DebugLabel,
+                LaneKey = request.LaneKey,
                 TargetKey = request.TargetKey,
                 TargetKind = request.TargetKind,
                 Anchor = request.Anchor,
@@ -49,6 +50,7 @@ namespace Martian.Feedback.Runtime
             var playback = new FeedbackPlaybackRequest
             {
                 DebugLabel = request.DebugLabel,
+                LaneKey = request.LaneKey,
                 TargetKey = request.TargetKey,
                 TargetKind = request.TargetKind,
                 Anchor = request.Anchor,

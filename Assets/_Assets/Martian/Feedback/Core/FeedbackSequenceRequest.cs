@@ -9,6 +9,7 @@ namespace Martian.Feedback
     {
         public string SequenceId;
         public string DebugLabel;
+        public string LaneKey;
         public string TargetKey;
         public FeedbackTargetKind TargetKind = FeedbackTargetKind.Global;
         public FeedbackChannel Channel = FeedbackChannel.Sequence;

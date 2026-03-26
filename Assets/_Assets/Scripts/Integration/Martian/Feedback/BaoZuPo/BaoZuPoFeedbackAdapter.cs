@@ -10,19 +10,24 @@ namespace BaoZuPo.Integration.Martian.Feedback
 {
     public static class BaoZuPoFeedbackAdapter
     {
-        public static void PublishSettlementSequence(GameEvents.SettlementSequenceQueued payload)
+        public static FeedbackPlaybackHandle PublishSettlementSequence(GameEvents.SettlementSequenceQueued payload, string laneKey = null)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || payload.Steps == null || payload.Steps.Length == 0)
             {
-                return;
+                return null;
             }
 
             ResolveSettlementTarget(payload.SourceKind, payload.Room, payload.Card, out var targetKey, out var targetKind, out var anchor, out var useCenterFallback, out var screenOffset);
 
             var request = new FeedbackSequenceRequest
             {
-                SequenceId = $"settlement:{payload.SourceKind}:{targetKey}",
+                SequenceId = $"settlement:{payload.BatchId}:{payload.SourceKind}:{payload.SourceIndex}:{targetKey}",
                 DebugLabel = payload.Title,
+                LaneKey = !string.IsNullOrWhiteSpace(laneKey)
+                    ? laneKey
+                    : !string.IsNullOrWhiteSpace(payload.LaneKey)
+                        ? payload.LaneKey
+                        : "settlement-global",
                 TargetKey = targetKey,
                 TargetKind = targetKind,
                 Anchor = anchor,
@@ -43,7 +48,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 });
             }
 
-            FeedbackServiceLocator.Current.PublishSequence(request);
+            return FeedbackServiceLocator.Current.PublishSequence(request);
         }
 
         public static void PublishPlayCost(CardInstance card, RoomSlot targetRoom, int cost)

@@ -14,6 +14,15 @@ namespace BaoZuPo.UI
         public TextMeshProUGUI turnText;
         public TextMeshProUGUI moneyText;
         public TextMeshProUGUI deckText;
+        [SerializeField] private RectTransform moneyTargetAnchor;
+
+        private bool _deferredMoneyDisplay;
+        private int _displayedMoney;
+        private int _authoritativeMoney;
+
+        public bool IsDeferredMoneyDisplayActive => _deferredMoneyDisplay;
+
+        public RectTransform MoneyTargetAnchor => moneyTargetAnchor != null ? moneyTargetAnchor : moneyText != null ? moneyText.rectTransform : null;
 
         private void OnEnable()
         {
@@ -52,10 +61,54 @@ namespace BaoZuPo.UI
 
         public void RefreshMoney(int money)
         {
+            _authoritativeMoney = money;
+
+            if (_deferredMoneyDisplay)
+            {
+                return;
+            }
+
+            _displayedMoney = money;
+            UpdateMoneyLabel();
+        }
+
+        public void BeginDeferredMoneyDisplay(int startValue)
+        {
+            EnsureHudLayout();
+            _deferredMoneyDisplay = true;
+            _authoritativeMoney = startValue;
+            _displayedMoney = startValue;
+            UpdateMoneyLabel();
+        }
+
+        public void CommitDisplayedDelta(int delta)
+        {
+            EnsureHudLayout();
+
+            if (_deferredMoneyDisplay)
+            {
+                _displayedMoney += delta;
+                UpdateMoneyLabel();
+                PlayMoneyPulse();
+                return;
+            }
+
+            RefreshMoney(MoneyManager.Instance.CurrentMoney);
+            PlayMoneyPulse();
+        }
+
+        public void EndDeferredMoneyDisplay()
+        {
+            _deferredMoneyDisplay = false;
+            RefreshMoney(MoneyManager.Instance.CurrentMoney);
+        }
+
+        private void UpdateMoneyLabel()
+        {
             UIFontCatalog.ApplyToText(moneyText);
             if (moneyText != null)
             {
-                moneyText.text = UIStrings.Money(money);
+                moneyText.text = UIStrings.Money(_displayedMoney);
             }
         }
 
@@ -70,9 +123,14 @@ namespace BaoZuPo.UI
 
         private void OnMoneyChanged(GameEvents.MoneyChanged e)
         {
-            RefreshMoney(e.NewValue);
+            _authoritativeMoney = e.NewValue;
+            if (!_deferredMoneyDisplay)
+            {
+                RefreshMoney(e.NewValue);
+                PlayMoneyPulse();
+            }
+
             RefreshSummary();
-            PlayMoneyPulse();
         }
 
         private void OnTurnStarted(GameEvents.TurnStarted e)
@@ -113,6 +171,11 @@ namespace BaoZuPo.UI
             ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
             ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
             ApplyMoneyLayout(moneyText.rectTransform);
+
+            if (moneyTargetAnchor == null)
+            {
+                moneyTargetAnchor = moneyText.rectTransform;
+            }
         }
 
         private static void ApplyTopLayout(RectTransform rect, Vector2 anchoredPosition, TextAlignmentOptions alignment)

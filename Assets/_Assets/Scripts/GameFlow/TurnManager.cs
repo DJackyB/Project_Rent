@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
@@ -13,17 +14,33 @@ namespace BaoZuPo.GameFlow
 {
     public class TurnManager : Singleton<TurnManager>
     {
-        private const float DefaultSettlementMultiplier = 1f;
+        private const string DefaultSettlementLaneKey = "settlement-global";
 
         [Header("Debug")]
         [SerializeField] private int _currentTurn;
         [SerializeField] private bool _isGameOver;
         [SerializeField] private int _loanPaymentCount;
 
+        private string _activeSettlementBatchId;
+        private int _pendingSettlementPlaybackCount;
+        private bool _settlementTurnEndedPublished;
+
         public int CurrentTurn => _currentTurn;
         public bool IsGameOver => _isGameOver;
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
         public bool ActionPhaseEnded { get; set; }
+        public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
+        public string ActiveSettlementBatchId => _activeSettlementBatchId;
+
+        private void OnEnable()
+        {
+            EventBus.Subscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Unsubscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
+        }
 
         public void ExecutePreparePhase()
         {
@@ -176,8 +193,13 @@ namespace BaoZuPo.GameFlow
             PublishPhaseChanged(GamePhase.Settle);
 
             var context = GameManager.Instance.GameContext;
+            context.SettlementCapture.Reset();
+
             var toRemove = new List<CardInstance>();
             var toDestroy = new List<CardInstance>();
+            var queuedPayloads = new List<GameEvents.SettlementSequenceQueued>();
+            string batchId = Guid.NewGuid().ToString("N");
+            int sourceIndex = 0;
 
             var rooms = BoardManager.Instance.GetAllRooms();
             foreach (var room in rooms)
@@ -189,14 +211,17 @@ namespace BaoZuPo.GameFlow
 
                 var roomCards = room.GetAllCards();
                 var tenant = room.GetTenantAt(0);
+                int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
+
+                context.SettlementCapture.Begin();
 
                 int baseRent = tenant != null ? Mathf.Max(0, tenant.Data.baseRent) : 0;
                 if (baseRent > 0)
                 {
                     MoneyManager.Instance.AddMoney(baseRent);
+                    context.SettlementCapture.RecordBase(baseRent);
                 }
 
-                int moneyBeforeEffects = MoneyManager.Instance.CurrentMoney;
                 foreach (var card in roomCards)
                 {
                     if (card == null || card.IsDestroyed)
@@ -207,8 +232,15 @@ namespace BaoZuPo.GameFlow
                     card.SettleEffect?.Execute(card, context);
                 }
 
-                int additiveAmount = MoneyManager.Instance.CurrentMoney - moneyBeforeEffects;
-                PublishSettlementSequence(GameEvents.SettlementSourceKind.Room, room, tenant, baseRent, additiveAmount, DefaultSettlementMultiplier);
+                QueueSettlementPayload(
+                    queuedPayloads,
+                    batchId,
+                    ref sourceIndex,
+                    GameEvents.SettlementSourceKind.Room,
+                    room,
+                    tenant,
+                    context.SettlementCapture,
+                    sourceStartMoney);
 
                 foreach (var card in roomCards)
                 {
@@ -233,10 +265,20 @@ namespace BaoZuPo.GameFlow
                     continue;
                 }
 
-                int moneyBeforeContract = MoneyManager.Instance.CurrentMoney;
+                int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
+                context.SettlementCapture.Begin();
+
                 contract.SettleEffect?.Execute(contract, context);
-                int contractDelta = MoneyManager.Instance.CurrentMoney - moneyBeforeContract;
-                PublishSettlementSequence(GameEvents.SettlementSourceKind.Contract, null, contract, 0, contractDelta, DefaultSettlementMultiplier);
+
+                QueueSettlementPayload(
+                    queuedPayloads,
+                    batchId,
+                    ref sourceIndex,
+                    GameEvents.SettlementSourceKind.Contract,
+                    null,
+                    contract,
+                    context.SettlementCapture,
+                    sourceStartMoney);
 
                 if (contract.Data.durability <= 0)
                 {
@@ -332,13 +374,36 @@ namespace BaoZuPo.GameFlow
                 AwardOneCardFromThreeOptions(boosted);
             }
 
-            EventBus.Publish(new GameEvents.TurnEnded { TurnNumber = _currentTurn });
+            if (queuedPayloads.Count == 0)
+            {
+                CompleteSettlementPhase();
+                return;
+            }
+
+            BeginSettlementPlayback(batchId, queuedPayloads.Count);
+            for (int i = 0; i < queuedPayloads.Count; i++)
+            {
+                var payload = queuedPayloads[i];
+                payload.BatchId = batchId;
+                payload.SourceIndex = i;
+                payload.SourceCount = queuedPayloads.Count;
+                payload.LaneKey = DefaultSettlementLaneKey;
+                EventBus.Publish(payload);
+            }
+        }
+
+        public void NotifySettlementPlaybackCompleted(string batchId)
+        {
+            OnSettlementPlaybackCompleted(new GameEvents.SettlementPlaybackCompleted
+            {
+                BatchId = batchId
+            });
         }
 
         private bool ResolveCardAfterPlay(
             CardInstance card,
             GameContext context,
-            System.Action<CardInstance> afterInstant,
+            Action<CardInstance> afterInstant,
             RoomSlot targetRoom)
         {
             if (!MoneyManager.Instance.ReduceMoney(card.Data.cost))
@@ -384,70 +449,81 @@ namespace BaoZuPo.GameFlow
             });
         }
 
-        private void PublishSettlementSequence(
+        private void QueueSettlementPayload(
+            List<GameEvents.SettlementSequenceQueued> queuedPayloads,
+            string batchId,
+            ref int sourceIndex,
             GameEvents.SettlementSourceKind sourceKind,
             RoomSlot room,
             CardInstance card,
-            int baseAmount,
-            int additiveAmount,
-            float multiplier)
+            SettlementCaptureContext capture,
+            int sourceStartMoney)
         {
-            int preMultiplier = baseAmount + additiveAmount;
-            int finalAmount = Mathf.RoundToInt(preMultiplier * multiplier);
-            bool hasMultiplier = !Mathf.Approximately(multiplier, 1f);
-
-            if (baseAmount == 0 && additiveAmount == 0 && !hasMultiplier && finalAmount == 0)
+            if (capture == null)
             {
                 return;
             }
 
-            var steps = new List<GameEvents.SettlementStep>(4);
-            if (baseAmount != 0)
+            int finalAmount = MoneyManager.Instance.CurrentMoney - sourceStartMoney;
+            int capturedStepCount = capture.Steps.Count;
+            var steps = capture.Complete(finalAmount);
+
+            if (capturedStepCount == 0 && finalAmount == 0)
             {
-                steps.Add(new GameEvents.SettlementStep
-                {
-                    Label = UIStrings.SettlementBase,
-                    Amount = baseAmount,
-                    IsMultiplier = false
-                });
+                return;
             }
 
-            if (additiveAmount != 0)
+            queuedPayloads.Add(new GameEvents.SettlementSequenceQueued
             {
-                steps.Add(new GameEvents.SettlementStep
-                {
-                    Label = UIStrings.SettlementBonus,
-                    Amount = additiveAmount,
-                    IsMultiplier = false
-                });
-            }
-
-            if (hasMultiplier)
-            {
-                steps.Add(new GameEvents.SettlementStep
-                {
-                    Label = UIStrings.SettlementMultiplier,
-                    Amount = Mathf.RoundToInt(multiplier * 100f),
-                    IsMultiplier = true
-                });
-            }
-
-            steps.Add(new GameEvents.SettlementStep
-            {
-                Label = UIStrings.SettlementFinal,
-                Amount = finalAmount,
-                IsMultiplier = false
-            });
-
-            EventBus.Publish(new GameEvents.SettlementSequenceQueued
-            {
+                BatchId = batchId,
+                SourceIndex = sourceIndex++,
+                SourceCount = 0,
+                LaneKey = DefaultSettlementLaneKey,
                 SourceKind = sourceKind,
                 Room = room,
                 Card = card,
                 Title = ResolveSettlementTitle(sourceKind, room, card),
-                Steps = steps.ToArray(),
+                Steps = steps,
                 FinalAmount = finalAmount
             });
+        }
+
+        private void BeginSettlementPlayback(string batchId, int pendingCount)
+        {
+            _activeSettlementBatchId = batchId;
+            _pendingSettlementPlaybackCount = Mathf.Max(0, pendingCount);
+            _settlementTurnEndedPublished = false;
+        }
+
+        private void OnSettlementPlaybackCompleted(GameEvents.SettlementPlaybackCompleted e)
+        {
+            if (string.IsNullOrWhiteSpace(e.BatchId) || !string.Equals(e.BatchId, _activeSettlementBatchId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (_pendingSettlementPlaybackCount > 0)
+            {
+                _pendingSettlementPlaybackCount--;
+            }
+
+            if (_pendingSettlementPlaybackCount <= 0)
+            {
+                CompleteSettlementPhase();
+            }
+        }
+
+        private void CompleteSettlementPhase()
+        {
+            if (_settlementTurnEndedPublished)
+            {
+                return;
+            }
+
+            _settlementTurnEndedPublished = true;
+            _pendingSettlementPlaybackCount = 0;
+            _activeSettlementBatchId = null;
+            EventBus.Publish(new GameEvents.TurnEnded { TurnNumber = _currentTurn });
         }
 
         private static string ResolveSettlementTitle(GameEvents.SettlementSourceKind sourceKind, RoomSlot room, CardInstance card)
@@ -485,10 +561,10 @@ namespace BaoZuPo.GameFlow
             var options = new List<CardData>();
             for (int i = 0; i < 3; i++)
             {
-                options.Add(source[Random.Range(0, source.Count)]);
+                options.Add(source[UnityEngine.Random.Range(0, source.Count)]);
             }
 
-            var chosen = options[Random.Range(0, options.Count)];
+            var chosen = options[UnityEngine.Random.Range(0, options.Count)];
             Deck.DeckManager.Instance.AddCardToHand(chosen);
         }
     }

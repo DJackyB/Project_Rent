@@ -1,39 +1,115 @@
+using System;
+using System.Collections.Generic;
+using BaoZuPo.Board;
+using BaoZuPo.Core;
+using UnityEngine;
+
 namespace BaoZuPo.Card
 {
     /// <summary>
-    /// 效果执行时的附加上下文。
-    /// 一次出牌或一次效果链共用同一个上下文对象。
+    /// Additional execution context used while card effects run.
     /// </summary>
     public class EffectExecutionContext
     {
-        /// <summary>当前选择的房间目标，可为空</summary>
-        public Board.RoomSlot SelectedRoom { get; set; }
+        /// <summary>Currently selected room target, or null.</summary>
+        public RoomSlot SelectedRoom { get; set; }
+
+        /// <summary>Optional settlement capture hook used during settle phase.</summary>
+        public SettlementCaptureContext SettlementCapture { get; set; }
     }
 
     /// <summary>
-    /// 卡牌效果接口。
-    /// 所有卡牌效果（如 AddMoney、ReduceMoney）都需要实现此接口。
+    /// Card effect interface.
     /// </summary>
     public interface ICardEffect
     {
-        /// <summary>
-        /// 执行效果。
-        /// </summary>
-        /// <param name="source">触发该效果的卡牌实例</param>
-        /// <param name="context">游戏上下文，提供对各系统的访问能力</param>
         void Execute(CardInstance source, GameContext context);
     }
 
     /// <summary>
-    /// 游戏上下文，供效果执行时使用。
-    /// 用来避免效果直接依赖各类 Manager 单例，便于测试和扩展。
+    /// Shared game context used while effects execute.
     /// </summary>
     public class GameContext
     {
         public Economy.MoneyManager MoneyManager { get; set; }
         public Board.BoardManager BoardManager { get; set; }
-        public EffectExecutionContext EffectContext { get; set; } = new();
+        public SettlementCaptureContext SettlementCapture { get; }
+        public EffectExecutionContext EffectContext { get; }
 
-        // 后续如有需要，可以继续扩展更多系统引用
+        public GameContext()
+        {
+            SettlementCapture = new SettlementCaptureContext();
+            EffectContext = new EffectExecutionContext
+            {
+                SettlementCapture = SettlementCapture
+            };
+        }
+    }
+
+    /// <summary>
+    /// Captures ordered money steps while still letting the real money state update immediately.
+    /// </summary>
+    public sealed class SettlementCaptureContext
+    {
+        private readonly List<GameEvents.SettlementStep> _steps = new();
+
+        public bool IsCapturing { get; private set; }
+        public IReadOnlyList<GameEvents.SettlementStep> Steps => _steps;
+
+        public void Begin()
+        {
+            _steps.Clear();
+            IsCapturing = true;
+        }
+
+        public void RecordBase(int amount, string label = null)
+        {
+            RecordStep(GameEvents.SettlementStepKind.Base, amount, false, label);
+        }
+
+        public void RecordDelta(int amount, string label = null)
+        {
+            RecordStep(GameEvents.SettlementStepKind.Delta, amount, false, label);
+        }
+
+        public void RecordMultiplier(float multiplier, string label = null)
+        {
+            int amount = Mathf.RoundToInt(multiplier * 100f);
+            RecordStep(GameEvents.SettlementStepKind.Multiplier, amount, true, label);
+        }
+
+        public GameEvents.SettlementStep[] Complete(int finalAmount, string label = null)
+        {
+            RecordStep(GameEvents.SettlementStepKind.Final, finalAmount, false, label);
+            IsCapturing = false;
+            return _steps.ToArray();
+        }
+
+        public void Reset()
+        {
+            _steps.Clear();
+            IsCapturing = false;
+        }
+
+        private void RecordStep(GameEvents.SettlementStepKind kind, int amount, bool isMultiplier, string label)
+        {
+            if (!IsCapturing)
+            {
+                return;
+            }
+
+            if (kind != GameEvents.SettlementStepKind.Final && amount == 0)
+            {
+                return;
+            }
+
+            _steps.Add(new GameEvents.SettlementStep
+            {
+                Kind = kind,
+                Label = string.IsNullOrWhiteSpace(label) ? null : label,
+                Amount = amount,
+                IsMultiplier = isMultiplier
+            });
+        }
     }
 }

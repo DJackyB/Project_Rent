@@ -7,6 +7,7 @@ namespace Martian.Feedback
     public class FeedbackRequest
     {
         public string DebugLabel;
+        public string LaneKey;
         public string TargetKey;
         public FeedbackTargetKind TargetKind = FeedbackTargetKind.Global;
         public FeedbackChannel Channel = FeedbackChannel.FloatingText;

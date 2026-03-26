@@ -3,8 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 按空房间数量加钱
-    /// 格式：AddMoneyByEmptyRooms;每个空房金额
+    /// Add money based on current empty room count.
     /// </summary>
     public class AddMoneyByEmptyRoomsEffect : ICardEffect
     {
@@ -21,16 +20,19 @@ namespace BaoZuPo.Card.Effects
             foreach (var room in context.BoardManager.GetAllRooms())
             {
                 if (room.TenantCount <= 0)
+                {
                     emptyCount++;
+                }
             }
 
             int total = emptyCount * _amountPerRoom;
             if (total != 0)
             {
                 context.MoneyManager.AddMoney(total);
+                context?.SettlementCapture?.RecordDelta(total);
             }
 
-            Debug.Log($"[效果] {source.Data.cardName}: 空房 {emptyCount} 间，资金变化 {total}");
+            Debug.Log($"[镜像效果] {source.Data.cardName}: 空房 {emptyCount} 间，资金变化 {total}");
         }
     }
 }

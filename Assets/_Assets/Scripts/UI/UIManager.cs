@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using BaoZuPo.Core;
+using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Integration.Martian.Tooltip;
@@ -22,13 +24,12 @@ namespace BaoZuPo.UI
 
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
 
-        private FeedbackBootstrap _feedbackBootstrap;
-        private UISettlementSequenceController _settlementSequenceController;
+        [SerializeField] private FeedbackBootstrap _feedbackBootstrap;
+        [SerializeField] private UISettlementSequenceController _settlementSequenceController;
 
         private void OnEnable()
         {
             EventBus.Subscribe<GameEvents.PhaseChanged>(OnPhaseChanged);
-            EventBus.Subscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
             EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
@@ -43,16 +44,14 @@ namespace BaoZuPo.UI
             }
 
             BaoZuPoMartianTooltipIntegration.Install();
-            EnsureFeedbackBootstrap();
-            EnsureCardDragController();
-            EnsureSettlementSequenceController();
+            ConfigureFeedbackBootstrap();
+            InitializeCardDragController();
             RefreshAll();
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<GameEvents.PhaseChanged>(OnPhaseChanged);
-            EventBus.Unsubscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
@@ -69,14 +68,13 @@ namespace BaoZuPo.UI
 
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
+            if (e.Phase == GamePhase.Settle)
+            {
+                BeginDeferredMoneyDisplay(MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
+            }
+
             phasePanel?.UpdatePhase(string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName);
             RefreshAll();
-        }
-
-        private void OnMoneyChanged(GameEvents.MoneyChanged e)
-        {
-            topBar?.RefreshMoney(e.NewValue);
-            topBar?.RefreshSummary();
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed e)
@@ -118,79 +116,65 @@ namespace BaoZuPo.UI
             boardPanel?.RefreshBoard();
         }
 
-        private void EnsureCardDragController()
+        public void BeginDeferredMoneyDisplay(int startValue)
         {
-            if (cardDragController != null)
-            {
-                return;
-            }
+            topBar?.BeginDeferredMoneyDisplay(startValue);
+        }
 
-            var controllerTransform = transform.Find("CardDragController");
-            if (controllerTransform == null)
-            {
-                var controllerObject = new GameObject("CardDragController", typeof(RectTransform));
-                controllerObject.transform.SetParent(transform, false);
+        public void CommitDisplayedDelta(int delta)
+        {
+            topBar?.CommitDisplayedDelta(delta);
+        }
 
-                var rect = controllerObject.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero;
-                rect.anchorMax = Vector2.one;
-                rect.offsetMin = Vector2.zero;
-                rect.offsetMax = Vector2.zero;
+        public void EndDeferredMoneyDisplay()
+        {
+            topBar?.EndDeferredMoneyDisplay();
+        }
 
-                controllerTransform = controllerObject.transform;
-            }
+        public RectTransform ResolveMoneyTargetAnchor()
+        {
+            return topBar != null ? topBar.MoneyTargetAnchor : null;
+        }
 
-            cardDragController = controllerTransform.GetComponent<UICardDragController>();
+        public bool IsDeferredMoneyDisplayActive => topBar != null && topBar.IsDeferredMoneyDisplayActive;
+
+        public void SubmitSettlementPayload(GameEvents.SettlementSequenceQueued payload)
+        {
+            _settlementSequenceController?.Queue(payload);
+        }
+
+        public void SubmitSettlementPayloads(IReadOnlyList<GameEvents.SettlementSequenceQueued> payloads)
+        {
+            _settlementSequenceController?.QueueBatch(payloads);
+        }
+
+        public void SubmitSettlementBatch(UISettlementPlaybackBatch batch)
+        {
+            _settlementSequenceController?.Queue(batch);
+        }
+
+        private void InitializeCardDragController()
+        {
             if (cardDragController == null)
             {
-                cardDragController = controllerTransform.gameObject.AddComponent<UICardDragController>();
+                Debug.LogError("[UIManager] cardDragController 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 UICardDragController 组件。");
+                return;
             }
 
             cardDragController.BindDragLayer(null);
         }
 
-        private void EnsureFeedbackBootstrap()
+        private void ConfigureFeedbackBootstrap()
         {
             if (_feedbackBootstrap == null)
             {
-                var bootstrapTransform = transform.Find("FeedbackBootstrap");
-                if (bootstrapTransform == null)
-                {
-                    bootstrapTransform = new GameObject("FeedbackBootstrap", typeof(RectTransform)).transform;
-                    bootstrapTransform.SetParent(transform, false);
-                }
-
-                _feedbackBootstrap = bootstrapTransform.GetComponent<FeedbackBootstrap>();
-                if (_feedbackBootstrap == null)
-                {
-                    _feedbackBootstrap = bootstrapTransform.gameObject.AddComponent<FeedbackBootstrap>();
-                }
+                Debug.LogError("[UIManager] _feedbackBootstrap 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 FeedbackBootstrap 组件。");
+                return;
             }
 
             BaoZuPoMartianFeedbackIntegration.Configure(
                 _feedbackBootstrap,
                 GameManager.Instance != null ? GameManager.Instance.gameConfig : null);
-        }
-
-        private void EnsureSettlementSequenceController()
-        {
-            if (_settlementSequenceController != null)
-            {
-                return;
-            }
-
-            var controllerTransform = transform.Find("SettlementSequenceController");
-            if (controllerTransform == null)
-            {
-                controllerTransform = new GameObject("SettlementSequenceController", typeof(RectTransform)).transform;
-                controllerTransform.SetParent(transform, false);
-            }
-
-            _settlementSequenceController = controllerTransform.GetComponent<UISettlementSequenceController>();
-            if (_settlementSequenceController == null)
-            {
-                _settlementSequenceController = controllerTransform.gameObject.AddComponent<UISettlementSequenceController>();
-            }
         }
     }
 }
