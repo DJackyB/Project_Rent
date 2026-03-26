@@ -3,7 +3,8 @@
   "references": [
     "Martian.Tooltip.Abstractions",
     "Martian.Tooltip.Runtime",
-    "Martian.Tooltip.Presets"
+    "Martian.Tooltip.Presets",
+    "Unity.TextMeshPro"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

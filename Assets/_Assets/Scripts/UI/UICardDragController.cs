@@ -237,16 +237,9 @@ namespace BaoZuPo.UI
                         dragLayer.SetAsLastSibling();
                     }
                 }
-                else if (_rootCanvas != null)
+                else
                 {
-                    var dragLayerObject = new GameObject("DragLayer", typeof(RectTransform));
-                    dragLayerObject.transform.SetParent(_rootCanvas.transform, false);
-                    dragLayer = dragLayerObject.transform as RectTransform;
-                    dragLayer.anchorMin = Vector2.zero;
-                    dragLayer.anchorMax = Vector2.one;
-                    dragLayer.offsetMin = Vector2.zero;
-                    dragLayer.offsetMax = Vector2.zero;
-                    dragLayer.SetAsLastSibling();
+                    Debug.LogError("[UICardDragController] dragLayer 未在 Inspector 中赋值，也未在场景中找到 DragLayer。请在 Canvas 下创建 DragLayer (RectTransform, 全屏锚点) 并拖入。");
                 }
             }
 

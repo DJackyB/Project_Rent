@@ -7,6 +7,7 @@ namespace Martian.Feedback
     public class FeedbackRuntimeOptions
     {
         public bool EnableFeedback = true;
+        public bool EnableMoneyFeedback = true;
         public bool EnableLogs = false;
         public int SortingOrder = 6000;
         public Vector2 DefaultScreenOffset = new Vector2(0f, 96f);

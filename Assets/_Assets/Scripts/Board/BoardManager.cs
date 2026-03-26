@@ -14,7 +14,8 @@ namespace BaoZuPo.Board
         [SerializeField] private List<RoomSlot> _rooms = new();
         [SerializeField] private List<CardInstance> _contracts = new();
 
-        private Transform _roomRoot;
+        [Header("Scene References")]
+        [SerializeField] private Transform _roomRoot;
 
         /// <summary>Current room count.</summary>
         public int RoomCount => _rooms.Count;
@@ -29,8 +30,8 @@ namespace BaoZuPo.Board
         {
             if (_roomRoot == null)
             {
-                var go = new GameObject("Rooms");
-                _roomRoot = go.transform;
+                Debug.LogError("[BoardManager] _roomRoot 未在 Inspector 中赋值。请在场景中创建空 GameObject 'Rooms' 并拖入。");
+                return;
             }
 
             ClearAllRooms();

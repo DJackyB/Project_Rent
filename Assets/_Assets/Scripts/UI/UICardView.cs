@@ -58,6 +58,7 @@ namespace BaoZuPo.UI
 
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
+        public RectTransform HoverAnchor => transform as RectTransform;
 
         private void Awake()
         {

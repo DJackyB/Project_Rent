@@ -72,7 +72,7 @@ namespace Martian.Tooltip.Presets
             canvasGroup.interactable = false;
 
             var image = _panel.GetComponent<Image>();
-            image.sprite = UIRuntimeSpriteUtility.GetWhiteSprite();
+            image.sprite = TooltipSpriteUtility.WhiteSprite;
             image.type = Image.Type.Sliced;
             image.color = PanelColor;
             image.raycastTarget = false;
@@ -148,12 +148,32 @@ namespace Martian.Tooltip.Presets
             label.color = color;
             label.alignment = TextAlignmentOptions.Left;
             label.textWrappingMode = TextWrappingModes.Normal;
-            label.enableWordWrapping = true;
             label.raycastTarget = false;
             label.font = TMP_Settings.defaultFontAsset;
 
             var layoutElement = textObject.AddComponent<LayoutElement>();
             layoutElement.preferredHeight = fontSize + 4f;
+        }
+    }
+}
+
+internal static class TooltipSpriteUtility
+{
+    private static Sprite _whiteSprite;
+
+    public static Sprite WhiteSprite
+    {
+        get
+        {
+            if (_whiteSprite != null)
+            {
+                return _whiteSprite;
+            }
+
+            var texture = Texture2D.whiteTexture;
+            _whiteSprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+            _whiteSprite.name = "TooltipWhiteSprite";
+            return _whiteSprite;
         }
     }
 }

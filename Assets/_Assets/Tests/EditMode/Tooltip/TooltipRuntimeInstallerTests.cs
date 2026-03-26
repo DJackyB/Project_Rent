@@ -3,6 +3,7 @@ using Martian.Tooltip.Presets;
 using Martian.Tooltip.Runtime;
 using NUnit.Framework;
 using System;
+using TMPro;
 using UnityEngine;
 
 namespace Martian.Tests.Tooltip
@@ -15,10 +16,10 @@ namespace Martian.Tests.Tooltip
             TooltipPresenterRegistry.Clear();
             TooltipServices.SetCurrent(null);
 
-            var services = Object.FindObjectsByType<TooltipRuntimeService>(FindObjectsSortMode.None);
+            var services = UnityEngine.Object.FindObjectsByType<TooltipRuntimeService>(FindObjectsSortMode.None);
             for (int i = 0; i < services.Length; i++)
             {
-                Object.DestroyImmediate(services[i].gameObject);
+                UnityEngine.Object.DestroyImmediate(services[i].gameObject);
             }
         }
 
@@ -28,7 +29,7 @@ namespace Martian.Tests.Tooltip
             TooltipRuntimeInstaller.Install();
 
             Assert.IsTrue(TooltipServices.Current.IsAvailable);
-            Assert.NotNull(Object.FindFirstObjectByType<TooltipRuntimeService>());
+            Assert.NotNull(UnityEngine.Object.FindFirstObjectByType<TooltipRuntimeService>());
         }
 
         [Test]
@@ -70,7 +71,7 @@ namespace Martian.Tests.Tooltip
             }
             finally
             {
-                Object.DestroyImmediate(parent);
+                UnityEngine.Object.DestroyImmediate(parent);
             }
         }
 
@@ -97,8 +98,8 @@ namespace Martian.Tests.Tooltip
             }
             finally
             {
-                Object.DestroyImmediate(anchorObject);
-                Object.DestroyImmediate(canvasObject);
+                UnityEngine.Object.DestroyImmediate(anchorObject);
+                UnityEngine.Object.DestroyImmediate(canvasObject);
             }
         }
     }

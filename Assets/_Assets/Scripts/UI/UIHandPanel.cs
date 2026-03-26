@@ -46,19 +46,11 @@ namespace BaoZuPo.UI
 
         private Transform EnsureContainer()
         {
-            if (handContainer != null)
+            if (handContainer == null)
             {
-                return handContainer;
+                Debug.LogError("[UIHandPanel] handContainer 未在 Inspector 中赋值。请在 UIHandPanel 下创建子对象 HandContainer (RectTransform) 并拖入。");
             }
 
-            var containerTransform = transform.Find("HandContainer");
-            if (containerTransform == null)
-            {
-                containerTransform = new GameObject("HandContainer", typeof(RectTransform)).transform;
-                containerTransform.SetParent(transform, false);
-            }
-
-            handContainer = containerTransform;
             return handContainer;
         }
 

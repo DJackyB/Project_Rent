@@ -1,6 +1,9 @@
 {
   "name": "Martian.Feedback.Runtime",
   "references": [
-    "Martian.Feedback"
+    "Martian.Feedback",
+    "Unity.TextMeshPro",
+    "Unity.UI",
+    "DOTween.Modules"
   ]
 }

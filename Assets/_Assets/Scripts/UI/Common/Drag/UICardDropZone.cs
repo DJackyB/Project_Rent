@@ -167,10 +167,7 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (_raycastGraphic == null)
             {
-                var image = gameObject.AddComponent<Image>();
-                image.color = new Color(1f, 1f, 1f, 0.001f);
-                image.raycastTarget = true;
-                _raycastGraphic = image;
+                Debug.LogError("[UICardDropZone] 缺少 Graphic 组件用于 raycast。请在 Prefab 上预配 Image 组件。", gameObject);
             }
             else
             {
@@ -180,24 +177,18 @@ namespace BaoZuPo.UI.Common.Drag
             if (highlightGraphic == null)
             {
                 var highlightTransform = transform.Find("DropHighlight");
-                if (highlightTransform == null)
+                if (highlightTransform != null)
                 {
-                    var highlightObject = new GameObject("DropHighlight", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                    highlightObject.transform.SetParent(transform, false);
-                    highlightTransform = highlightObject.transform;
-
-                    var highlightRect = highlightTransform as RectTransform;
-                    highlightRect.anchorMin = Vector2.zero;
-                    highlightRect.anchorMax = Vector2.one;
-                    highlightRect.offsetMin = Vector2.zero;
-                    highlightRect.offsetMax = Vector2.zero;
-
-                    var highlightImage = highlightObject.GetComponent<Image>();
-                    highlightImage.raycastTarget = false;
-                    highlightImage.color = new Color(highlightColor.r, highlightColor.g, highlightColor.b, 0f);
+                    highlightGraphic = highlightTransform.GetComponent<Graphic>();
                 }
+            }
 
-                highlightGraphic = highlightTransform.GetComponent<Graphic>();
+            if (highlightGraphic == null)
+            {
+                Debug.LogError("[UICardDropZone] 缺少 highlightGraphic。请在 Prefab 中创建 DropHighlight 子节点 (Image) 并拖入 highlightGraphic 字段。", gameObject);
+            }
+            else
+            {
                 highlightGraphic.raycastTarget = false;
             }
         }

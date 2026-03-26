@@ -5,6 +5,7 @@ using UnityEngine.UI;
 namespace BaoZuPo.UI
 {
     [RequireComponent(typeof(UICardView))]
+    [RequireComponent(typeof(LayoutElement))]
     public class UIEquipmentCardView : MonoBehaviour
     {
         [SerializeField] private Vector2 compactSize = new Vector2(170f, 238f);
@@ -18,10 +19,6 @@ namespace BaoZuPo.UI
         {
             _cardView = GetComponent<UICardView>();
             _layoutElement = GetComponent<LayoutElement>();
-            if (_layoutElement == null)
-            {
-                _layoutElement = gameObject.AddComponent<LayoutElement>();
-            }
         }
 
         public void Setup(CardInstance card)

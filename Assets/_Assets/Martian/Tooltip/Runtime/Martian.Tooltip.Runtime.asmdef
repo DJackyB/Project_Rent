@@ -1,6 +1,8 @@
 {
   "name": "Martian.Tooltip.Runtime",
   "references": [
-    "Martian.Tooltip.Abstractions"
+    "Martian.Tooltip.Abstractions",
+    "Unity.InputSystem",
+    "Unity.UI"
   ]
 }
