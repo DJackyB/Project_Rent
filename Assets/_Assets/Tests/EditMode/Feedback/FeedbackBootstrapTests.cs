@@ -34,13 +34,14 @@ namespace Martian.Tests.Feedback
             });
             bootstrap.SetBackend(backend);
 
-            FeedbackServiceLocator.Current.Publish(new FeedbackRequest
+            var handle = FeedbackServiceLocator.Current.Publish(new FeedbackRequest
             {
                 TargetKey = "player",
                 Text = "+12"
             });
 
             Assert.AreEqual(1, backend.PublishCount);
+            Assert.NotNull(handle);
         }
 
         [Test]
@@ -90,13 +91,15 @@ namespace Martian.Tests.Feedback
             {
             }
 
-            public void Publish(FeedbackRequest request)
+            public FeedbackPlaybackHandle Publish(FeedbackRequest request)
             {
                 PublishCount++;
+                return new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
-            public void PublishSequence(FeedbackSequenceRequest request)
+            public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
             {
+                return new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
             public void Clear()

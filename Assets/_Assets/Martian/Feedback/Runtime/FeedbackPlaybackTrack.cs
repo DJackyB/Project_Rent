@@ -48,6 +48,13 @@ namespace Martian.Feedback.Runtime
 
         public void Clear()
         {
+            CancelHandle(_currentRequest);
+
+            foreach (var request in _queue)
+            {
+                CancelHandle(request);
+            }
+
             _queue.Clear();
             _currentRequest = null;
 
@@ -195,6 +202,7 @@ namespace Martian.Feedback.Runtime
 
         private void FinishCurrentRequest()
         {
+            CompleteHandle(_currentRequest);
             _currentRequest = null;
 
             if (_activeSequence != null)
@@ -346,12 +354,14 @@ namespace Martian.Feedback.Runtime
             var clone = new FeedbackPlaybackRequest
             {
                 DebugLabel = request.DebugLabel,
+                LaneKey = request.LaneKey,
                 TargetKey = request.TargetKey,
                 TargetKind = request.TargetKind,
                 Anchor = request.Anchor,
                 UseScreenCenterFallback = request.UseScreenCenterFallback,
                 ScreenOffset = request.ScreenOffset,
-                GapSeconds = request.GapSeconds
+                GapSeconds = request.GapSeconds,
+                Handle = request.Handle
             };
 
             if (request.Steps != null)
@@ -380,6 +390,16 @@ namespace Martian.Feedback.Runtime
             }
 
             return clone;
+        }
+
+        private static void CompleteHandle(FeedbackPlaybackRequest request)
+        {
+            request?.Handle?.Complete();
+        }
+
+        private static void CancelHandle(FeedbackPlaybackRequest request)
+        {
+            request?.Handle?.Cancel();
         }
     }
 

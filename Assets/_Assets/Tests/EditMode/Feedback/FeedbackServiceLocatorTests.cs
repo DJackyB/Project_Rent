@@ -35,12 +35,14 @@ namespace Martian.Tests.Feedback
         {
             public bool IsAvailable => true;
 
-            public void Publish(FeedbackRequest request)
+            public FeedbackPlaybackHandle Publish(FeedbackRequest request)
             {
+                return new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
-            public void PublishSequence(FeedbackSequenceRequest request)
+            public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
             {
+                return new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
         }
     }

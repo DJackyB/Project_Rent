@@ -8,6 +8,14 @@ namespace BaoZuPo.Core
     /// </summary>
     public static class GameEvents
     {
+        public enum SettlementStepKind
+        {
+            Base,
+            Delta,
+            Multiplier,
+            Final
+        }
+
         public enum SettlementSourceKind
         {
             Room,
@@ -17,6 +25,7 @@ namespace BaoZuPo.Core
 
         public struct SettlementStep
         {
+            public SettlementStepKind Kind;
             public string Label;
             public int Amount;
             public bool IsMultiplier;
@@ -74,14 +83,23 @@ namespace BaoZuPo.Core
             public int TotalTurns;
         }
 
-        public struct SettlementSequenceQueued
+        public sealed class SettlementSequenceQueued
         {
+            public string BatchId;
+            public int SourceIndex;
+            public int SourceCount;
+            public string LaneKey;
             public SettlementSourceKind SourceKind;
             public RoomSlot Room;
             public Card.CardInstance Card;
             public string Title;
             public SettlementStep[] Steps;
             public int FinalAmount;
+        }
+
+        public struct SettlementPlaybackCompleted
+        {
+            public string BatchId;
         }
     }
 }

@@ -41,11 +41,36 @@ namespace Martian.Tests.Feedback
         [Test]
         public void PublishQueuesSameTargetIntoSingleTrack()
         {
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
+            var first = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
+            var second = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
 
             Assert.AreEqual(1, _backend.ActiveTrackCount);
             Assert.AreEqual(2, _backend.GetPendingCount("player"));
+            Assert.AreEqual("player", first.LaneKey);
+            Assert.AreEqual("player", second.LaneKey);
+        }
+
+        [Test]
+        public void PublishUsesExplicitLaneKeyToShareTrackAcrossTargets()
+        {
+            var first = _backend.Publish(new FeedbackRequest { LaneKey = "settlement", TargetKey = "room:0", Text = "+1" });
+            var second = _backend.Publish(new FeedbackRequest { LaneKey = "settlement", TargetKey = "room:1", Text = "+2" });
+
+            Assert.AreEqual(1, _backend.ActiveTrackCount);
+            Assert.AreEqual(2, _backend.GetPendingCount("settlement"));
+            Assert.AreEqual("settlement", first.LaneKey);
+            Assert.AreEqual("settlement", second.LaneKey);
+        }
+
+        [Test]
+        public void PublishUsesDifferentExplicitLaneKeysForSeparateTracks()
+        {
+            _backend.Publish(new FeedbackRequest { LaneKey = "lane:a", TargetKey = "room:0", Text = "+1" });
+            _backend.Publish(new FeedbackRequest { LaneKey = "lane:b", TargetKey = "room:0", Text = "+2" });
+
+            Assert.AreEqual(2, _backend.ActiveTrackCount);
+            Assert.AreEqual(1, _backend.GetPendingCount("lane:a"));
+            Assert.AreEqual(1, _backend.GetPendingCount("lane:b"));
         }
 
         [Test]
@@ -54,18 +79,21 @@ namespace Martian.Tests.Feedback
             int completedCount = 0;
             _backend.AllPlaybackCompleted += () => completedCount++;
 
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
+            var first = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
+            var second = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
 
             _backend.CompleteTrackForTesting("player");
             Assert.AreEqual(1, _backend.ActiveTrackCount);
             Assert.AreEqual(1, _backend.GetPendingCount("player"));
             Assert.AreEqual(0, completedCount);
+            Assert.IsTrue(first.IsCompleted);
+            Assert.IsFalse(second.IsFinished);
 
             _backend.CompleteTrackForTesting("player");
             Assert.AreEqual(0, _backend.ActiveTrackCount);
             Assert.AreEqual(0, _backend.GetPendingCount("player"));
             Assert.AreEqual(1, completedCount);
+            Assert.IsTrue(second.IsCompleted);
         }
 
         [Test]
@@ -94,8 +122,8 @@ namespace Martian.Tests.Feedback
         [Test]
         public void Clear_RemovesActiveTracksAndPendingRequests()
         {
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
-            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
+            var first = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+1" });
+            var second = _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+2" });
 
             Assert.AreEqual(1, _backend.ActiveTrackCount);
             Assert.AreEqual(2, _backend.GetPendingCount("player"));
@@ -104,6 +132,8 @@ namespace Martian.Tests.Feedback
 
             Assert.AreEqual(0, _backend.ActiveTrackCount);
             Assert.AreEqual(0, _backend.GetPendingCount("player"));
+            Assert.IsTrue(first.IsCancelled);
+            Assert.IsTrue(second.IsCancelled);
         }
     }
 }

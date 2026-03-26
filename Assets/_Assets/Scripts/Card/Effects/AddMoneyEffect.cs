@@ -3,8 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 增加金钱效果
-    /// 配置格式：AddMoney;100（增加100金钱）
+    /// Add a fixed amount of money.
     /// </summary>
     public class AddMoneyEffect : ICardEffect
     {
@@ -18,7 +17,8 @@ namespace BaoZuPo.Card.Effects
         public void Execute(CardInstance source, GameContext context)
         {
             context.MoneyManager.AddMoney(_amount);
-            Debug.Log($"[效果] {source.Data.cardName} 触发 AddMoney({_amount})");
+            context?.SettlementCapture?.RecordDelta(_amount);
+            Debug.Log($"[镜像效果] {source.Data.cardName} 触发 AddMoney({_amount})");
         }
     }
 }

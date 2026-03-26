@@ -12,12 +12,18 @@ namespace Martian.Feedback.Runtime
         {
         }
 
-        public void Publish(FeedbackRequest request)
+        public FeedbackPlaybackHandle Publish(FeedbackRequest request)
         {
+            var handle = new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
+            handle.Cancel();
+            return handle;
         }
 
-        public void PublishSequence(FeedbackSequenceRequest request)
+        public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
         {
+            var handle = new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
+            handle.Cancel();
+            return handle;
         }
     }
 }

@@ -29,24 +29,24 @@ namespace Martian.Feedback.Runtime
             BindBackend();
         }
 
-        public void Publish(FeedbackRequest request)
+        public FeedbackPlaybackHandle Publish(FeedbackRequest request)
         {
             if (!IsAvailable)
             {
-                return;
+                return CreateCancelledHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
-            _backend.Publish(request);
+            return _backend.Publish(request);
         }
 
-        public void PublishSequence(FeedbackSequenceRequest request)
+        public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
         {
             if (!IsAvailable)
             {
-                return;
+                return CreateCancelledHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
-            _backend.PublishSequence(request);
+            return _backend.PublishSequence(request);
         }
 
         public void Clear()
@@ -91,6 +91,13 @@ namespace Martian.Feedback.Runtime
         private void HandleBackendCompletion()
         {
             AllPlaybackCompleted?.Invoke();
+        }
+
+        private static FeedbackPlaybackHandle CreateCancelledHandle(string laneKey, string targetKey)
+        {
+            var handle = new FeedbackPlaybackHandle(laneKey, targetKey);
+            handle.Cancel();
+            return handle;
         }
     }
 }

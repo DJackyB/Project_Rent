@@ -3,8 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 按房间总数加钱
-    /// 格式：AddMoneyByRoomCount;每个房间金额
+    /// Add money based on current room count.
     /// </summary>
     public class AddMoneyByRoomCountEffect : ICardEffect
     {
@@ -22,9 +21,10 @@ namespace BaoZuPo.Card.Effects
             if (total != 0)
             {
                 context.MoneyManager.AddMoney(total);
+                context?.SettlementCapture?.RecordDelta(total);
             }
 
-            Debug.Log($"[效果] {source.Data.cardName}: 房间 {roomCount} 间，资金变化 {total}");
+            Debug.Log($"[镜像效果] {source.Data.cardName}: 房间 {roomCount} 间，资金变化 {total}");
         }
     }
 }

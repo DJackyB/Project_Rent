@@ -21,9 +21,13 @@ namespace BaoZuPo.Integration.Martian.Feedback
 
             var request = new FeedbackSequenceRequest
             {
-                SequenceId = $"settlement:{payload.SourceKind}:{targetKey}",
+                SequenceId = $"settlement:{payload.BatchId}:{payload.SourceKind}:{payload.SourceIndex}:{targetKey}",
                 DebugLabel = payload.Title,
-                LaneKey = string.IsNullOrWhiteSpace(laneKey) ? "settlement-global" : laneKey,
+                LaneKey = !string.IsNullOrWhiteSpace(laneKey)
+                    ? laneKey
+                    : !string.IsNullOrWhiteSpace(payload.LaneKey)
+                        ? payload.LaneKey
+                        : "settlement-global",
                 TargetKey = targetKey,
                 TargetKind = targetKind,
                 Anchor = anchor,

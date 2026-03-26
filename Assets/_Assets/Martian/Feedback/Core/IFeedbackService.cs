@@ -4,7 +4,7 @@ namespace Martian.Feedback
     {
         bool IsAvailable { get; }
 
-        void Publish(FeedbackRequest request);
-        void PublishSequence(FeedbackSequenceRequest request);
+        FeedbackPlaybackHandle Publish(FeedbackRequest request);
+        FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request);
     }
 }

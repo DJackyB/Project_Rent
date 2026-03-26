@@ -7,12 +7,14 @@ namespace Martian.Feedback.Runtime
     internal sealed class FeedbackPlaybackRequest
     {
         public string DebugLabel;
+        public string LaneKey;
         public string TargetKey;
         public FeedbackTargetKind TargetKind;
         public RectTransform Anchor;
         public bool UseScreenCenterFallback;
         public Vector2 ScreenOffset;
         public float GapSeconds;
+        public FeedbackPlaybackHandle Handle;
         public List<FeedbackPlaybackStep> Steps = new();
     }
 

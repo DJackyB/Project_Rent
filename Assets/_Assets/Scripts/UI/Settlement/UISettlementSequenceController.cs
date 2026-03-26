@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BaoZuPo.Core;
+using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Economy;
 using Martian.EventBus;
@@ -59,7 +60,7 @@ namespace BaoZuPo.UI.Settlement
 
         private void OnTurnEnded(GameEvents.TurnEnded _)
         {
-            TryStartPlayback();
+            FinishPlayback();
         }
 
         private void OnPhaseChanged(GameEvents.PhaseChanged payload)
@@ -273,11 +274,24 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
+            if (entry.Payload.FinalAmount == 0)
+            {
+                CompleteEntry(entry, onCompleted);
+                return;
+            }
+
+            if (transferLayerRoot == null || transferLayerGroup == null)
+            {
+                UIManager.Instance.CommitDisplayedDelta(entry.Payload.FinalAmount);
+                CompleteEntry(entry, onCompleted);
+                return;
+            }
+
             var topBarTarget = UIManager.Instance.ResolveMoneyTargetAnchor();
             if (topBarTarget == null)
             {
                 UIManager.Instance.CommitDisplayedDelta(entry.Payload.FinalAmount);
-                onCompleted?.Invoke();
+                CompleteEntry(entry, onCompleted);
                 return;
             }
 
@@ -349,10 +363,23 @@ namespace BaoZuPo.UI.Settlement
             _activeTransferSequence.OnComplete(() =>
             {
                 HideTransferImmediate();
-                onCompleted?.Invoke();
+                CompleteEntry(entry, onCompleted);
             });
 
             _activeTransferSequence.Play();
+        }
+
+        private static void CompleteEntry(UISettlementPlaybackEntry entry, Action onCompleted)
+        {
+            if (entry != null && entry.Payload != null && !string.IsNullOrWhiteSpace(entry.Payload.BatchId))
+            {
+                EventBus.Publish(new GameEvents.SettlementPlaybackCompleted
+                {
+                    BatchId = entry.Payload.BatchId
+                });
+            }
+
+            onCompleted?.Invoke();
         }
 
         private void OnBatchCompleted()
@@ -416,13 +443,11 @@ namespace BaoZuPo.UI.Settlement
 
             if (transferLayerRoot == null)
             {
-                var rootObject = new GameObject("SettlementTransfer", typeof(RectTransform), typeof(CanvasGroup));
-                rootObject.transform.SetParent(_canvas != null ? _canvas.transform : transform, false);
-                transferLayerRoot = rootObject.GetComponent<RectTransform>();
-                transferLayerRoot.anchorMin = new Vector2(0.5f, 0.5f);
-                transferLayerRoot.anchorMax = new Vector2(0.5f, 0.5f);
-                transferLayerRoot.pivot = new Vector2(0.5f, 0.5f);
-                transferLayerRoot.sizeDelta = new Vector2(260f, 80f);
+                transferLayerRoot = transform as RectTransform;
+                if (transferLayerRoot == null)
+                {
+                    return;
+                }
             }
 
             if (transferLayerGroup == null)
@@ -432,7 +457,7 @@ namespace BaoZuPo.UI.Settlement
 
             if (transferLayerGroup == null)
             {
-                transferLayerGroup = transferLayerRoot.gameObject.AddComponent<CanvasGroup>();
+                return;
             }
 
             if (transferLabel == null)

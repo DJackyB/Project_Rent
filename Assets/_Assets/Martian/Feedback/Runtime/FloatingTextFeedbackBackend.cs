@@ -48,26 +48,26 @@ namespace Martian.Feedback.Runtime
             }
         }
 
-        public void Publish(FeedbackRequest request)
+        public FeedbackPlaybackHandle Publish(FeedbackRequest request)
         {
             if (!IsEnabled() || request == null)
             {
-                return;
+                return CreateCancelledHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
             var playback = FeedbackPlaybackFormatting.Create(_options, request);
-            Enqueue(request.TargetKey, playback);
+            return Enqueue(request.LaneKey, request.TargetKey, playback);
         }
 
-        public void PublishSequence(FeedbackSequenceRequest request)
+        public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
         {
             if (!IsEnabled() || request == null)
             {
-                return;
+                return CreateCancelledHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
             }
 
             var playback = FeedbackPlaybackFormatting.Create(_options, request);
-            Enqueue(request.TargetKey, playback);
+            return Enqueue(request.LaneKey, request.TargetKey, playback);
         }
 
         public void Clear()
@@ -106,9 +106,10 @@ namespace Martian.Feedback.Runtime
 
         internal int ActiveTrackCount => _activeTracks.Count;
 
-        internal int GetPendingCount(string targetKey)
+        internal int GetPendingCount(string laneKey)
         {
-            if (string.IsNullOrWhiteSpace(targetKey) || !_activeTracks.TryGetValue(targetKey, out var track) || track == null)
+            string resolvedKey = ResolveLaneKey(laneKey, laneKey);
+            if (!_activeTracks.TryGetValue(resolvedKey, out var track) || track == null)
             {
                 return 0;
             }
@@ -116,9 +117,10 @@ namespace Martian.Feedback.Runtime
             return track.PendingCount;
         }
 
-        internal void CompleteTrackForTesting(string targetKey)
+        internal void CompleteTrackForTesting(string laneKey)
         {
-            if (string.IsNullOrWhiteSpace(targetKey) || !_activeTracks.TryGetValue(targetKey, out var track) || track == null)
+            string resolvedKey = ResolveLaneKey(laneKey, laneKey);
+            if (!_activeTracks.TryGetValue(resolvedKey, out var track) || track == null)
             {
                 return;
             }
@@ -131,27 +133,30 @@ namespace Martian.Feedback.Runtime
             return _options == null || _options.EnableFeedback;
         }
 
-        private void Enqueue(string targetKey, FeedbackPlaybackRequest playback)
+        private FeedbackPlaybackHandle Enqueue(string laneKey, string targetKey, FeedbackPlaybackRequest playback)
         {
             if (playback == null || playback.Steps == null || playback.Steps.Count == 0)
             {
-                return;
+                return CreateCancelledHandle(laneKey, targetKey);
             }
 
             EnsureLayerRoot();
             if (_layerRoot == null)
             {
-                return;
+                return CreateCancelledHandle(laneKey, targetKey);
             }
 
-            string resolvedKey = string.IsNullOrWhiteSpace(targetKey) ? "__global__" : targetKey;
+            string resolvedKey = ResolveLaneKey(laneKey, targetKey);
             var track = GetOrCreateTrack(resolvedKey);
             if (track == null)
             {
-                return;
+                return CreateCancelledHandle(laneKey, targetKey);
             }
 
+            playback.LaneKey = resolvedKey;
+            playback.Handle = new FeedbackPlaybackHandle(resolvedKey, targetKey);
             track.Enqueue(playback);
+            return playback.Handle;
         }
 
         private FeedbackPlaybackTrack GetOrCreateTrack(string targetKey)
@@ -256,6 +261,28 @@ namespace Martian.Feedback.Runtime
             var canvasGroup = layerObject.GetComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
+        }
+
+        private static string ResolveLaneKey(string laneKey, string targetKey)
+        {
+            if (!string.IsNullOrWhiteSpace(laneKey))
+            {
+                return laneKey;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetKey))
+            {
+                return targetKey;
+            }
+
+            return "__global__";
+        }
+
+        private static FeedbackPlaybackHandle CreateCancelledHandle(string laneKey, string targetKey)
+        {
+            var handle = new FeedbackPlaybackHandle(ResolveLaneKey(laneKey, targetKey), targetKey);
+            handle.Cancel();
+            return handle;
         }
     }
 }

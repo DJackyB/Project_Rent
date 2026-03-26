@@ -12,7 +12,14 @@ namespace BaoZuPo.NodeActions
         protected override void OnExecute()
         {
             TurnManager.Instance.ExecuteSettlePhase();
-            EndAction(true);
+        }
+
+        protected override void OnUpdate()
+        {
+            if (TurnManager.Instance == null || !TurnManager.Instance.IsSettlementPlaybackPending)
+            {
+                EndAction(true);
+            }
         }
     }
 }
