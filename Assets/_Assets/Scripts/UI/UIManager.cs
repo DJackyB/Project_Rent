@@ -47,6 +47,7 @@ namespace BaoZuPo.UI
             ConfigureFeedbackBootstrap();
             InitializeCardDragController();
             RefreshAll();
+            phasePanel?.UpdatePhase(CurrentPhase.ToString());
         }
 
         private void OnDisable()
