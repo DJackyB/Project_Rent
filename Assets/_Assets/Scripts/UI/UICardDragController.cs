@@ -41,6 +41,7 @@ namespace BaoZuPo.UI
         private bool _isCompletingPlay;
 
         public static UICardDragController Instance => _instance;
+        public bool IsInteractionInProgress => _activeHandler != null || _isCompletingPlay;
 
         private void Awake()
         {

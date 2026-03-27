@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
+using BaoZuPo.Save;
 using UnityEngine;
 
 namespace BaoZuPo.Deck
@@ -191,6 +192,69 @@ namespace BaoZuPo.Deck
             _drawPileCount = _drawPile.Count;
             _handCount = _hand.Count;
             _discardPileCount = _discardPile.Count;
+        }
+
+        public DeckSaveState CaptureState()
+        {
+            var state = new DeckSaveState
+            {
+                maxHandSize = _maxHandSize
+            };
+
+            CapturePile(_drawPile, state.drawPile);
+            CapturePile(_hand, state.hand);
+            CapturePile(_discardPile, state.discardPile);
+            return state;
+        }
+
+        public void RestoreState(DeckSaveState state)
+        {
+            if (state == null)
+            {
+                throw new System.ArgumentNullException(nameof(state));
+            }
+
+            _drawPile.Clear();
+            _hand.Clear();
+            _discardPile.Clear();
+            _maxHandSize = Mathf.Max(1, state.maxHandSize);
+
+            RestorePile(state.drawPile, _drawPile, "drawPile");
+            RestorePile(state.hand, _hand, "hand");
+            RestorePile(state.discardPile, _discardPile, "discardPile");
+            UpdateDebugInfo();
+        }
+
+        private static void CapturePile(IReadOnlyList<CardInstance> source, List<CardRuntimeState> target)
+        {
+            if (source == null || target == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                var card = source[i];
+                if (card == null || card.IsDestroyed)
+                {
+                    continue;
+                }
+
+                target.Add(card.CaptureRuntimeState());
+            }
+        }
+
+        private static void RestorePile(IReadOnlyList<CardRuntimeState> source, List<CardInstance> target, string label)
+        {
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (!CardInstance.TryCreateFromRuntimeState(source[i], out var card, out var error))
+                {
+                    throw new System.InvalidOperationException($"[DeckManager] Failed to restore {label}[{i}]. {error}");
+                }
+
+                target.Add(card);
+            }
         }
     }
 }

@@ -33,6 +33,7 @@ namespace BaoZuPo.UI
             EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Subscribe<GameEvents.GameStateLoaded>(OnGameStateLoaded);
             LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
 
@@ -55,6 +56,7 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Unsubscribe<GameEvents.GameStateLoaded>(OnGameStateLoaded);
             LocalizationManager.LanguageChanged -= OnLanguageChanged;
         }
 
@@ -99,6 +101,25 @@ namespace BaoZuPo.UI
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
+        private void OnGameStateLoaded(GameEvents.GameStateLoaded e)
+        {
+            CurrentPhase = e.Phase;
+            cardDragController?.CancelCurrentDrag(true);
+            TooltipServices.Current.HideAll();
+            phasePanel?.UpdatePhase(CurrentPhase.ToString());
+
+            if (e.IsGameOver)
+            {
+                gameOverPanel?.Show(e.TurnNumber, MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
+            }
+            else
+            {
+                gameOverPanel?.Hide();
+            }
+
+            RefreshAll();
+        }
+
         private void OnLanguageChanged()
         {
             UIFontCatalog.ApplyToAllLoadedSceneTexts();
@@ -137,6 +158,7 @@ namespace BaoZuPo.UI
         }
 
         public bool IsDeferredMoneyDisplayActive => topBar != null && topBar.IsDeferredMoneyDisplayActive;
+        public bool IsSettlementPlaybackBusy => _settlementSequenceController != null && _settlementSequenceController.IsPlaybackBusy;
 
         public void SubmitSettlementPayload(GameEvents.SettlementSequenceQueued payload)
         {
@@ -151,6 +173,16 @@ namespace BaoZuPo.UI
         public void SubmitSettlementBatch(UISettlementPlaybackBatch batch)
         {
             _settlementSequenceController?.Queue(batch);
+        }
+
+        public void PrepareForGameplayLoad()
+        {
+            cardDragController?.CancelCurrentDrag(true);
+            TooltipServices.Current.HideAll();
+            _settlementSequenceController?.CancelPlaybackImmediately();
+            _feedbackBootstrap?.Coordinator?.Clear();
+            EndDeferredMoneyDisplay();
+            gameOverPanel?.Hide();
         }
 
         private void InitializeCardDragController()
