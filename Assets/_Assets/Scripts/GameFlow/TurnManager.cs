@@ -9,6 +9,7 @@ using BaoZuPo.Integration.Martian.Feedback;
 using Martian.EventBus;
 using UnityEngine;
 using BaoZuPo.UI;
+using BaoZuPo.UI.Settlement;
 
 namespace BaoZuPo.GameFlow
 {
@@ -192,14 +193,18 @@ namespace BaoZuPo.GameFlow
 
             PublishPhaseChanged(GamePhase.Settle);
 
-            var context = GameManager.Instance.GameContext;
-            context.SettlementCapture.Reset();
+            var sharedContext = GameManager.Instance.GameContext;
+            int phaseStartMoney = MoneyManager.Instance.CurrentMoney;
 
             var toRemove = new List<CardInstance>();
             var toDestroy = new List<CardInstance>();
-            var queuedPayloads = new List<GameEvents.SettlementSequenceQueued>();
             string batchId = Guid.NewGuid().ToString("N");
             int sourceIndex = 0;
+            var settlementBatch = new UISettlementPlaybackBatch
+            {
+                CompletionBatchId = batchId,
+                DeferredMoneyStartValue = phaseStartMoney
+            };
 
             var rooms = BoardManager.Instance.GetAllRooms();
             foreach (var room in rooms)
@@ -210,37 +215,7 @@ namespace BaoZuPo.GameFlow
                 }
 
                 var roomCards = room.GetAllCards();
-                var tenant = room.GetTenantAt(0);
-                int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
-
-                context.SettlementCapture.Begin();
-
-                int baseRent = tenant != null ? Mathf.Max(0, tenant.Data.baseRent) : 0;
-                if (baseRent > 0)
-                {
-                    MoneyManager.Instance.AddMoney(baseRent);
-                    context.SettlementCapture.RecordBase(baseRent);
-                }
-
-                foreach (var card in roomCards)
-                {
-                    if (card == null || card.IsDestroyed)
-                    {
-                        continue;
-                    }
-
-                    card.SettleEffect?.Execute(card, context);
-                }
-
-                QueueSettlementPayload(
-                    queuedPayloads,
-                    batchId,
-                    ref sourceIndex,
-                    GameEvents.SettlementSourceKind.Room,
-                    room,
-                    tenant,
-                    context.SettlementCapture,
-                    sourceStartMoney);
+                AppendRoomSettlementStage(settlementBatch, batchId, room, sharedContext, ref sourceIndex);
 
                 foreach (var card in roomCards)
                 {
@@ -266,19 +241,29 @@ namespace BaoZuPo.GameFlow
                 }
 
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
-                context.SettlementCapture.Begin();
+                var contractContext = CreateSettlementExecutionContext(sharedContext, null);
+                contractContext.SettlementCapture.Begin();
 
-                contract.SettleEffect?.Execute(contract, context);
+                contract.SettleEffect?.Execute(contract, contractContext);
 
-                QueueSettlementPayload(
-                    queuedPayloads,
+                var payload = CreateSettlementPayload(
                     batchId,
                     ref sourceIndex,
                     GameEvents.SettlementSourceKind.Contract,
                     null,
                     contract,
-                    context.SettlementCapture,
+                    contractContext.SettlementCapture,
                     sourceStartMoney);
+
+                if (payload != null)
+                {
+                    payload.TrackIndex = 0;
+                    payload.TrackCount = 1;
+                    payload.LaneKey = BuildLaneKey(batchId, payload.SourceIndex);
+                    settlementBatch.Stages.Add(UISettlementPlaybackStage.CreateSerial(
+                        payload.Title,
+                        UISettlementPlaybackEntry.Create(payload, payload.LaneKey)));
+                }
 
                 if (contract.Data.durability <= 0)
                 {
@@ -314,7 +299,7 @@ namespace BaoZuPo.GameFlow
                     continue;
                 }
 
-                card.DestroyEffect?.Execute(card, context);
+                card.DestroyEffect?.Execute(card, sharedContext);
                 card.MarkDestroyed();
                 EventBus.Publish(new GameEvents.CardDestroyed
                 {
@@ -374,22 +359,23 @@ namespace BaoZuPo.GameFlow
                 AwardOneCardFromThreeOptions(boosted);
             }
 
-            if (queuedPayloads.Count == 0)
+            settlementBatch.DeferredMoneyEndValue = MoneyManager.Instance.CurrentMoney;
+            FinalizeSourceCounts(settlementBatch);
+
+            if (settlementBatch.IsEmpty && settlementBatch.TotalDelta == 0)
             {
                 CompleteSettlementPhase();
                 return;
             }
 
-            BeginSettlementPlayback(batchId, queuedPayloads.Count);
-            for (int i = 0; i < queuedPayloads.Count; i++)
+            if (UIManager.Instance == null)
             {
-                var payload = queuedPayloads[i];
-                payload.BatchId = batchId;
-                payload.SourceIndex = i;
-                payload.SourceCount = queuedPayloads.Count;
-                payload.LaneKey = DefaultSettlementLaneKey;
-                EventBus.Publish(payload);
+                CompleteSettlementPhase();
+                return;
             }
+
+            BeginSettlementPlayback(batchId, 1);
+            UIManager.Instance.SubmitSettlementBatch(settlementBatch);
         }
 
         public void NotifySettlementPlaybackCompleted(string batchId)
@@ -449,8 +435,107 @@ namespace BaoZuPo.GameFlow
             });
         }
 
-        private void QueueSettlementPayload(
-            List<GameEvents.SettlementSequenceQueued> queuedPayloads,
+        private void AppendRoomSettlementStage(
+            UISettlementPlaybackBatch batch,
+            string batchId,
+            RoomSlot room,
+            GameContext sharedContext,
+            ref int sourceIndex)
+        {
+            if (batch == null || room == null)
+            {
+                return;
+            }
+
+            var roomPayloads = new List<GameEvents.SettlementSequenceQueued>();
+
+            var tenants = room.GetTenants();
+            for (int i = 0; i < tenants.Count; i++)
+            {
+                var tenant = tenants[i];
+                if (tenant == null || tenant.IsDestroyed)
+                {
+                    continue;
+                }
+
+                int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
+                var tenantContext = CreateSettlementExecutionContext(sharedContext, room);
+                tenantContext.SettlementCapture.Begin();
+
+                int baseRent = Mathf.Max(0, tenant.Data != null ? tenant.Data.baseRent : 0);
+                if (baseRent > 0)
+                {
+                    MoneyManager.Instance.AddMoney(baseRent);
+                    tenantContext.SettlementCapture.RecordBase(baseRent, UIStrings.SettlementBase);
+                }
+
+                tenant.SettleEffect?.Execute(tenant, tenantContext);
+
+                var payload = CreateSettlementPayload(
+                    batchId,
+                    ref sourceIndex,
+                    GameEvents.SettlementSourceKind.Room,
+                    room,
+                    tenant,
+                    tenantContext.SettlementCapture,
+                    sourceStartMoney);
+
+                if (payload != null)
+                {
+                    roomPayloads.Add(payload);
+                }
+            }
+
+            var equipments = room.GetEquipments();
+            for (int i = 0; i < equipments.Count; i++)
+            {
+                var equipment = equipments[i];
+                if (equipment == null || equipment.IsDestroyed)
+                {
+                    continue;
+                }
+
+                int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
+                var equipmentContext = CreateSettlementExecutionContext(sharedContext, room);
+                equipmentContext.SettlementCapture.Begin();
+                equipment.SettleEffect?.Execute(equipment, equipmentContext);
+
+                var payload = CreateSettlementPayload(
+                    batchId,
+                    ref sourceIndex,
+                    GameEvents.SettlementSourceKind.Room,
+                    room,
+                    equipment,
+                    equipmentContext.SettlementCapture,
+                    sourceStartMoney);
+
+                if (payload != null)
+                {
+                    roomPayloads.Add(payload);
+                }
+            }
+
+            if (roomPayloads.Count == 0)
+            {
+                return;
+            }
+
+            var entries = new UISettlementPlaybackEntry[roomPayloads.Count];
+            for (int i = 0; i < roomPayloads.Count; i++)
+            {
+                var payload = roomPayloads[i];
+                payload.TrackIndex = i;
+                payload.TrackCount = roomPayloads.Count;
+                payload.LaneKey = BuildLaneKey(batchId, payload.SourceIndex);
+                entries[i] = UISettlementPlaybackEntry.Create(payload, payload.LaneKey);
+            }
+
+            batch.Stages.Add(UISettlementPlaybackStage.CreateParallel(
+                ResolveSettlementTitle(GameEvents.SettlementSourceKind.Room, room, null),
+                entries));
+        }
+
+        private GameEvents.SettlementSequenceQueued CreateSettlementPayload(
             string batchId,
             ref int sourceIndex,
             GameEvents.SettlementSourceKind sourceKind,
@@ -461,19 +546,19 @@ namespace BaoZuPo.GameFlow
         {
             if (capture == null)
             {
-                return;
+                return null;
             }
 
             int finalAmount = MoneyManager.Instance.CurrentMoney - sourceStartMoney;
             int capturedStepCount = capture.Steps.Count;
-            var steps = capture.Complete(finalAmount);
+            var steps = capture.Complete(finalAmount, includeFinalStep: false);
 
             if (capturedStepCount == 0 && finalAmount == 0)
             {
-                return;
+                return null;
             }
 
-            queuedPayloads.Add(new GameEvents.SettlementSequenceQueued
+            return new GameEvents.SettlementSequenceQueued
             {
                 BatchId = batchId,
                 SourceIndex = sourceIndex++,
@@ -484,8 +569,10 @@ namespace BaoZuPo.GameFlow
                 Card = card,
                 Title = ResolveSettlementTitle(sourceKind, room, card),
                 Steps = steps,
-                FinalAmount = finalAmount
-            });
+                FinalAmount = finalAmount,
+                TrackIndex = 0,
+                TrackCount = 1
+            };
         }
 
         private void BeginSettlementPlayback(string batchId, int pendingCount)
@@ -530,11 +617,72 @@ namespace BaoZuPo.GameFlow
         {
             return sourceKind switch
             {
+                GameEvents.SettlementSourceKind.Room when card != null => card.Data.cardName,
                 GameEvents.SettlementSourceKind.Room when room != null => UIStrings.SettlementRoomTitle(room.RoomIndex + 1),
                 GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
                 GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
                 _ => UIStrings.SettlementFallbackTitle
             };
+        }
+
+        private static GameContext CreateSettlementExecutionContext(GameContext sharedContext, RoomSlot selectedRoom)
+        {
+            var context = new GameContext
+            {
+                MoneyManager = sharedContext != null ? sharedContext.MoneyManager : null,
+                BoardManager = sharedContext != null ? sharedContext.BoardManager : null
+            };
+
+            context.EffectContext.SelectedRoom = selectedRoom;
+            return context;
+        }
+
+        private static string BuildLaneKey(string batchId, int sourceIndex)
+        {
+            return $"{DefaultSettlementLaneKey}:{batchId}:{sourceIndex}";
+        }
+
+        private static void FinalizeSourceCounts(UISettlementPlaybackBatch batch)
+        {
+            if (batch == null || batch.Stages == null)
+            {
+                return;
+            }
+
+            int totalSourceCount = 0;
+            for (int i = 0; i < batch.Stages.Count; i++)
+            {
+                var stage = batch.Stages[i];
+                if (stage == null || stage.Entries == null)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < stage.Entries.Count; j++)
+                {
+                    if (stage.Entries[j] != null && stage.Entries[j].Payload != null)
+                    {
+                        totalSourceCount++;
+                    }
+                }
+            }
+
+            for (int i = 0; i < batch.Stages.Count; i++)
+            {
+                var stage = batch.Stages[i];
+                if (stage == null || stage.Entries == null)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < stage.Entries.Count; j++)
+                {
+                    if (stage.Entries[j] != null && stage.Entries[j].Payload != null)
+                    {
+                        stage.Entries[j].Payload.SourceCount = totalSourceCount;
+                    }
+                }
+            }
         }
 
         private int CalculateCurrentLoanPayment(int baseAmount, float growthFactor)

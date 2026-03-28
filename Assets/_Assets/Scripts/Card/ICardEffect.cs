@@ -78,9 +78,13 @@ namespace BaoZuPo.Card
             RecordStep(GameEvents.SettlementStepKind.Multiplier, amount, true, label);
         }
 
-        public GameEvents.SettlementStep[] Complete(int finalAmount, string label = null)
+        public GameEvents.SettlementStep[] Complete(int finalAmount, string label = null, bool includeFinalStep = true)
         {
-            RecordStep(GameEvents.SettlementStepKind.Final, finalAmount, false, label);
+            if (includeFinalStep)
+            {
+                RecordStep(GameEvents.SettlementStepKind.Final, finalAmount, false, label);
+            }
+
             IsCapturing = false;
             return _steps.ToArray();
         }

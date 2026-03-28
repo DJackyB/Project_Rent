@@ -110,7 +110,7 @@ namespace BaoZuPo.UI.Settlement
 
         private void EnqueueBatch(UISettlementPlaybackBatch batch)
         {
-            if (batch == null || batch.IsEmpty)
+            if (batch == null || (batch.IsEmpty && !ShouldFinalizeBatch(batch)))
             {
                 return;
             }
@@ -119,7 +119,10 @@ namespace BaoZuPo.UI.Settlement
 
             if (UIManager.Instance != null && !UIManager.Instance.IsDeferredMoneyDisplayActive)
             {
-                UIManager.Instance.BeginDeferredMoneyDisplay(MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
+                int startValue = batch.PlayMoneyJumpOnBatchEnd
+                    ? batch.DeferredMoneyStartValue
+                    : MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0;
+                UIManager.Instance.BeginDeferredMoneyDisplay(startValue);
             }
 
             if (_isSettling)
@@ -152,7 +155,7 @@ namespace BaoZuPo.UI.Settlement
 
             _isPlaybackRunning = true;
             var batch = _pendingBatches.Dequeue();
-            PlayBatch(batch, OnBatchCompleted);
+            PlayBatch(batch, () => OnBatchCompleted(batch));
         }
 
         private void PlayBatch(UISettlementPlaybackBatch batch, Action onCompleted)
@@ -242,25 +245,25 @@ namespace BaoZuPo.UI.Settlement
             var handle = BaoZuPoFeedbackAdapter.PublishSettlementSequence(entry.Payload, entry.LaneKey);
             if (handle == null || handle.IsFinished)
             {
-                PlayTransfer(entry, onCompleted);
+                onCompleted?.Invoke();
                 return;
             }
 
-            void TriggerTransfer(FeedbackPlaybackHandle _)
+            void CompletePlayback(FeedbackPlaybackHandle _)
             {
-                handle.Completed -= TriggerTransfer;
-                handle.Cancelled -= TriggerTransfer;
-                PlayTransfer(entry, onCompleted);
+                handle.Completed -= CompletePlayback;
+                handle.Cancelled -= CompletePlayback;
+                onCompleted?.Invoke();
             }
 
-            handle.Completed += TriggerTransfer;
-            handle.Cancelled += TriggerTransfer;
+            handle.Completed += CompletePlayback;
+            handle.Cancelled += CompletePlayback;
 
             if (handle.IsFinished)
             {
-                handle.Completed -= TriggerTransfer;
-                handle.Cancelled -= TriggerTransfer;
-                PlayTransfer(entry, onCompleted);
+                handle.Completed -= CompletePlayback;
+                handle.Cancelled -= CompletePlayback;
+                onCompleted?.Invoke();
             }
         }
 
@@ -371,27 +374,30 @@ namespace BaoZuPo.UI.Settlement
 
         private static void CompleteEntry(UISettlementPlaybackEntry entry, Action onCompleted)
         {
-            if (entry != null && entry.Payload != null && !string.IsNullOrWhiteSpace(entry.Payload.BatchId))
-            {
-                EventBus.Publish(new GameEvents.SettlementPlaybackCompleted
-                {
-                    BatchId = entry.Payload.BatchId
-                });
-            }
-
             onCompleted?.Invoke();
         }
 
-        private void OnBatchCompleted()
+        private void OnBatchCompleted(UISettlementPlaybackBatch batch)
         {
-            _isPlaybackRunning = false;
-            if (_pendingBatches.Count > 0)
+            PlayBatchMoneyJump(batch, () =>
             {
-                TryStartPlayback();
-                return;
-            }
+                if (batch != null && batch.PublishCompletionOnBatchEnd && !string.IsNullOrWhiteSpace(batch.CompletionBatchId))
+                {
+                    EventBus.Publish(new GameEvents.SettlementPlaybackCompleted
+                    {
+                        BatchId = batch.CompletionBatchId
+                    });
+                }
 
-            FinishPlayback();
+                _isPlaybackRunning = false;
+                if (_pendingBatches.Count > 0)
+                {
+                    TryStartPlayback();
+                    return;
+                }
+
+                FinishPlayback();
+            });
         }
 
         private void FinishPlayback()
@@ -417,6 +423,56 @@ namespace BaoZuPo.UI.Settlement
             _isSettling = false;
             _activeTransferSequence?.Kill(false);
             _activeTransferSequence = null;
+        }
+
+        private void PlayBatchMoneyJump(UISettlementPlaybackBatch batch, Action onCompleted)
+        {
+            if (!ShouldFinalizeBatch(batch))
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            int totalDelta = batch.TotalDelta;
+            if (totalDelta == 0 || UIManager.Instance == null)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            UIManager.Instance.CommitDisplayedDelta(totalDelta);
+            var handle = BaoZuPoFeedbackAdapter.PublishSettlementMoneyJump(
+                batch.CompletionBatchId,
+                totalDelta,
+                UIManager.Instance.ResolveMoneyTargetAnchor());
+
+            if (handle == null || handle.IsFinished)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            void CompleteJump(FeedbackPlaybackHandle _)
+            {
+                handle.Completed -= CompleteJump;
+                handle.Cancelled -= CompleteJump;
+                onCompleted?.Invoke();
+            }
+
+            handle.Completed += CompleteJump;
+            handle.Cancelled += CompleteJump;
+
+            if (handle.IsFinished)
+            {
+                handle.Completed -= CompleteJump;
+                handle.Cancelled -= CompleteJump;
+                onCompleted?.Invoke();
+            }
+        }
+
+        private static bool ShouldFinalizeBatch(UISettlementPlaybackBatch batch)
+        {
+            return batch != null && batch.PlayMoneyJumpOnBatchEnd;
         }
 
         private void EnsureTransferView()

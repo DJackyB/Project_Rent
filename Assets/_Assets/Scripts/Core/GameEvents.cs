@@ -88,6 +88,8 @@ namespace BaoZuPo.Core
             public string BatchId;
             public int SourceIndex;
             public int SourceCount;
+            public int TrackIndex;
+            public int TrackCount = 1;
             public string LaneKey;
             public SettlementSourceKind SourceKind;
             public RoomSlot Room;

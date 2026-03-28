@@ -18,6 +18,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             }
 
             ResolveSettlementTarget(payload.SourceKind, payload.Room, payload.Card, out var targetKey, out var targetKind, out var anchor, out var useCenterFallback, out var screenOffset);
+            screenOffset += ResolveTrackOffset(payload);
 
             var request = new FeedbackSequenceRequest
             {
@@ -41,7 +42,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 var step = payload.Steps[i];
                 request.Steps.Add(new FeedbackStep
                 {
-                    Label = step.Label,
+                    Label = ResolveStepLabel(payload, step),
                     Amount = step.Amount,
                     IsMultiplier = step.IsMultiplier,
                     Category = ResolveStepCategory(step)
@@ -49,6 +50,28 @@ namespace BaoZuPo.Integration.Martian.Feedback
             }
 
             return FeedbackServiceLocator.Current.PublishSequence(request);
+        }
+
+        public static FeedbackPlaybackHandle PublishSettlementMoneyJump(string batchId, int totalDelta, RectTransform anchor)
+        {
+            if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || totalDelta == 0)
+            {
+                return null;
+            }
+
+            return FeedbackServiceLocator.Current.Publish(new FeedbackRequest
+            {
+                DebugLabel = string.IsNullOrWhiteSpace(batchId) ? "SettlementMoneyTotal" : $"SettlementMoneyTotal_{batchId}",
+                LaneKey = string.IsNullOrWhiteSpace(batchId) ? "settlement-money-total" : $"settlement-money-total:{batchId}",
+                TargetKey = "hud:money",
+                TargetKind = FeedbackTargetKind.Global,
+                Anchor = anchor,
+                UseScreenCenterFallback = anchor == null,
+                ScreenOffset = new Vector2(0f, 40f),
+                Text = FormatSignedAmount(totalDelta),
+                NumericDelta = totalDelta,
+                Category = totalDelta < 0 ? FeedbackCategory.Cost : FeedbackCategory.Money
+            });
         }
 
         public static void PublishPlayCost(CardInstance card, RoomSlot targetRoom, int cost)
@@ -128,6 +151,40 @@ namespace BaoZuPo.Integration.Martian.Feedback
             }
 
             return step.Amount < 0 ? FeedbackCategory.Cost : FeedbackCategory.Money;
+        }
+
+        private static string ResolveStepLabel(GameEvents.SettlementSequenceQueued payload, GameEvents.SettlementStep step)
+        {
+            if (!string.IsNullOrWhiteSpace(step.Label))
+            {
+                return step.Label;
+            }
+
+            if (payload != null && payload.Card != null && payload.Card.Data != null && step.Kind == GameEvents.SettlementStepKind.Delta)
+            {
+                return payload.Card.Data.cardName;
+            }
+
+            return step.Kind switch
+            {
+                GameEvents.SettlementStepKind.Base => UIStrings.SettlementBase,
+                GameEvents.SettlementStepKind.Delta => UIStrings.SettlementBonus,
+                GameEvents.SettlementStepKind.Multiplier => UIStrings.SettlementMultiplier,
+                GameEvents.SettlementStepKind.Final => UIStrings.SettlementFinal,
+                _ => null
+            };
+        }
+
+        private static Vector2 ResolveTrackOffset(GameEvents.SettlementSequenceQueued payload)
+        {
+            if (payload == null || payload.TrackCount <= 1)
+            {
+                return Vector2.zero;
+            }
+
+            float center = (payload.TrackCount - 1) * 0.5f;
+            float horizontal = (payload.TrackIndex - center) * 76f;
+            return new Vector2(horizontal, 0f);
         }
 
         private static void ResolveSettlementTarget(
