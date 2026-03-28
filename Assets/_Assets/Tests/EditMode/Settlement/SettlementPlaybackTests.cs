@@ -256,20 +256,31 @@ namespace BaoZuPo.Tests.Settlement
 
             public bool IsAvailable => true;
 
+            private FeedbackPlaybackHandle CreateCompletedHandle(string laneKey, string targetKey)
+            {
+                var handle = (FeedbackPlaybackHandle)System.Activator.CreateInstance(
+                    typeof(FeedbackPlaybackHandle),
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                    null,
+                    new object[] { laneKey ?? "__global__", targetKey ?? string.Empty },
+                    null);
+
+                var completeMethod = typeof(FeedbackPlaybackHandle).GetMethod("Complete", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                completeMethod?.Invoke(handle, null);
+
+                return handle;
+            }
+
             public FeedbackPlaybackHandle Publish(FeedbackRequest request)
             {
                 Requests.Add(request);
-                var handle = new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
-                handle.Complete();
-                return handle;
+                return CreateCompletedHandle(request?.LaneKey, request?.TargetKey);
             }
 
             public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
             {
                 SequenceRequests.Add(request);
-                var handle = new FeedbackPlaybackHandle(request != null ? request.LaneKey : null, request != null ? request.TargetKey : null);
-                handle.Complete();
-                return handle;
+                return CreateCompletedHandle(request?.LaneKey, request?.TargetKey);
             }
         }
     }

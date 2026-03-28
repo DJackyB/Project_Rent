@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --max-time 15 \"https://api.github.com/repos/Donchitos/Claude-Code-Game-Studios/readme\" -o /tmp/readme_response.json)",
+      "Bash(python3 -c \":*)",
+      "Bash(curl -v --max-time 10 \"https://api.github.com/repos/Donchitos/Claude-Code-Game-Studios\")",
+      "Bash(python3:*)",
+      "Bash(echo $TEMP)",
+      "Bash(echo $TMP)",
+      "Bash(curl -s --max-time 20 \"https://api.github.com/repos/Donchitos/Claude-Code-Game-Studios\")",
+      "Bash(curl -s --max-time 20 \"https://api.github.com/repos/Donchitos/Claude-Code-Game-Studios/contents/.claude/agents\")",
+      "Bash(git clone:*)",
+      "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/skills/code-review\")",
+      "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/skills/balance-check\")",
+      "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/agents\")"
+    ]
+  }
+}
