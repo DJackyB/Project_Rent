@@ -1,0 +1,12 @@
+{
+  "name": "Martian.Audio.EditModeTests",
+  "references": [
+    "Martian.Audio"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}
