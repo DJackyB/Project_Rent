@@ -67,7 +67,8 @@ namespace BaoZuPo.GameFlow
 
             var config = GameManager.Instance.gameConfig;
             int drawCount = _currentTurn == 1 ? config.firstTurnDrawCount : config.normalTurnDrawCount;
-            Deck.DeckManager.Instance.Draw(drawCount);
+            var drawLibrary = _currentTurn == 1 ? config.firstTurnDrawLibrary : config.normalTurnDrawLibrary;
+            Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
 
             BoardManager.Instance.CleanupDestroyedCards();
         }
@@ -695,7 +696,17 @@ namespace BaoZuPo.GameFlow
 
         private void AwardOneCardFromThreeOptions(bool boosted)
         {
-            var allCards = CardDatabase.GetAll().Values;
+            var rewardLibrary = GameManager.Instance != null && GameManager.Instance.gameConfig != null
+                ? GameManager.Instance.gameConfig.rewardLibrary
+                : null;
+
+            if (rewardLibrary == null)
+            {
+                Debug.LogWarning("[TurnManager] No reward library configured.");
+                return;
+            }
+
+            var allCards = rewardLibrary.cards;
             var source = boosted
                 ? allCards.Where(c => c.rarity >= CardRarity.Rare).ToList()
                 : allCards.ToList();

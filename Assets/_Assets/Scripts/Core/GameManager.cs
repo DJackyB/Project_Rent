@@ -46,6 +46,8 @@ namespace BaoZuPo.Core
             CardEffectRegistration.EnsureRegistered();
 
             CardDatabase.LoadAll();
+            CardLibraryDatabase.LoadAll();
+            ValidateConfiguredLibraries();
             ValidateLoadedCardEffects();
 
             Debug.Log($"[GameManager] Config loaded. Money={gameConfig.startingMoney}, Rooms={gameConfig.initialRoomCount}, LoanGrowth={gameConfig.loanGrowthFactor}");
@@ -62,8 +64,7 @@ namespace BaoZuPo.Core
 
             if (Deck.DeckManager.Instance != null)
             {
-                var allCards = CardDatabase.GetAll().Values;
-                Deck.DeckManager.Instance.Initialize(allCards, gameConfig.maxHandSize);
+                Deck.DeckManager.Instance.Initialize(gameConfig.maxHandSize);
             }
 
             GameContext = new GameContext
@@ -73,6 +74,21 @@ namespace BaoZuPo.Core
             };
 
             Debug.Log("[GameManager] All systems initialized.");
+        }
+
+        private void ValidateConfiguredLibraries()
+        {
+            var errors = new List<string>();
+
+            ValidateConfiguredLibrary(nameof(gameConfig.firstTurnDrawLibrary), gameConfig.firstTurnDrawLibrary, errors);
+            ValidateConfiguredLibrary(nameof(gameConfig.normalTurnDrawLibrary), gameConfig.normalTurnDrawLibrary, errors);
+            ValidateConfiguredLibrary(nameof(gameConfig.rewardLibrary), gameConfig.rewardLibrary, errors);
+
+            if (errors.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "[GameManager] GameConfig library validation failed:\n" + string.Join("\n", errors));
+            }
         }
 
         private void ValidateLoadedCardEffects()
@@ -118,6 +134,24 @@ namespace BaoZuPo.Core
             }
 
             errors.Add($"Card [{card.cardId}] {card.cardName} target kind mismatch. {warning}");
+        }
+
+        private static void ValidateConfiguredLibrary(string fieldName, CardLibrary library, List<string> errors)
+        {
+            if (library == null)
+            {
+                errors.Add($"GameConfig.{fieldName} is not assigned.");
+                return;
+            }
+
+            try
+            {
+                CardLibraryDatabase.ValidateLibrary(library, $"GameConfig.{fieldName}");
+            }
+            catch (Exception exception)
+            {
+                errors.Add(exception.Message);
+            }
         }
 
         private void OnGameOver(GameEvents.GameOver e)
