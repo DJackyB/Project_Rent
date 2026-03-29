@@ -62,6 +62,7 @@ namespace BaoZuPo.Core
             if (_instance == this)
             {
                 _instance = null;
+                _applicationIsQuitting = false;
             }
         }
     }

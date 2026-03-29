@@ -18,7 +18,7 @@ namespace BaoZuPo.Card.Effects
 
         public void Execute(CardInstance card, GameContext context)
         {
-            Deck.DeckManager.Instance.Draw(_count);
+            context.DeckManager.Draw(_count);
             Debug.Log($"[Effect] Drew {_count} extra cards.");
         }
     }

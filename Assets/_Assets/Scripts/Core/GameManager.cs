@@ -70,6 +70,7 @@ namespace BaoZuPo.Core
             {
                 MoneyManager = Economy.MoneyManager.Instance,
                 BoardManager = Board.BoardManager.Instance,
+                DeckManager = Deck.DeckManager.Instance,
             };
 
             Debug.Log("[GameManager] All systems initialized.");

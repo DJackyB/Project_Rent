@@ -12,7 +12,11 @@
       "Bash(git clone:*)",
       "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/skills/code-review\")",
       "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/skills/balance-check\")",
-      "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/agents\")"
+      "Bash(mkdir -p \"D:/Unity/Project/Project_Rent/.claude/agents\")",
+      "Bash(wc -l \"D:\\\\Unity\\\\Project\\\\Project_Rent\\\\Assets\\\\_Assets\\\\Scripts\"/**/*.cs)",
+      "Bash(find \"D:\\\\Unity\\\\Project\\\\Project_Rent\\\\Assets\\\\_Assets\\\\Scripts\" -name \"*.cs\" -type f -exec wc -l {} +)",
+      "Bash(xargs cat:*)",
+      "Bash(find D:UnityProjectProject_RentAssetsScenes -name *.unity)"
     ]
   }
 }

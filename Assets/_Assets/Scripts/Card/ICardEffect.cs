@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Core;
+using BaoZuPo.Deck;
 using UnityEngine;
 
 namespace BaoZuPo.Card
@@ -33,6 +34,7 @@ namespace BaoZuPo.Card
     {
         public Economy.MoneyManager MoneyManager { get; set; }
         public Board.BoardManager BoardManager { get; set; }
+        public DeckManager DeckManager { get; set; }
         public SettlementCaptureContext SettlementCapture { get; }
         public EffectExecutionContext EffectContext { get; }
 

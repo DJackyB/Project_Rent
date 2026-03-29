@@ -195,9 +195,6 @@ namespace BaoZuPo.GameFlow
 
             var sharedContext = GameManager.Instance.GameContext;
             int phaseStartMoney = MoneyManager.Instance.CurrentMoney;
-
-            var toRemove = new List<CardInstance>();
-            var toDestroy = new List<CardInstance>();
             string batchId = Guid.NewGuid().ToString("N");
             int sourceIndex = 0;
             var settlementBatch = new UISettlementPlaybackBatch
@@ -206,6 +203,31 @@ namespace BaoZuPo.GameFlow
                 DeferredMoneyStartValue = phaseStartMoney
             };
 
+            var toRemove = new List<CardInstance>();
+            var toDestroy = new List<CardInstance>();
+
+            ProcessRoomSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
+            ProcessContractSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
+            ProcessWaitExpiry(toRemove);
+            DestroyAndCleanupCards(toDestroy, toRemove, sharedContext);
+
+            ProcessLoanPayment();
+
+            if (!_isGameOver)
+            {
+                ProcessTurnReward();
+            }
+
+            FinalizeBatch(settlementBatch, batchId);
+        }
+
+        private void ProcessRoomSettlements(
+            UISettlementPlaybackBatch batch,
+            string batchId,
+            GameContext sharedContext,
+            ref int sourceIndex,
+            List<CardInstance> toDestroy)
+        {
             var rooms = BoardManager.Instance.GetAllRooms();
             foreach (var room in rooms)
             {
@@ -214,10 +236,9 @@ namespace BaoZuPo.GameFlow
                     continue;
                 }
 
-                var roomCards = room.GetAllCards();
-                AppendRoomSettlementStage(settlementBatch, batchId, room, sharedContext, ref sourceIndex);
+                AppendRoomSettlementStage(batch, batchId, room, sharedContext, ref sourceIndex);
 
-                foreach (var card in roomCards)
+                foreach (var card in room.GetAllCards())
                 {
                     if (card == null || card.IsDestroyed || card.Data.durability <= 0)
                     {
@@ -231,7 +252,15 @@ namespace BaoZuPo.GameFlow
                     }
                 }
             }
+        }
 
+        private void ProcessContractSettlements(
+            UISettlementPlaybackBatch batch,
+            string batchId,
+            GameContext sharedContext,
+            ref int sourceIndex,
+            List<CardInstance> toDestroy)
+        {
             var contracts = BoardManager.Instance.GetAllContracts();
             foreach (var contract in contracts)
             {
@@ -243,7 +272,6 @@ namespace BaoZuPo.GameFlow
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
                 var contractContext = CreateSettlementExecutionContext(sharedContext, null);
                 contractContext.SettlementCapture.Begin();
-
                 contract.SettleEffect?.Execute(contract, contractContext);
 
                 var payload = CreateSettlementPayload(
@@ -260,7 +288,7 @@ namespace BaoZuPo.GameFlow
                     payload.TrackIndex = 0;
                     payload.TrackCount = 1;
                     payload.LaneKey = BuildLaneKey(batchId, payload.SourceIndex);
-                    settlementBatch.Stages.Add(UISettlementPlaybackStage.CreateSerial(
+                    batch.Stages.Add(UISettlementPlaybackStage.CreateSerial(
                         payload.Title,
                         UISettlementPlaybackEntry.Create(payload, payload.LaneKey)));
                 }
@@ -276,7 +304,10 @@ namespace BaoZuPo.GameFlow
                     toDestroy.Add(contract);
                 }
             }
+        }
 
+        private static void ProcessWaitExpiry(List<CardInstance> toRemove)
+        {
             var fieldCards = BoardManager.Instance.GetAllFieldCards();
             foreach (var card in fieldCards)
             {
@@ -291,7 +322,13 @@ namespace BaoZuPo.GameFlow
                     toRemove.Add(card);
                 }
             }
+        }
 
+        private static void DestroyAndCleanupCards(
+            List<CardInstance> toDestroy,
+            List<CardInstance> toRemove,
+            GameContext sharedContext)
+        {
             foreach (var card in toDestroy)
             {
                 if (card == null || card.IsDestroyed)
@@ -301,11 +338,7 @@ namespace BaoZuPo.GameFlow
 
                 card.DestroyEffect?.Execute(card, sharedContext);
                 card.MarkDestroyed();
-                EventBus.Publish(new GameEvents.CardDestroyed
-                {
-                    Card = card,
-                    TriggeredByDurability = true
-                });
+                EventBus.Publish(new GameEvents.CardDestroyed { Card = card, TriggeredByDurability = true });
             }
 
             foreach (var card in toRemove)
@@ -316,49 +349,54 @@ namespace BaoZuPo.GameFlow
                 }
 
                 card.MarkDestroyed();
-                EventBus.Publish(new GameEvents.CardDestroyed
-                {
-                    Card = card,
-                    TriggeredByDurability = false
-                });
+                EventBus.Publish(new GameEvents.CardDestroyed { Card = card, TriggeredByDurability = false });
             }
 
             BoardManager.Instance.CleanupDestroyedCards();
             Deck.DeckManager.Instance.ResolveHandWaitAndDiscardExpired();
+        }
 
+        private void ProcessLoanPayment()
+        {
             var config = GameManager.Instance.gameConfig;
-            if (config.loanInterval > 0 && _currentTurn % config.loanInterval == 0)
+            if (config.loanInterval <= 0 || _currentTurn % config.loanInterval != 0)
             {
-                int requiredPayment = CalculateCurrentLoanPayment(config.loanAmount, config.loanGrowthFactor);
-                bool paid = MoneyManager.Instance.ReduceMoney(requiredPayment);
-                EventBus.Publish(new GameEvents.LoanPayment
+                return;
+            }
+
+            int requiredPayment = CalculateCurrentLoanPayment(config.loanAmount, config.loanGrowthFactor);
+            bool paid = MoneyManager.Instance.ReduceMoney(requiredPayment);
+            EventBus.Publish(new GameEvents.LoanPayment
+            {
+                Amount = requiredPayment,
+                RemainingMoney = MoneyManager.Instance.CurrentMoney
+            });
+
+            if (!paid)
+            {
+                _isGameOver = true;
+                EventBus.Publish(new GameEvents.GameOver
                 {
-                    Amount = requiredPayment,
-                    RemainingMoney = MoneyManager.Instance.CurrentMoney
+                    FinalMoney = MoneyManager.Instance.CurrentMoney,
+                    TotalTurns = _currentTurn
                 });
-
-                if (!paid)
-                {
-                    _isGameOver = true;
-                    EventBus.Publish(new GameEvents.GameOver
-                    {
-                        FinalMoney = MoneyManager.Instance.CurrentMoney,
-                        TotalTurns = _currentTurn
-                    });
-                }
-                else
-                {
-                    _loanPaymentCount++;
-                    BaoZuPoFeedbackAdapter.PublishLoanPayment(requiredPayment);
-                }
             }
-
-            if (!_isGameOver)
+            else
             {
-                bool boosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
-                AwardOneCardFromThreeOptions(boosted);
+                _loanPaymentCount++;
+                BaoZuPoFeedbackAdapter.PublishLoanPayment(requiredPayment);
             }
+        }
 
+        private void ProcessTurnReward()
+        {
+            var config = GameManager.Instance.gameConfig;
+            bool boosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
+            AwardOneCardFromThreeOptions(boosted);
+        }
+
+        private void FinalizeBatch(UISettlementPlaybackBatch settlementBatch, string batchId)
+        {
             settlementBatch.DeferredMoneyEndValue = MoneyManager.Instance.CurrentMoney;
             FinalizeSourceCounts(settlementBatch);
 

@@ -6,15 +6,15 @@ namespace BaoZuPo.Card
     {
         public static void EnsureRegistered()
         {
-            CardEffectFactory.Register("AddMoney", args => new AddMoneyEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("ReduceMoney", args => new ReduceMoneyEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("DrawCard", args => new DrawCardEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("ExpandSlot", args => new ExpandSlotEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddTenantDurability", args => new AddTenantDurabilityEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddEquipmentDurability", args => new AddEquipmentDurabilityEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddMoneyByEmptyRooms", args => new AddMoneyByEmptyRoomsEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddMoneyByRoomCount", args => new AddMoneyByRoomCountEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("AddTenantDurabilityInSelectedRoom", args => new AddTenantDurabilityInSelectedRoomEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddMoney", 1, args => new AddMoneyEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("ReduceMoney", 1, args => new ReduceMoneyEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("DrawCard", 1, args => new DrawCardEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("ExpandSlot", 1, args => new ExpandSlotEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddTenantDurability", 1, args => new AddTenantDurabilityEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddEquipmentDurability", 1, args => new AddEquipmentDurabilityEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddMoneyByEmptyRooms", 1, args => new AddMoneyByEmptyRoomsEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddMoneyByRoomCount", 1, args => new AddMoneyByRoomCountEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddTenantDurabilityInSelectedRoom", 1, args => new AddTenantDurabilityInSelectedRoomEffect(int.Parse(args[0])));
             CardEffectFactory.Register("MoveTenantToEmptyRoom", _ => new MoveTenantToEmptyRoomEffect());
             CardEffectFactory.Register("EvictTenantInSelectedRoom", _ => new EvictTenantInSelectedRoomEffect());
             CardEffectFactory.Register("TriggerSelectedRoomSettle", _ => new TriggerSelectedRoomSettleEffect());

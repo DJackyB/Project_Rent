@@ -35,17 +35,6 @@ namespace BaoZuPo.UI
         [Header("Skin Configuration")]
         [SerializeField] private CardSkinDatabase skinDatabase;
 
-        [Header("Fallback Colors")]
-        [SerializeField] private Color normalTint = new Color(0.22f, 0.22f, 0.24f, 0.96f);
-        [SerializeField] private Color selectedTint = new Color(0.38f, 0.58f, 0.88f, 1f);
-        [SerializeField] private Color tenantTint = new Color(0.24f, 0.56f, 0.33f, 0.96f);
-        [SerializeField] private Color equipmentTint = new Color(0.59f, 0.43f, 0.20f, 0.96f);
-        [SerializeField] private Color eventTint = new Color(0.55f, 0.25f, 0.65f, 0.96f);
-        [SerializeField] private Color contractTint = new Color(0.25f, 0.44f, 0.68f, 0.96f);
-
-        private static CardSkinDatabase _cachedSkinDatabase;
-        private static bool _skinLookupAttempted;
-
         private TextMeshProUGUI typeText;
         private TextMeshProUGUI durabilityText;
         private TextMeshProUGUI waitText;
@@ -55,6 +44,16 @@ namespace BaoZuPo.UI
         private bool _loggedMissingVisualReferences;
         private bool _loggedMissingTooltipTrigger;
         private bool _loggedMissingDragHandler;
+        private bool _initialVisualStateCached;
+        private Sprite _initialBackgroundSprite;
+        private Image.Type _initialBackgroundType;
+        private Color _initialBackgroundColor;
+        private Sprite _initialFrameSprite;
+        private Image.Type _initialFrameType;
+        private Color _initialFrameColor;
+        private Sprite _initialArtSprite;
+        private Color _initialArtColor;
+        private bool _initialArtEnabled;
 
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
@@ -216,6 +215,8 @@ namespace BaoZuPo.UI
             {
                 artImage.raycastTarget = false;
             }
+
+            CacheInitialVisualState();
         }
 
         private void ValidateVisualConfiguration()
@@ -239,6 +240,7 @@ namespace BaoZuPo.UI
             if (background == null) missing.Add(nameof(background));
             if (frameImage == null) missing.Add(nameof(frameImage));
             if (artImage == null) missing.Add(nameof(artImage));
+            if (skinDatabase == null) missing.Add(nameof(skinDatabase));
 
             if (missing.Count == 0)
             {
@@ -262,31 +264,11 @@ namespace BaoZuPo.UI
                 return;
             }
 
-            ApplyContextOffsets();
             UpdateBackground();
             UpdateArt();
             UpdateMainText();
             UpdateContextualText();
             UpdateButtonState();
-        }
-
-        private void ApplyContextOffsets()
-        {
-            if (artImage == null)
-            {
-                return;
-            }
-
-            if (CurrentContext == CardViewContext.RoomEquipment)
-            {
-                artImage.rectTransform.offsetMin = new Vector2(10f, 38f);
-                artImage.rectTransform.offsetMax = new Vector2(-10f, -56f);
-            }
-            else
-            {
-                artImage.rectTransform.offsetMin = new Vector2(14f, 62f);
-                artImage.rectTransform.offsetMax = new Vector2(-14f, -82f);
-            }
         }
 
         private void UpdateBackground()
@@ -302,16 +284,16 @@ namespace BaoZuPo.UI
 
             if (background != null)
             {
-                background.sprite = faceSprite != null ? faceSprite : GetBuiltinSprite();
-                background.type = faceSprite != null ? Image.Type.Simple : Image.Type.Sliced;
-                background.color = ResolveFaceTint(faceSprite != null);
+                background.sprite = faceSprite != null ? faceSprite : skins != null ? skins.DefaultFaceSprite : _initialBackgroundSprite;
+                background.type = _initialBackgroundType;
+                background.color = _initialBackgroundColor;
             }
 
             if (frameImage != null)
             {
-                frameImage.sprite = frameSprite != null ? frameSprite : GetBuiltinSprite();
-                frameImage.type = frameSprite != null ? Image.Type.Simple : Image.Type.Sliced;
-                frameImage.color = frameSprite != null ? Color.white : ResolveRarityTint(Card.Data.rarity);
+                frameImage.sprite = frameSprite != null ? frameSprite : skins != null ? skins.DefaultFrameSprite : _initialFrameSprite;
+                frameImage.type = _initialFrameType;
+                frameImage.color = _initialFrameColor;
             }
         }
 
@@ -322,9 +304,17 @@ namespace BaoZuPo.UI
                 return;
             }
 
-            artImage.sprite = Card.Data.cardArt;
-            artImage.enabled = Card.Data.cardArt != null;
-            artImage.color = Card.Data.cardArt != null ? Color.white : Color.clear;
+            if (Card.Data.cardArt != null)
+            {
+                artImage.sprite = Card.Data.cardArt;
+                artImage.enabled = true;
+                artImage.color = Color.white;
+                return;
+            }
+
+            artImage.sprite = _initialArtSprite;
+            artImage.enabled = _initialArtEnabled;
+            artImage.color = _initialArtColor;
         }
 
         private void UpdateMainText()
@@ -521,22 +511,23 @@ namespace BaoZuPo.UI
 
             if (artImage != null)
             {
-                artImage.sprite = null;
-                artImage.enabled = false;
+                artImage.sprite = _initialArtSprite;
+                artImage.enabled = _initialArtEnabled;
+                artImage.color = _initialArtColor;
             }
 
             if (background != null)
             {
-                background.sprite = GetBuiltinSprite();
-                background.type = Image.Type.Sliced;
-                background.color = normalTint;
+                background.sprite = _initialBackgroundSprite;
+                background.type = _initialBackgroundType;
+                background.color = _initialBackgroundColor;
             }
 
             if (frameImage != null)
             {
-                frameImage.sprite = GetBuiltinSprite();
-                frameImage.type = Image.Type.Sliced;
-                frameImage.color = ResolveRarityTint(CardRarity.Common);
+                frameImage.sprite = _initialFrameSprite;
+                frameImage.type = _initialFrameType;
+                frameImage.color = _initialFrameColor;
             }
         }
 
@@ -566,44 +557,6 @@ namespace BaoZuPo.UI
                 "[UICardView] Hand drag requires UICardDragHandler on Card.prefab. " +
                 "Please configure the prefab instead of relying on AddComponent.",
                 this);
-        }
-
-        private Color ResolveFaceTint(bool hasSprite)
-        {
-            if (_selected)
-            {
-                return hasSprite ? Color.Lerp(Color.white, selectedTint, 0.35f) : selectedTint;
-            }
-
-            if (hasSprite)
-            {
-                return Color.white;
-            }
-
-            return Card != null && Card.Data != null ? ResolveTypeTint(Card.Data.cardType) : normalTint;
-        }
-
-        private Color ResolveTypeTint(CardType cardType)
-        {
-            return cardType switch
-            {
-                CardType.Tenant => tenantTint,
-                CardType.Equipment => equipmentTint,
-                CardType.Event => eventTint,
-                CardType.Contract => contractTint,
-                _ => normalTint
-            };
-        }
-
-        private static Color ResolveRarityTint(CardRarity rarity)
-        {
-            return rarity switch
-            {
-                CardRarity.Rare => new Color(0.35f, 0.63f, 1f, 0.30f),
-                CardRarity.Epic => new Color(0.70f, 0.35f, 1f, 0.32f),
-                CardRarity.Legendary => new Color(1f, 0.82f, 0.28f, 0.34f),
-                _ => new Color(0.85f, 0.85f, 0.88f, 0.18f)
-            };
         }
 
         private static void SetBadge(GameObject badgeRoot, TextMeshProUGUI badgeText, bool visible, string value)
@@ -681,28 +634,7 @@ namespace BaoZuPo.UI
 
         private CardSkinDatabase ResolveSkinDatabase()
         {
-            if (skinDatabase != null)
-            {
-                return skinDatabase;
-            }
-
-            if (_skinLookupAttempted)
-            {
-                return _cachedSkinDatabase;
-            }
-
-            _cachedSkinDatabase = Resources.Load<CardSkinDatabase>("CardSkinDatabase");
-            if (_cachedSkinDatabase == null)
-            {
-                var all = Resources.LoadAll<CardSkinDatabase>(string.Empty);
-                if (all != null && all.Length > 0)
-                {
-                    _cachedSkinDatabase = all[0];
-                }
-            }
-
-            _skinLookupAttempted = true;
-            return _cachedSkinDatabase;
+            return skinDatabase;
         }
 
         private static string GetTypeLabel(CardType cardType)
@@ -710,9 +642,35 @@ namespace BaoZuPo.UI
             return UIStrings.TypeLabel(cardType);
         }
 
-        private static Sprite GetBuiltinSprite()
+        private void CacheInitialVisualState()
         {
-            return UIRuntimeSpriteUtility.GetWhiteSprite();
+            if (_initialVisualStateCached)
+            {
+                return;
+            }
+
+            if (background != null)
+            {
+                _initialBackgroundSprite = background.sprite;
+                _initialBackgroundType = background.type;
+                _initialBackgroundColor = background.color;
+            }
+
+            if (frameImage != null)
+            {
+                _initialFrameSprite = frameImage.sprite;
+                _initialFrameType = frameImage.type;
+                _initialFrameColor = frameImage.color;
+            }
+
+            if (artImage != null)
+            {
+                _initialArtSprite = artImage.sprite;
+                _initialArtColor = artImage.color;
+                _initialArtEnabled = artImage.enabled;
+            }
+
+            _initialVisualStateCached = true;
         }
     }
 }
