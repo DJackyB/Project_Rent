@@ -10,6 +10,7 @@ using Martian.EventBus;
 using UnityEngine;
 using BaoZuPo.UI;
 using BaoZuPo.UI.Settlement;
+using BaoZuPo.Save;
 
 namespace BaoZuPo.GameFlow
 {
@@ -763,6 +764,35 @@ namespace BaoZuPo.GameFlow
 
             var chosen = options[UnityEngine.Random.Range(0, options.Count)];
             Deck.DeckManager.Instance.AddCardToHand(chosen);
+        }
+
+        public TurnSaveState CaptureState()
+        {
+            return new TurnSaveState
+            {
+                currentTurn = _currentTurn,
+                isGameOver = _isGameOver,
+                loanPaymentCount = _loanPaymentCount,
+                currentPhase = CurrentPhase,
+                actionPhaseEnded = ActionPhaseEnded
+            };
+        }
+
+        public void RestoreState(TurnSaveState state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            _currentTurn = state.currentTurn;
+            _isGameOver = state.isGameOver;
+            _loanPaymentCount = state.loanPaymentCount;
+            CurrentPhase = state.currentPhase;
+            ActionPhaseEnded = state.actionPhaseEnded;
+            _activeSettlementBatchId = null;
+            _pendingSettlementPlaybackCount = 0;
+            _settlementTurnEndedPublished = false;
         }
     }
 }

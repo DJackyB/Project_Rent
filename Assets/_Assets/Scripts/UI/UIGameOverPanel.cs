@@ -59,5 +59,15 @@ namespace BaoZuPo.UI
                 Show(_lastTotalTurns, _lastFinalMoney);
             }
         }
+
+        public void Hide()
+        {
+            _hasShownResult = false;
+
+            if (panel != null)
+            {
+                panel.SetActive(false);
+            }
+        }
     }
 }

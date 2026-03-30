@@ -4,12 +4,16 @@ using Martian.EventBus;
 using NodeCanvas.StateMachines;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace BaoZuPo.Core
 {
     public class GameManager : Singleton<GameManager>
     {
+        private const string ActionStateName = "ActionSatage";
+        private static readonly FieldInfo EnterStartStateFlagField = typeof(FSM).GetField("enterStartStateFlag", BindingFlags.Instance | BindingFlags.NonPublic);
+
         [Header("Config")]
         public GameConfig gameConfig;
 
@@ -20,11 +24,13 @@ namespace BaoZuPo.Core
         private void OnEnable()
         {
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Subscribe<GameEvents.GameStateLoaded>(OnGameStateLoaded);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Unsubscribe<GameEvents.GameStateLoaded>(OnGameStateLoaded);
         }
 
         protected override void Awake()
@@ -161,6 +167,58 @@ namespace BaoZuPo.Core
             {
                 _turnFlowFsm.StopBehaviour(false);
             }
+        }
+
+        private void OnGameStateLoaded(GameEvents.GameStateLoaded e)
+        {
+            RestoreTurnFlow(e.Phase, e.IsGameOver);
+        }
+
+        private void RestoreTurnFlow(GamePhase phase, bool isGameOver)
+        {
+            if (_turnFlowFsm == null)
+            {
+                return;
+            }
+
+            if (isGameOver)
+            {
+                if (_turnFlowFsm.isRunning)
+                {
+                    _turnFlowFsm.StopBehaviour(false);
+                }
+
+                return;
+            }
+
+            if (phase != GamePhase.Action)
+            {
+                Debug.LogWarning($"[GameManager] Save load expected Action phase safe point but got '{phase}'.");
+                return;
+            }
+
+            if (!_turnFlowFsm.isRunning)
+            {
+                _turnFlowFsm.StartBehaviour();
+                SuppressPrimeStateEntry(_turnFlowFsm.behaviour);
+            }
+
+            if (string.Equals(_turnFlowFsm.currentRootStateName, ActionStateName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _turnFlowFsm.behaviour?.TriggerState(ActionStateName, FSM.TransitionCallMode.Clean);
+        }
+
+        private static void SuppressPrimeStateEntry(FSM behaviour)
+        {
+            if (behaviour == null || EnterStartStateFlagField == null)
+            {
+                return;
+            }
+
+            EnterStartStateFlagField.SetValue(behaviour, false);
         }
     }
 }
