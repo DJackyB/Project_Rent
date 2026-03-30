@@ -1,0 +1,4 @@
+interface:
+  display_name: "工程文档与记录"
+  short_description: "规范实现文档、专题方案、评估审查、外部资料与归档的边界"
+  default_prompt: "Use $engineering-documentation-rules to organize or update project documentation."

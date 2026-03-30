@@ -1,0 +1,4 @@
+interface:
+  display_name: "交付优先代码原则"
+  short_description: "用交付优先原则指导代码实现、重构、评审与架构取舍"
+  default_prompt: "Use $delivery-first-code-guardrails to guide this coding task."
