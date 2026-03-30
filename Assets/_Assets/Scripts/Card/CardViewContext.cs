@@ -10,6 +10,7 @@ namespace BaoZuPo.Card
         RoomTenant,
         RoomEquipment,
         Contract,
-        TooltipPreview
+        TooltipPreview,
+        RewardPick
     }
 }

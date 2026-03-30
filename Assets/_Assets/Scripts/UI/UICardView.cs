@@ -330,7 +330,7 @@ namespace BaoZuPo.UI
                 nameText.gameObject.SetActive(true);
             }
 
-            bool showCost = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.TooltipPreview;
+            bool showCost = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.TooltipPreview || CurrentContext == CardViewContext.RewardPick;
             if (costText != null)
             {
                 costText.gameObject.SetActive(showCost);
@@ -342,7 +342,8 @@ namespace BaoZuPo.UI
 
             bool showDescription = CurrentContext == CardViewContext.Hand
                 || CurrentContext == CardViewContext.TooltipPreview
-                || CurrentContext == CardViewContext.Contract;
+                || CurrentContext == CardViewContext.Contract
+                || CurrentContext == CardViewContext.RewardPick;
 
             if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.RoomEquipment)
             {

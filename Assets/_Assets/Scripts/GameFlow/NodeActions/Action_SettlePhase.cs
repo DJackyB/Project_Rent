@@ -16,7 +16,8 @@ namespace BaoZuPo.NodeActions
 
         protected override void OnUpdate()
         {
-            if (TurnManager.Instance == null || !TurnManager.Instance.IsSettlementPlaybackPending)
+            if (TurnManager.Instance == null
+                || (!TurnManager.Instance.IsSettlementPlaybackPending && !TurnManager.Instance.IsRewardSelectionPending))
             {
                 EndAction(true);
             }

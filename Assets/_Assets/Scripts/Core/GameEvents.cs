@@ -103,5 +103,22 @@ namespace BaoZuPo.Core
         {
             public string BatchId;
         }
+
+        /// <summary>
+        /// 结算完成后展示三选一奖励（TurnManager → UI）
+        /// </summary>
+        public struct CardRewardOffered
+        {
+            public Card.CardData[] Options;
+            public bool Boosted;
+        }
+
+        /// <summary>
+        /// 玩家选择奖励卡或跳过（UI → TurnManager）
+        /// </summary>
+        public struct CardRewardSelected
+        {
+            public Card.CardData ChosenCard;
+        }
     }
 }

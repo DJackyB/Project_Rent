@@ -25,22 +25,29 @@ namespace BaoZuPo.GameFlow
         private string _activeSettlementBatchId;
         private int _pendingSettlementPlaybackCount;
         private bool _settlementTurnEndedPublished;
+        private bool _isRewardSelectionPending;
+
+        // 缓存当前回合的 boosted 状态，供结算动画完成后使用
+        private bool _pendingRewardBoosted;
 
         public int CurrentTurn => _currentTurn;
         public bool IsGameOver => _isGameOver;
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
         public bool ActionPhaseEnded { get; set; }
         public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
+        public bool IsRewardSelectionPending => _isRewardSelectionPending;
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
         private void OnEnable()
         {
             EventBus.Subscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
+            EventBus.Subscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
+            EventBus.Unsubscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
         }
 
         public void ExecutePreparePhase()
@@ -214,10 +221,9 @@ namespace BaoZuPo.GameFlow
 
             ProcessLoanPayment();
 
-            if (!_isGameOver)
-            {
-                ProcessTurnReward();
-            }
+            // 缓存 boosted 状态，奖励在结算动画播完后再展示
+            var config = GameManager.Instance.gameConfig;
+            _pendingRewardBoosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
 
             FinalizeBatch(settlementBatch, batchId);
         }
@@ -389,13 +395,6 @@ namespace BaoZuPo.GameFlow
             }
         }
 
-        private void ProcessTurnReward()
-        {
-            var config = GameManager.Instance.gameConfig;
-            bool boosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
-            AwardOneCardFromThreeOptions(boosted);
-        }
-
         private void FinalizeBatch(UISettlementPlaybackBatch settlementBatch, string batchId)
         {
             settlementBatch.DeferredMoneyEndValue = MoneyManager.Instance.CurrentMoney;
@@ -403,13 +402,14 @@ namespace BaoZuPo.GameFlow
 
             if (settlementBatch.IsEmpty && settlementBatch.TotalDelta == 0)
             {
-                CompleteSettlementPhase();
+                // 无结算动画，直接进入奖励或完成
+                TryStartRewardOrComplete();
                 return;
             }
 
             if (UIManager.Instance == null)
             {
-                CompleteSettlementPhase();
+                TryStartRewardOrComplete();
                 return;
             }
 
@@ -635,13 +635,49 @@ namespace BaoZuPo.GameFlow
 
             if (_pendingSettlementPlaybackCount <= 0)
             {
-                CompleteSettlementPhase();
+                // 结算动画全部播完，进入奖励选择或直接完成
+                TryStartRewardOrComplete();
             }
+        }
+
+        /// <summary>
+        /// 结算动画播完后，决定是展示三选一奖励还是直接结束回合。
+        /// </summary>
+        private void TryStartRewardOrComplete()
+        {
+            if (!_isGameOver)
+            {
+                AwardOneCardFromThreeOptions(_pendingRewardBoosted);
+                // 如果 AwardOneCardFromThreeOptions 设置了 _isRewardSelectionPending，
+                // 则等待玩家选择；否则（无可用卡）直接完成
+                if (_isRewardSelectionPending)
+                {
+                    return;
+                }
+            }
+
+            CompleteSettlementPhase();
+        }
+
+        private void OnCardRewardSelected(GameEvents.CardRewardSelected e)
+        {
+            if (!_isRewardSelectionPending)
+            {
+                return;
+            }
+
+            if (e.ChosenCard != null)
+            {
+                Deck.DeckManager.Instance.AddCardToHand(e.ChosenCard);
+            }
+
+            _isRewardSelectionPending = false;
+            CompleteSettlementPhase();
         }
 
         private void CompleteSettlementPhase()
         {
-            if (_settlementTurnEndedPublished)
+            if (_settlementTurnEndedPublished || _isRewardSelectionPending)
             {
                 return;
             }
@@ -755,14 +791,19 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
-            var options = new List<CardData>();
+            var options = new CardData[3];
             for (int i = 0; i < 3; i++)
             {
-                options.Add(source[UnityEngine.Random.Range(0, source.Count)]);
+                options[i] = source[UnityEngine.Random.Range(0, source.Count)];
             }
 
-            var chosen = options[UnityEngine.Random.Range(0, options.Count)];
-            Deck.DeckManager.Instance.AddCardToHand(chosen);
+            // 设置等待状态，由 UI 发布 CardRewardSelected 事件后恢复
+            _isRewardSelectionPending = true;
+            EventBus.Publish(new GameEvents.CardRewardOffered
+            {
+                Options = options,
+                Boosted = boosted
+            });
         }
     }
 }
