@@ -32,8 +32,6 @@ namespace BaoZuPo.UI.Settlement
         private bool _isSettling;
         private bool _runtimeTransferViewBuilt;
 
-        public bool IsPlaybackBusy => _isPlaybackRunning || _activeTransferSequence != null || _pendingBatches.Count > 0 || _isSettling;
-
         private void OnEnable()
         {
             EventBus.Subscribe<GameEvents.SettlementSequenceQueued>(OnSettlementQueued);
@@ -108,13 +106,6 @@ namespace BaoZuPo.UI.Settlement
         public void Queue(UISettlementPlaybackBatch batch)
         {
             EnqueueBatch(batch);
-        }
-
-        public void CancelPlaybackImmediately()
-        {
-            ClearPending();
-            HideTransferImmediate();
-            UIManager.Instance?.EndDeferredMoneyDisplay();
         }
 
         private void EnqueueBatch(UISettlementPlaybackBatch batch)

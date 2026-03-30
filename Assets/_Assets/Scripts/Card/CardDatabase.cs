@@ -58,7 +58,6 @@ namespace BaoZuPo.Card
             }
 
             _cards[data.cardId] = data;
-            _isLoaded = true;
         }
 
         /// <summary>
@@ -96,7 +95,5 @@ namespace BaoZuPo.Card
             _cards.Clear();
             _isLoaded = false;
         }
-
-        public static bool IsLoaded => _isLoaded;
     }
 }

@@ -1,7 +1,6 @@
 using UnityEngine;
 using BaoZuPo.Core;
 using Martian.EventBus;
-using BaoZuPo.Save;
 
 namespace BaoZuPo.Economy
 {
@@ -101,26 +100,6 @@ namespace BaoZuPo.Economy
         public bool CanAfford(int amount)
         {
             return _currentMoney >= amount;
-        }
-
-        public EconomySaveState CaptureState()
-        {
-            return new EconomySaveState
-            {
-                currentMoney = _currentMoney,
-                totalSpent = _totalSpent
-            };
-        }
-
-        public void RestoreState(EconomySaveState state)
-        {
-            if (state == null)
-            {
-                throw new System.ArgumentNullException(nameof(state));
-            }
-
-            _currentMoney = state.currentMoney;
-            _totalSpent = state.totalSpent;
         }
     }
 }

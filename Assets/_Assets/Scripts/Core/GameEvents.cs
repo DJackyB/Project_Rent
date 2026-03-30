@@ -83,14 +83,6 @@ namespace BaoZuPo.Core
             public int TotalTurns;
         }
 
-        public struct GameStateLoaded
-        {
-            public string SlotId;
-            public GamePhase Phase;
-            public int TurnNumber;
-            public bool IsGameOver;
-        }
-
         public sealed class SettlementSequenceQueued
         {
             public string BatchId;

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
-using BaoZuPo.Save;
 using UnityEngine;
 
 namespace BaoZuPo.Board
@@ -163,123 +162,17 @@ namespace BaoZuPo.Board
             _contracts.RemoveAll(c => c == null || c.IsDestroyed);
         }
 
-        public BoardSaveState CaptureState()
-        {
-            var state = new BoardSaveState();
-
-            for (int i = 0; i < _rooms.Count; i++)
-            {
-                var room = _rooms[i];
-                if (room == null)
-                {
-                    continue;
-                }
-
-                var roomState = new RoomSaveState
-                {
-                    roomIndex = room.RoomIndex,
-                    tenantSlotCapacity = room.TenantSlotCapacity,
-                    equipmentSlotCapacity = room.EquipmentSlotCapacity
-                };
-
-                CaptureCards(room.GetTenants(), roomState.tenants);
-                CaptureCards(room.GetEquipments(), roomState.equipments);
-                state.rooms.Add(roomState);
-            }
-
-            CaptureCards(_contracts, state.contracts);
-            return state;
-        }
-
-        public void RestoreState(BoardSaveState state)
-        {
-            if (state == null)
-            {
-                throw new System.ArgumentNullException(nameof(state));
-            }
-
-            if (_roomRoot == null)
-            {
-                throw new System.InvalidOperationException("[BoardManager] Cannot restore board state without a room root.");
-            }
-
-            ClearAllRooms();
-            _contracts.Clear();
-
-            for (int i = 0; i < state.rooms.Count; i++)
-            {
-                var roomState = state.rooms[i];
-                var room = AddRoom(roomState.tenantSlotCapacity, roomState.equipmentSlotCapacity);
-                room.RoomIndex = roomState.roomIndex;
-
-                RestoreCardsIntoRoom(room, roomState.tenants);
-                RestoreCardsIntoRoom(room, roomState.equipments);
-            }
-
-            for (int i = 0; i < state.contracts.Count; i++)
-            {
-                if (!CardInstance.TryCreateFromRuntimeState(state.contracts[i], out var contract, out var error))
-                {
-                    throw new System.InvalidOperationException($"[BoardManager] Failed to restore contract #{i}. {error}");
-                }
-
-                AddContract(contract);
-            }
-        }
-
         private void ClearAllRooms()
         {
             foreach (var room in _rooms)
             {
                 if (room != null)
                 {
-                    if (Application.isPlaying)
-                    {
-                        Destroy(room.gameObject);
-                    }
-                    else
-                    {
-                        DestroyImmediate(room.gameObject);
-                    }
+                    Destroy(room.gameObject);
                 }
             }
 
             _rooms.Clear();
-        }
-
-        private static void CaptureCards(IReadOnlyList<CardInstance> source, List<CardRuntimeState> target)
-        {
-            if (source == null || target == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < source.Count; i++)
-            {
-                var card = source[i];
-                if (card == null || card.IsDestroyed)
-                {
-                    continue;
-                }
-
-                target.Add(card.CaptureRuntimeState());
-            }
-        }
-
-        private static void RestoreCardsIntoRoom(RoomSlot room, IReadOnlyList<CardRuntimeState> states)
-        {
-            for (int i = 0; i < states.Count; i++)
-            {
-                if (!CardInstance.TryCreateFromRuntimeState(states[i], out var card, out var error))
-                {
-                    throw new System.InvalidOperationException($"[BoardManager] Failed to restore room card #{i}. {error}");
-                }
-
-                if (!room.PlaceCard(card))
-                {
-                    throw new System.InvalidOperationException($"[BoardManager] Failed to place restored card '{card}'.");
-                }
-            }
         }
     }
 }
