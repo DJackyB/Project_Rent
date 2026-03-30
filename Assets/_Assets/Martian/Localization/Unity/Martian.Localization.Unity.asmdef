@@ -1,0 +1,18 @@
+{
+  "name": "Martian.Localization.Unity",
+  "references": [
+    "Martian.Localization.Abstractions",
+    "Martian.Localization.Runtime",
+    "Unity.Localization"
+  ],
+  "defineConstraints": [
+    "MARTIAN_LOCALIZATION_PACKAGE"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.localization",
+      "expression": "1.0.0",
+      "define": "MARTIAN_LOCALIZATION_PACKAGE"
+    }
+  ]
+}
