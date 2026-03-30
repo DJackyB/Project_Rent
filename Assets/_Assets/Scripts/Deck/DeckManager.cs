@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
+using BaoZuPo.Core;
 using UnityEngine;
 
 namespace BaoZuPo.Deck
@@ -11,41 +12,53 @@ namespace BaoZuPo.Deck
         [SerializeField] private int _handCount;
         [SerializeField] private int _discardPileCount;
 
-        private readonly List<CardInstance> _drawPile = new();
         private readonly List<CardInstance> _hand = new();
         private readonly List<CardInstance> _discardPile = new();
 
         private int _maxHandSize = 7;
 
         public IReadOnlyList<CardInstance> Hand => _hand;
-        public int DrawPileCount => _drawPile.Count;
+        public int DrawPileCount => _drawPileCount;
         public int HandCount => _hand.Count;
         public int DiscardPileCount => _discardPile.Count;
         public int MaxHandSize => _maxHandSize;
 
-        public void Initialize(IEnumerable<CardData> allCards, int maxHandSize = 7)
+        public void Initialize(int maxHandSize = 7)
         {
-            _drawPile.Clear();
             _hand.Clear();
             _discardPile.Clear();
 
             _maxHandSize = Mathf.Max(1, maxHandSize);
-
-            foreach (var data in allCards)
-            {
-                _drawPile.Add(new CardInstance(data));
-            }
-
-            Shuffle(_drawPile);
             UpdateDebugInfo();
-            Debug.Log($"[DeckManager] Initialized deck with {_drawPile.Count} cards. Hand size cap: {_maxHandSize}.");
+            Debug.Log($"[DeckManager] Initialized card zones. Hand size cap: {_maxHandSize}.");
         }
 
         public List<CardInstance> Draw(int count)
         {
+            CardLibrary library = GameManager.Instance != null && GameManager.Instance.gameConfig != null
+                ? GameManager.Instance.gameConfig.normalTurnDrawLibrary
+                : null;
+
+            return DrawFromLibrary(library, count);
+        }
+
+        public List<CardInstance> DrawFromLibrary(CardLibrary library, int count)
+        {
             var drawn = new List<CardInstance>();
             if (count <= 0)
             {
+                return drawn;
+            }
+
+            if (library == null)
+            {
+                Debug.LogWarning("[DeckManager] Cannot draw: library is null.");
+                return drawn;
+            }
+
+            if (library.cards == null || library.cards.Count == 0)
+            {
+                Debug.LogWarning($"[DeckManager] Library '{library.DisplayName}' is empty.");
                 return drawn;
             }
 
@@ -63,26 +76,21 @@ namespace BaoZuPo.Deck
                     break;
                 }
 
-                if (_drawPile.Count == 0)
+                var data = PickRandomCard(library);
+                if (data == null)
                 {
-                    RefillDrawPileFromDiscard();
-                    if (_drawPile.Count == 0)
-                    {
-                        Debug.LogWarning("[DeckManager] Draw pile and discard pile are both empty.");
-                        break;
-                    }
+                    Debug.LogWarning($"[DeckManager] Library '{library.DisplayName}' produced a null card.");
+                    break;
                 }
 
-                var card = _drawPile[0];
-                _drawPile.RemoveAt(0);
-                card.CurrentWait = card.Data.waitTurns;
-
+                var card = CreateCardInstance(data);
                 _hand.Add(card);
                 drawn.Add(card);
             }
 
             UpdateDebugInfo();
-            Debug.Log($"[DeckManager] Drew {drawn.Count} card(s). Hand={_hand.Count}, Draw={_drawPile.Count}, Discard={_discardPile.Count}.");
+            Debug.Log(
+                $"[DeckManager] Drew {drawn.Count} card(s) from library '{library.DisplayName}'. Hand={_hand.Count}, Discard={_discardPile.Count}.");
             return drawn;
         }
 
@@ -105,20 +113,17 @@ namespace BaoZuPo.Deck
                 return;
             }
 
-            var card = new CardInstance(data)
-            {
-                CurrentWait = data.waitTurns
-            };
+            var card = CreateCardInstance(data);
 
             if (_hand.Count >= _maxHandSize)
             {
                 _discardPile.Add(card);
-                Debug.Log($"[DeckManager] Hand full, reward card sent to discard: {data.cardName}");
+                Debug.Log($"[DeckManager] Hand full, generated card sent to discard: {data.cardName}");
             }
             else
             {
                 _hand.Add(card);
-                Debug.Log($"[DeckManager] Added reward card to hand: {data.cardName}");
+                Debug.Log($"[DeckManager] Added generated card to hand: {data.cardName}");
             }
 
             UpdateDebugInfo();
@@ -162,35 +167,27 @@ namespace BaoZuPo.Deck
             return movedToDiscard;
         }
 
-        private void RefillDrawPileFromDiscard()
-        {
-            if (_discardPile.Count == 0)
-            {
-                return;
-            }
-
-            _drawPile.AddRange(_discardPile);
-            _discardPile.Clear();
-            Shuffle(_drawPile);
-
-            Debug.Log($"[DeckManager] Refilled draw pile. Draw={_drawPile.Count}.");
-            UpdateDebugInfo();
-        }
-
-        private void Shuffle(List<CardInstance> pile)
-        {
-            for (int i = pile.Count - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                (pile[i], pile[j]) = (pile[j], pile[i]);
-            }
-        }
-
         private void UpdateDebugInfo()
         {
-            _drawPileCount = _drawPile.Count;
+            _drawPileCount = 0;
             _handCount = _hand.Count;
             _discardPileCount = _discardPile.Count;
+        }
+
+        private static CardInstance CreateCardInstance(CardData data)
+        {
+            return new CardInstance(data);
+        }
+
+        private static CardData PickRandomCard(CardLibrary library)
+        {
+            if (library == null || library.cards == null || library.cards.Count == 0)
+            {
+                return null;
+            }
+
+            int index = Random.Range(0, library.cards.Count);
+            return library.cards[index];
         }
     }
 }

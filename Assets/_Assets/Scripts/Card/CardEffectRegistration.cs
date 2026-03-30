@@ -8,7 +8,7 @@ namespace BaoZuPo.Card
         {
             CardEffectFactory.Register("AddMoney", 1, args => new AddMoneyEffect(int.Parse(args[0])));
             CardEffectFactory.Register("ReduceMoney", 1, args => new ReduceMoneyEffect(int.Parse(args[0])));
-            CardEffectFactory.Register("DrawCard", 1, args => new DrawCardEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("DrawCard", 1, args => new DrawCardEffect(int.Parse(args[0]), args.Length > 1 ? args[1] : null));
             CardEffectFactory.Register("ExpandSlot", 1, args => new ExpandSlotEffect(int.Parse(args[0])));
             CardEffectFactory.Register("AddTenantDurability", 1, args => new AddTenantDurabilityEffect(int.Parse(args[0])));
             CardEffectFactory.Register("AddEquipmentDurability", 1, args => new AddEquipmentDurabilityEffect(int.Parse(args[0])));
