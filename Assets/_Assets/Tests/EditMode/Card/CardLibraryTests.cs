@@ -137,13 +137,15 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
-        public void RewardGeneration_OffersConfiguredRewardLibraryOptions()
+        public void RewardGeneration_OffersThreeUniqueOptions_WhenRewardLibraryContainsDistinctCards()
         {
-            var rewardCard = CreateCardData(40, "Reward");
+            var rewardA = CreateCardData(40, "Reward A");
+            var rewardB = CreateCardData(41, "Reward B");
+            var rewardC = CreateCardData(42, "Reward C");
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(41, "First")),
-                CreateLibrary("NormalPool", CreateCardData(42, "Normal")),
-                CreateLibrary("RewardPool", rewardCard),
+                CreateLibrary("FirstPool", CreateCardData(43, "First")),
+                CreateLibrary("NormalPool", CreateCardData(44, "Normal")),
+                CreateLibrary("RewardPool", rewardA, rewardB, rewardC),
                 firstTurnDrawCount: 0,
                 normalTurnDrawCount: 0,
                 maxHandSize: 5);
@@ -163,10 +165,7 @@ namespace BaoZuPo.Tests.Card
 
             Assert.IsTrue(offered.HasValue);
             Assert.AreEqual(3, offered.Value.Options.Length);
-            foreach (var option in offered.Value.Options)
-            {
-                Assert.AreSame(rewardCard, option);
-            }
+            CollectionAssert.AreEquivalent(new[] { rewardA, rewardB, rewardC }, offered.Value.Options);
             Assert.AreEqual(0, context.DeckManager.HandCount);
             Assert.IsTrue(context.TurnManager.IsRewardSelectionPending);
         }
@@ -174,31 +173,35 @@ namespace BaoZuPo.Tests.Card
         [Test]
         public void RewardSelection_AddsChosenCardToHand_AndClearsPending()
         {
-            var rewardCard = CreateCardData(50, "Reward");
+            var rewardA = CreateCardData(50, "Reward A");
+            var rewardB = CreateCardData(51, "Reward B");
+            var rewardC = CreateCardData(52, "Reward C");
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(51, "First")),
-                CreateLibrary("NormalPool", CreateCardData(52, "Normal")),
-                CreateLibrary("RewardPool", rewardCard),
+                CreateLibrary("FirstPool", CreateCardData(53, "First")),
+                CreateLibrary("NormalPool", CreateCardData(54, "Normal")),
+                CreateLibrary("RewardPool", rewardA, rewardB, rewardC),
                 firstTurnDrawCount: 0,
                 normalTurnDrawCount: 0,
                 maxHandSize: 5);
 
             InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
-            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = rewardCard });
+            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = rewardA });
 
             Assert.AreEqual(1, context.DeckManager.HandCount);
-            Assert.AreSame(rewardCard, context.DeckManager.Hand[0].Data);
+            Assert.AreSame(rewardA, context.DeckManager.Hand[0].Data);
             Assert.IsFalse(context.TurnManager.IsRewardSelectionPending);
         }
 
         [Test]
         public void RewardSelection_SkipClearsPending_WithoutAddingCard()
         {
-            var rewardCard = CreateCardData(60, "Reward");
+            var rewardA = CreateCardData(60, "Reward A");
+            var rewardB = CreateCardData(61, "Reward B");
+            var rewardC = CreateCardData(62, "Reward C");
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(61, "First")),
-                CreateLibrary("NormalPool", CreateCardData(62, "Normal")),
-                CreateLibrary("RewardPool", rewardCard),
+                CreateLibrary("FirstPool", CreateCardData(63, "First")),
+                CreateLibrary("NormalPool", CreateCardData(64, "Normal")),
+                CreateLibrary("RewardPool", rewardA, rewardB, rewardC),
                 firstTurnDrawCount: 0,
                 normalTurnDrawCount: 0,
                 maxHandSize: 5);
@@ -213,11 +216,13 @@ namespace BaoZuPo.Tests.Card
         [Test]
         public void RewardGeneration_BoostedWithoutRareCards_LogsWarning_AndFallsBackToFullPool()
         {
-            var commonReward = CreateCardData(70, "Common Reward");
+            var commonA = CreateCardData(70, "Common Reward A");
+            var commonB = CreateCardData(71, "Common Reward B");
+            var commonC = CreateCardData(72, "Common Reward C");
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(71, "First")),
-                CreateLibrary("NormalPool", CreateCardData(72, "Normal")),
-                CreateLibrary("RewardPool", commonReward),
+                CreateLibrary("FirstPool", CreateCardData(73, "First")),
+                CreateLibrary("NormalPool", CreateCardData(74, "Normal")),
+                CreateLibrary("RewardPool", commonA, commonB, commonC),
                 firstTurnDrawCount: 0,
                 normalTurnDrawCount: 0,
                 maxHandSize: 5);
@@ -238,11 +243,72 @@ namespace BaoZuPo.Tests.Card
 
             Assert.IsTrue(offered.HasValue);
             Assert.AreEqual(3, offered.Value.Options.Length);
-            foreach (var option in offered.Value.Options)
-            {
-                Assert.AreSame(commonReward, option);
-            }
+            CollectionAssert.AreEquivalent(new[] { commonA, commonB, commonC }, offered.Value.Options);
             Assert.IsTrue(offered.Value.Boosted);
+        }
+
+        [Test]
+        public void RewardGeneration_DeduplicatesWeightedRewardEntries()
+        {
+            var rewardA = CreateCardData(100, "Reward A");
+            var rewardB = CreateCardData(101, "Reward B");
+            var rewardC = CreateCardData(102, "Reward C");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(103, "First")),
+                CreateLibrary("NormalPool", CreateCardData(104, "Normal")),
+                CreateLibrary("RewardPool", rewardA, rewardA, rewardB, rewardB, rewardC),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            GameEvents.CardRewardOffered? offered = null;
+            void OnRewardOffered(GameEvents.CardRewardOffered e) => offered = e;
+            EventBus.Subscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+
+            try
+            {
+                InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+            }
+
+            Assert.IsTrue(offered.HasValue);
+            Assert.AreEqual(3, offered.Value.Options.Length);
+            CollectionAssert.AreEquivalent(new[] { rewardA, rewardB, rewardC }, offered.Value.Options);
+        }
+
+        [Test]
+        public void RewardGeneration_WithFewerThanThreeUniqueCards_LogsWarning_AndOffersAvailableUniqueOptions()
+        {
+            var rewardA = CreateCardData(110, "Reward A");
+            var rewardB = CreateCardData(111, "Reward B");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(112, "First")),
+                CreateLibrary("NormalPool", CreateCardData(113, "Normal")),
+                CreateLibrary("RewardPool", rewardA, rewardA, rewardB),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            GameEvents.CardRewardOffered? offered = null;
+            void OnRewardOffered(GameEvents.CardRewardOffered e) => offered = e;
+            EventBus.Subscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+
+            try
+            {
+                LogAssert.Expect(LogType.Warning, "[TurnManager] Reward library only has 2 unique reward card(s) available. Offering 2 unique option(s).");
+                InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+            }
+
+            Assert.IsTrue(offered.HasValue);
+            Assert.AreEqual(2, offered.Value.Options.Length);
+            CollectionAssert.AreEquivalent(new[] { rewardA, rewardB }, offered.Value.Options);
         }
 
         [Test]

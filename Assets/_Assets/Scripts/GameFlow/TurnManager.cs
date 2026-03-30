@@ -807,10 +807,16 @@ namespace BaoZuPo.GameFlow
                 throw new InvalidOperationException("[TurnManager] Reward selection requires UIManager in scene.");
             }
 
-            var options = new CardData[3];
-            for (int i = 0; i < 3; i++)
+            var options = BuildUniqueRewardOptions(source, 3);
+            if (options.Length == 0)
             {
-                options[i] = source[UnityEngine.Random.Range(0, source.Count)];
+                Debug.LogWarning("[TurnManager] No unique reward cards available.");
+                return;
+            }
+
+            if (options.Length < 3)
+            {
+                Debug.LogWarning($"[TurnManager] Reward library only has {options.Length} unique reward card(s) available. Offering {options.Length} unique option(s).");
             }
 
             // 设置等待状态，由 UI 发布 CardRewardSelected 事件后恢复
@@ -820,6 +826,33 @@ namespace BaoZuPo.GameFlow
                 Options = options,
                 Boosted = boosted
             });
+        }
+
+        private static CardData[] BuildUniqueRewardOptions(List<CardData> source, int desiredCount)
+        {
+            var remaining = source != null
+                ? source.Where(card => card != null).ToList()
+                : new List<CardData>();
+            var options = new List<CardData>(Mathf.Max(0, desiredCount));
+
+            while (remaining.Count > 0 && options.Count < desiredCount)
+            {
+                var chosen = remaining[UnityEngine.Random.Range(0, remaining.Count)];
+                options.Add(chosen);
+                remaining.RemoveAll(card => IsSameRewardCard(card, chosen));
+            }
+
+            return options.ToArray();
+        }
+
+        private static bool IsSameRewardCard(CardData left, CardData right)
+        {
+            if (left == null || right == null)
+            {
+                return false;
+            }
+
+            return ReferenceEquals(left, right) || left.cardId == right.cardId;
         }
     }
 }
