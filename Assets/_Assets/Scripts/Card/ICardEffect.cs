@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Core;
+using BaoZuPo.Deck;
 using UnityEngine;
 
 namespace BaoZuPo.Card
@@ -33,6 +34,7 @@ namespace BaoZuPo.Card
     {
         public Economy.MoneyManager MoneyManager { get; set; }
         public Board.BoardManager BoardManager { get; set; }
+        public DeckManager DeckManager { get; set; }
         public SettlementCaptureContext SettlementCapture { get; }
         public EffectExecutionContext EffectContext { get; }
 
@@ -78,9 +80,13 @@ namespace BaoZuPo.Card
             RecordStep(GameEvents.SettlementStepKind.Multiplier, amount, true, label);
         }
 
-        public GameEvents.SettlementStep[] Complete(int finalAmount, string label = null)
+        public GameEvents.SettlementStep[] Complete(int finalAmount, string label = null, bool includeFinalStep = true)
         {
-            RecordStep(GameEvents.SettlementStepKind.Final, finalAmount, false, label);
+            if (includeFinalStep)
+            {
+                RecordStep(GameEvents.SettlementStepKind.Final, finalAmount, false, label);
+            }
+
             IsCapturing = false;
             return _steps.ToArray();
         }

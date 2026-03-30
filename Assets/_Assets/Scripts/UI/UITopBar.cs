@@ -45,8 +45,10 @@ namespace BaoZuPo.UI
         public void Refresh()
         {
             EnsureHudLayout();
-            RefreshTurn(TurnManager.Instance.CurrentTurn);
-            RefreshMoney(MoneyManager.Instance.CurrentMoney);
+            var turnManager = TurnManager.Instance;
+            var moneyManager = MoneyManager.Instance;
+            RefreshTurn(turnManager != null ? turnManager.CurrentTurn : 0);
+            RefreshMoney(moneyManager != null ? moneyManager.CurrentMoney : _authoritativeMoney);
             RefreshSummary();
         }
 
@@ -117,7 +119,7 @@ namespace BaoZuPo.UI
             UIFontCatalog.ApplyToText(deckText);
             if (deckText != null)
             {
-                deckText.text = UIStrings.Spent(MoneyManager.Instance.TotalSpent);
+                deckText.text = UIStrings.Spent(MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
             }
         }
 

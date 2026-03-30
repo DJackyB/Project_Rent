@@ -19,7 +19,7 @@ namespace BaoZuPo.Card.Effects
             bool success = context.MoneyManager.ReduceMoney(_amount);
             if (success)
             {
-                context?.SettlementCapture?.RecordDelta(-_amount);
+                context?.SettlementCapture?.RecordDelta(-_amount, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
             Debug.Log($"[镜像效果] {source.Data.cardName} 触发 ReduceMoney({_amount}), 成功: {success}");

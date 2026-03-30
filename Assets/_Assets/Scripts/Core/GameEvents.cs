@@ -88,6 +88,8 @@ namespace BaoZuPo.Core
             public string BatchId;
             public int SourceIndex;
             public int SourceCount;
+            public int TrackIndex;
+            public int TrackCount = 1;
             public string LaneKey;
             public SettlementSourceKind SourceKind;
             public RoomSlot Room;
@@ -100,6 +102,23 @@ namespace BaoZuPo.Core
         public struct SettlementPlaybackCompleted
         {
             public string BatchId;
+        }
+
+        /// <summary>
+        /// 结算完成后展示三选一奖励（TurnManager → UI）
+        /// </summary>
+        public struct CardRewardOffered
+        {
+            public Card.CardData[] Options;
+            public bool Boosted;
+        }
+
+        /// <summary>
+        /// 玩家选择奖励卡或跳过（UI → TurnManager）
+        /// </summary>
+        public struct CardRewardSelected
+        {
+            public Card.CardData ChosenCard;
         }
     }
 }

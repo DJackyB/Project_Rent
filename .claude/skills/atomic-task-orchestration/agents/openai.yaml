@@ -1,0 +1,4 @@
+interface:
+  display_name: "原子任务编排"
+  short_description: "指导 AI 判断任务规模、细化拆分、分发执行与总调度回收"
+  default_prompt: "Use $atomic-task-orchestration to break this work into atomic tasks and orchestrate execution."

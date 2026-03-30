@@ -17,7 +17,7 @@ namespace BaoZuPo.Card.Effects
         public void Execute(CardInstance source, GameContext context)
         {
             context.MoneyManager.AddMoney(_amount);
-            context?.SettlementCapture?.RecordDelta(_amount);
+            context?.SettlementCapture?.RecordDelta(_amount, source != null && source.Data != null ? source.Data.cardName : null);
             Debug.Log($"[镜像效果] {source.Data.cardName} 触发 AddMoney({_amount})");
         }
     }

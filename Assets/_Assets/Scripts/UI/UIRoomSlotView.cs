@@ -10,9 +10,11 @@ namespace BaoZuPo.UI
         [SerializeField] private CardViewContext slotContext = CardViewContext.RoomTenant;
         [SerializeField] private Vector2 tenantSlotSize = new Vector2(190f, 260f);
         [SerializeField] private Vector2 equipmentSlotSize = new Vector2(165f, 230f);
+        [SerializeField] private RectTransform contentRoot;
+        [SerializeField] private LayoutElement layoutElement;
+        [SerializeField] private GameObject placeholderObject;
+        [SerializeField] private TextMeshProUGUI placeholderLabel;
 
-        private Transform _contentRoot;
-        private GameObject _placeholderObject;
         private GameObject _currentCardObject;
         private GameObject _cardPrefab;
         private CardInstance _boundCard;
@@ -42,7 +44,7 @@ namespace BaoZuPo.UI
             }
 
             HidePlaceholder();
-            _currentCardObject = Instantiate(_cardPrefab, _contentRoot);
+            _currentCardObject = Instantiate(_cardPrefab, contentRoot);
             _currentCardObject.transform.localPosition = Vector3.zero;
             _currentCardObject.transform.localRotation = Quaternion.identity;
             _currentCardObject.transform.localScale = Vector3.one;
@@ -60,12 +62,15 @@ namespace BaoZuPo.UI
             if (slotContext == CardViewContext.RoomEquipment)
             {
                 var equipmentView = _currentCardObject.GetComponent<UIEquipmentCardView>();
-                if (equipmentView == null)
+                if (equipmentView != null)
                 {
-                    equipmentView = _currentCardObject.AddComponent<UIEquipmentCardView>();
+                    equipmentView.Setup(card);
                 }
-
-                equipmentView.Setup(card);
+                else
+                {
+                    Debug.LogError("[UIRoomSlotView] Equipment card prefab is missing UIEquipmentCardView.", _currentCardObject);
+                    cardView?.Setup(card, slotContext, null);
+                }
             }
             else if (cardView != null)
             {
@@ -75,35 +80,56 @@ namespace BaoZuPo.UI
 
         private void EnsureRoots()
         {
-            if (_contentRoot != null)
+            if (contentRoot == null)
             {
-                return;
+                contentRoot = transform.Find("ContentRoot") as RectTransform;
             }
 
-            var contentObject = new GameObject("ContentRoot", typeof(RectTransform));
-            contentObject.transform.SetParent(transform, false);
-            _contentRoot = contentObject.transform;
+            if (contentRoot == null)
+            {
+                var contentObject = new GameObject("ContentRoot", typeof(RectTransform));
+                contentObject.transform.SetParent(transform, false);
+                contentRoot = contentObject.GetComponent<RectTransform>();
 
-            var rect = _contentRoot as RectTransform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+                contentRoot.anchorMin = Vector2.zero;
+                contentRoot.anchorMax = Vector2.one;
+                contentRoot.offsetMin = Vector2.zero;
+                contentRoot.offsetMax = Vector2.zero;
+            }
+
+            if (layoutElement == null)
+            {
+                layoutElement = GetComponent<LayoutElement>();
+            }
+
+            if (placeholderObject == null)
+            {
+                placeholderObject = contentRoot.Find("EmptySlot")?.gameObject;
+            }
+
+            if (placeholderLabel == null && placeholderObject != null)
+            {
+                placeholderLabel = placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
         }
 
         private void ApplySlotSizing()
         {
-            var layout = GetComponent<LayoutElement>();
-            if (layout == null)
+            if (layoutElement == null)
             {
-                layout = gameObject.AddComponent<LayoutElement>();
+                layoutElement = GetComponent<LayoutElement>();
+            }
+
+            if (layoutElement == null)
+            {
+                layoutElement = gameObject.AddComponent<LayoutElement>();
             }
 
             Vector2 size = slotContext == CardViewContext.RoomEquipment ? equipmentSlotSize : tenantSlotSize;
-            layout.preferredWidth = size.x;
-            layout.preferredHeight = size.y;
-            layout.flexibleWidth = 0f;
-            layout.flexibleHeight = 0f;
+            layoutElement.preferredWidth = size.x;
+            layoutElement.preferredHeight = size.y;
+            layoutElement.flexibleWidth = 0f;
+            layoutElement.flexibleHeight = 0f;
         }
 
         private void ClearCurrentCard()
@@ -117,33 +143,37 @@ namespace BaoZuPo.UI
 
         private void ShowPlaceholder()
         {
-            if (_placeholderObject != null)
+            if (placeholderObject != null)
             {
-                _placeholderObject.SetActive(true);
-                var existingLabel = _placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
-                if (existingLabel != null)
+                placeholderObject.SetActive(true);
+                if (placeholderLabel == null)
                 {
-                    UIFontCatalog.ApplyToText(existingLabel);
-                    existingLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+                    placeholderLabel = placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
+                }
+
+                if (placeholderLabel != null)
+                {
+                    UIFontCatalog.ApplyToText(placeholderLabel);
+                    placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
                 }
                 return;
             }
 
-            _placeholderObject = new GameObject("EmptySlot", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            _placeholderObject.transform.SetParent(_contentRoot, false);
+            placeholderObject = new GameObject("EmptySlot", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            placeholderObject.transform.SetParent(contentRoot, false);
 
-            var rect = _placeholderObject.GetComponent<RectTransform>();
+            var rect = placeholderObject.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
-            var image = _placeholderObject.GetComponent<Image>();
+            var image = placeholderObject.GetComponent<Image>();
             image.color = new Color(1f, 1f, 1f, 0.08f);
             image.raycastTarget = false;
 
             var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            labelObject.transform.SetParent(_placeholderObject.transform, false);
+            labelObject.transform.SetParent(placeholderObject.transform, false);
 
             var labelRect = labelObject.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
@@ -151,20 +181,20 @@ namespace BaoZuPo.UI
             labelRect.offsetMin = Vector2.zero;
             labelRect.offsetMax = Vector2.zero;
 
-            var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = ResolveFont();
-            label.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
-            label.alignment = TextAlignmentOptions.Center;
-            label.fontSize = 20f;
-            label.color = new Color(1f, 1f, 1f, 0.45f);
-            label.raycastTarget = false;
+            placeholderLabel = labelObject.GetComponent<TextMeshProUGUI>();
+            placeholderLabel.font = ResolveFont();
+            placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+            placeholderLabel.alignment = TextAlignmentOptions.Center;
+            placeholderLabel.fontSize = 20f;
+            placeholderLabel.color = new Color(1f, 1f, 1f, 0.45f);
+            placeholderLabel.raycastTarget = false;
         }
 
         private void HidePlaceholder()
         {
-            if (_placeholderObject != null)
+            if (placeholderObject != null)
             {
-                _placeholderObject.SetActive(false);
+                placeholderObject.SetActive(false);
             }
         }
 

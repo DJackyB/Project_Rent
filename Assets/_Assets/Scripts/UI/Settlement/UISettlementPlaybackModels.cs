@@ -89,9 +89,15 @@ namespace BaoZuPo.UI.Settlement
     {
         public const string DefaultLaneKey = "settlement-global";
 
+        public string CompletionBatchId;
+        public bool PublishCompletionOnBatchEnd = true;
+        public bool PlayMoneyJumpOnBatchEnd = true;
+        public int DeferredMoneyStartValue;
+        public int DeferredMoneyEndValue;
         public List<UISettlementPlaybackStage> Stages = new();
 
         public bool IsEmpty => Stages == null || Stages.Count == 0;
+        public int TotalDelta => DeferredMoneyEndValue - DeferredMoneyStartValue;
 
         public static UISettlementPlaybackBatch CreateSerial(IReadOnlyList<GameEvents.SettlementSequenceQueued> payloads, string laneKey = null)
         {
@@ -115,6 +121,8 @@ namespace BaoZuPo.UI.Settlement
                     UISettlementPlaybackEntry.Create(payload, resolvedLaneKey)));
             }
 
+            batch.PlayMoneyJumpOnBatchEnd = false;
+            batch.PublishCompletionOnBatchEnd = false;
             return batch;
         }
 

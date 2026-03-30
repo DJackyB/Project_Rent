@@ -19,6 +19,9 @@ MonoBehaviour:
   firstTurnDrawCount: 5
   normalTurnDrawCount: 3
   maxHandSize: 7
+  firstTurnDrawLibrary: {fileID: 11400000, guid: eb059f8fdc5a425e9f219206420045b9, type: 2}
+  normalTurnDrawLibrary: {fileID: 11400000, guid: eb059f8fdc5a425e9f219206420045b9, type: 2}
+  rewardLibrary: {fileID: 11400000, guid: eb059f8fdc5a425e9f219206420045b9, type: 2}
   initialRoomCount: 3
   defaultTenantSlots: 1
   defaultEquipmentSlots: 3

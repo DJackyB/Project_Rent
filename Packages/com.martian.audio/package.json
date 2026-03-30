@@ -1,0 +1,23 @@
+{
+  "name": "com.martian.audio",
+  "displayName": "Martian Audio",
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "A default-disabled, reusable Unity audio package with a built-in AudioSource backend and pluggable backend factories.",
+  "keywords": [
+    "audio",
+    "unity",
+    "martian",
+    "tooling"
+  ],
+  "author": {
+    "name": "OpenAI Codex"
+  },
+  "samples": [
+    {
+      "displayName": "Minimal Setup",
+      "description": "A minimal bootstrap, config, and demo script sample for Martian Audio.",
+      "path": "Samples~/MinimalSetup"
+    }
+  ]
+}

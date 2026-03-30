@@ -26,6 +26,7 @@ namespace BaoZuPo.UI
 
         [SerializeField] private FeedbackBootstrap _feedbackBootstrap;
         [SerializeField] private UISettlementSequenceController _settlementSequenceController;
+        [SerializeField] private UICardRewardPanel _cardRewardPanel;
 
         private void OnEnable()
         {
@@ -33,6 +34,7 @@ namespace BaoZuPo.UI
             EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Subscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
             LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
 
@@ -47,6 +49,7 @@ namespace BaoZuPo.UI
             ConfigureFeedbackBootstrap();
             InitializeCardDragController();
             RefreshAll();
+            phasePanel?.UpdatePhase(CurrentPhase.ToString());
         }
 
         private void OnDisable()
@@ -55,6 +58,7 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+            EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
             LocalizationManager.LanguageChanged -= OnLanguageChanged;
         }
 
@@ -99,12 +103,18 @@ namespace BaoZuPo.UI
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
+        private void OnCardRewardOffered(GameEvents.CardRewardOffered e)
+        {
+            _cardRewardPanel?.Show(e.Options, e.Boosted);
+        }
+
         private void OnLanguageChanged()
         {
             UIFontCatalog.ApplyToAllLoadedSceneTexts();
             RefreshAll();
             phasePanel?.UpdatePhase(CurrentPhase.ToString());
             gameOverPanel?.RefreshLocalization();
+            _cardRewardPanel?.RefreshLocalization();
         }
 
         public void RefreshAll()

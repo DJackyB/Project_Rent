@@ -16,13 +16,16 @@ namespace BaoZuPo.UI
         public Transform roomContainer;
         public GameObject roomCardEntryPrefab;
         public UICardDropZone playAreaDropZone;
+        [SerializeField] private TextMeshProUGUI playAreaLabel;
+        [SerializeField] private RectTransform contractPanelRoot;
+        [SerializeField] private Transform contractContainer;
+        [SerializeField] private TextMeshProUGUI contractTitleText;
 
         private readonly List<UIRoomView> _roomViews = new();
         private readonly List<UICardView> _contractViews = new();
         private readonly Dictionary<RoomSlot, UIRoomView> _roomLookup = new();
         private readonly Dictionary<CardInstance, UICardView> _contractLookup = new();
 
-        private Transform _contractPanelRoot;
         private Transform _contractContainer;
 
         public void RefreshBoard()
@@ -109,11 +112,16 @@ namespace BaoZuPo.UI
                 playAreaDropZone = zoneTransform.GetComponent<UICardDropZone>();
             }
 
-            var zoneLabel = playAreaDropZone != null ? playAreaDropZone.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+            var zoneLabel = playAreaLabel != null
+                ? playAreaLabel
+                : playAreaDropZone != null
+                    ? playAreaDropZone.GetComponentInChildren<TextMeshProUGUI>(true)
+                    : null;
             if (zoneLabel != null)
             {
                 UIFontCatalog.ApplyToText(zoneLabel);
                 zoneLabel.text = UIStrings.PlayArea;
+                playAreaLabel = zoneLabel;
             }
 
             playAreaDropZone.ZoneKind = CardPlayTargetKind.PlayArea;
@@ -196,9 +204,47 @@ namespace BaoZuPo.UI
                 return;
             }
 
+            if (contractContainer != null)
+            {
+                _contractContainer = contractContainer;
+                EnsureContractContainerLayout(_contractContainer);
+                RefreshContractPanelLocalization();
+                return;
+            }
+
+            if (contractPanelRoot == null)
+            {
+                var existingRoot = transform.Find("ContractPanel");
+                if (existingRoot != null)
+                {
+                    contractPanelRoot = existingRoot as RectTransform;
+                }
+            }
+
+            if (contractPanelRoot != null)
+            {
+                if (contractTitleText == null)
+                {
+                    contractTitleText = contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
+                }
+
+                if (contractContainer == null)
+                {
+                    contractContainer = contractPanelRoot.Find("ContractContainer");
+                }
+
+                if (contractContainer != null)
+                {
+                    _contractContainer = contractContainer;
+                    EnsureContractContainerLayout(_contractContainer);
+                    RefreshContractPanelLocalization();
+                    return;
+                }
+            }
+
             var panelRoot = new GameObject("ContractPanel", typeof(RectTransform), typeof(Image));
             panelRoot.transform.SetParent(transform, false);
-            _contractPanelRoot = panelRoot.transform;
+            contractPanelRoot = panelRoot.GetComponent<RectTransform>();
 
             var panelRect = panelRoot.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(1f, 1f);
@@ -228,10 +274,12 @@ namespace BaoZuPo.UI
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = Color.white;
             titleText.raycastTarget = false;
+            contractTitleText = titleText;
 
             var listObject = new GameObject("ContractContainer", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             listObject.transform.SetParent(panelRoot.transform, false);
             _contractContainer = listObject.transform;
+            contractContainer = _contractContainer;
 
             var listRect = listObject.GetComponent<RectTransform>();
             listRect.anchorMin = new Vector2(0f, 0f);
@@ -241,32 +289,26 @@ namespace BaoZuPo.UI
             listRect.offsetMax = new Vector2(-12f, -48f);
 
             var layout = listObject.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 12f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-
-            var fitter = listObject.GetComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            EnsureContractContainerLayout(listObject.transform);
 
             UIFontCatalog.ApplyToChildren(panelRoot.transform);
         }
 
         private void RefreshContractPanelLocalization()
         {
-            if (_contractPanelRoot == null)
+            if (contractPanelRoot == null)
             {
                 return;
             }
 
-            UIFontCatalog.ApplyToChildren(_contractPanelRoot);
-            var titleText = _contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
+            UIFontCatalog.ApplyToChildren(contractPanelRoot);
+            var titleText = contractTitleText != null
+                ? contractTitleText
+                : contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
             if (titleText != null)
             {
                 titleText.text = UIStrings.Contracts;
+                contractTitleText = titleText;
             }
         }
 
@@ -281,6 +323,36 @@ namespace BaoZuPo.UI
             {
                 Destroy(container.GetChild(i).gameObject);
             }
+        }
+
+        private static void EnsureContractContainerLayout(Transform container)
+        {
+            if (container == null)
+            {
+                return;
+            }
+
+            var layout = container.GetComponent<VerticalLayoutGroup>();
+            if (layout == null)
+            {
+                layout = container.gameObject.AddComponent<VerticalLayoutGroup>();
+            }
+
+            layout.spacing = 12f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            var fitter = container.GetComponent<ContentSizeFitter>();
+            if (fitter == null)
+            {
+                fitter = container.gameObject.AddComponent<ContentSizeFitter>();
+            }
+
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
     }
 }

@@ -29,7 +29,7 @@ namespace BaoZuPo.Card.Effects
             if (total != 0)
             {
                 context.MoneyManager.AddMoney(total);
-                context?.SettlementCapture?.RecordDelta(total);
+                context?.SettlementCapture?.RecordDelta(total, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
             Debug.Log($"[镜像效果] {source.Data.cardName}: 空房 {emptyCount} 间，资金变化 {total}");

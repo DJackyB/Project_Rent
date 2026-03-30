@@ -1,0 +1,13 @@
+{
+  "name": "Martian.Save.EditModeTests",
+  "references": [
+    "Martian.Save",
+    "Martian.Save.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

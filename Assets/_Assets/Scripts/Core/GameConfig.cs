@@ -1,3 +1,4 @@
+using BaoZuPo.Card;
 using UnityEngine;
 
 namespace BaoZuPo.Core
@@ -5,47 +6,56 @@ namespace BaoZuPo.Core
     [CreateAssetMenu(fileName = "GameConfig", menuName = "BaoZuPo/GameConfig")]
     public class GameConfig : ScriptableObject
     {
-        [Header("\u7ecf\u6d4e")]
-        [Tooltip("\u521d\u59cb\u8d44\u91d1")]
+        [Header("经济")]
+        [Tooltip("初始资金")]
         public int startingMoney = 1000;
 
-        [Tooltip("\u6bcf\u6b21\u8fd8\u8d37\u91d1\u989d")]
+        [Tooltip("每次还贷金额")]
         public int loanAmount = 500;
 
-        [Tooltip("\u6bcf\u9694\u591a\u5c11\u56de\u5408\u8fd8\u8d37\u4e00\u6b21")]
+        [Tooltip("每隔多少回合还贷一次")]
         public int loanInterval = 5;
 
-        [Tooltip("\u540e\u7eed\u6bcf\u6b21\u8fd8\u8d37\u91d1\u989d\u7684\u589e\u957f\u7cfb\u6570")]
+        [Tooltip("后续每次还贷金额的增长系数")]
         public float loanGrowthFactor = 2f;
 
-        [Header("\u62bd\u724c")]
-        [Tooltip("\u9996\u56de\u5408\u62bd\u724c\u6570")]
+        [Header("抽牌")]
+        [Tooltip("首回合抽牌数")]
         public int firstTurnDrawCount = 5;
 
-        [Tooltip("\u666e\u901a\u56de\u5408\u62bd\u724c\u6570")]
+        [Tooltip("普通回合抽牌数")]
         public int normalTurnDrawCount = 3;
 
-        [Tooltip("\u6700\u5927\u624b\u724c\u4e0a\u9650")]
+        [Tooltip("最大手牌上限")]
         public int maxHandSize = 7;
 
-        [Header("\u623f\u95f4")]
-        [Tooltip("\u521d\u59cb\u623f\u95f4\u6570\u91cf")]
+        [Tooltip("首回合抽牌所使用的牌库")]
+        public CardLibrary firstTurnDrawLibrary;
+
+        [Tooltip("普通回合抽牌所使用的牌库")]
+        public CardLibrary normalTurnDrawLibrary;
+
+        [Tooltip("奖励三选一所使用的牌库")]
+        public CardLibrary rewardLibrary;
+
+        [Header("房间")]
+        [Tooltip("初始房间数量")]
         public int initialRoomCount = 3;
 
-        [Tooltip("\u6bcf\u4e2a\u623f\u95f4\u9ed8\u8ba4\u79df\u5ba2\u69fd\u4f4d\u6570")]
+        [Tooltip("每个房间默认租客槽位数")]
         public int defaultTenantSlots = 1;
 
-        [Tooltip("\u6bcf\u4e2a\u623f\u95f4\u9ed8\u8ba4\u88c5\u5907\u69fd\u4f4d\u6570")]
+        [Tooltip("每个房间默认装备槽位数")]
         public int defaultEquipmentSlots = 3;
 
-        [Header("\u8df3\u5b57\u53cd\u9988")]
-        [Tooltip("\u662f\u5426\u542f\u7528\u901a\u7528\u8df3\u5b57\u53cd\u9988\u6a21\u5757")]
+        [Header("跳字反馈")]
+        [Tooltip("是否启用通用跳字反馈模块")]
         public bool enableFeedback = true;
 
-        [Tooltip("\u662f\u5426\u542f\u7528\u8d44\u91d1\u53d8\u5316\u7684\u8df3\u5b57\u53cd\u9988")]
+        [Tooltip("是否启用资金变化的跳字反馈")]
         public bool enableMoneyFeedback = true;
 
-        [Tooltip("\u662f\u5426\u8f93\u51fa\u8df3\u5b57\u53cd\u9988\u6a21\u5757\u8c03\u8bd5\u65e5\u5fd7")]
+        [Tooltip("是否输出跳字反馈模块调试日志")]
         public bool enableFeedbackLogs = true;
     }
 }

@@ -82,6 +82,10 @@ namespace BaoZuPo.UI
         public static string SettlementMultiplier => LocalizationManager.UseChinese ? "倍率" : "Multiplier";
         public static string SettlementFinal => LocalizationManager.UseChinese ? "最终" : "Final";
 
+        public static string RewardTitle => LocalizationManager.UseChinese ? "选择奖励" : "Choose a Reward";
+        public static string RewardBoostedTitle => LocalizationManager.UseChinese ? "稀有奖励!" : "Rare Reward!";
+        public static string RewardSkip => LocalizationManager.UseChinese ? "跳过" : "Skip";
+
         public static IEnumerable<string> GetFontSeedTexts()
         {
             yield return FontSeedCommonCharacters;
@@ -144,6 +148,12 @@ namespace BaoZuPo.UI
             yield return "Bonus +100";
             yield return "Multiplier x2";
             yield return "Final +200";
+            yield return "选择奖励";
+            yield return "稀有奖励!";
+            yield return "跳过";
+            yield return "Choose a Reward";
+            yield return "Rare Reward!";
+            yield return "Skip";
         }
     }
 }

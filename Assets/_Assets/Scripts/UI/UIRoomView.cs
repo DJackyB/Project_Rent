@@ -18,6 +18,7 @@ namespace BaoZuPo.UI
         public RectTransform dropAnchor;
         public UICardDropZone dropZone;
         public Graphic highlightGraphic;
+        [SerializeField] private GameObject slotPrefab;
 
         private readonly List<UIRoomSlotView> _slotViews = new();
         private RoomSlot _room;
@@ -66,10 +67,26 @@ namespace BaoZuPo.UI
 
         private UIRoomSlotView CreateSlot(Transform parent, string slotName, CardViewContext context)
         {
-            var slotObject = new GameObject(slotName, typeof(RectTransform));
-            slotObject.transform.SetParent(parent, false);
+            GameObject slotObject;
+            UIRoomSlotView slotView;
 
-            var slotView = slotObject.AddComponent<UIRoomSlotView>();
+            if (slotPrefab != null)
+            {
+                slotObject = Instantiate(slotPrefab, parent, false);
+                slotObject.name = slotName;
+                slotView = slotObject.GetComponent<UIRoomSlotView>();
+                if (slotView == null)
+                {
+                    slotView = slotObject.AddComponent<UIRoomSlotView>();
+                }
+            }
+            else
+            {
+                slotObject = new GameObject(slotName, typeof(RectTransform));
+                slotObject.transform.SetParent(parent, false);
+                slotView = slotObject.AddComponent<UIRoomSlotView>();
+            }
+
             slotView.Setup(context, _cardPrefab);
             return slotView;
         }

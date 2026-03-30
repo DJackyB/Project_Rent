@@ -31,6 +31,18 @@ namespace BaoZuPo.Card
             _registry[effectId] = factory;
         }
 
+        public static void Register(string effectId, int expectedArgCount, Func<string[], ICardEffect> factory)
+        {
+            _registry[effectId] = args =>
+            {
+                if (args.Length < expectedArgCount)
+                {
+                    throw new ArgumentException($"expected {expectedArgCount} arg(s) but got {args.Length}");
+                }
+                return factory(args);
+            };
+        }
+
         public static ICardEffect Create(string effectString)
         {
             if (string.IsNullOrWhiteSpace(effectString))
