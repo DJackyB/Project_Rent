@@ -781,14 +781,30 @@ namespace BaoZuPo.GameFlow
             }
 
             var allCards = rewardLibrary.cards;
-            var source = boosted
-                ? allCards.Where(c => c.rarity >= CardRarity.Rare).ToList()
-                : allCards.ToList();
+            List<CardData> source;
+            if (boosted)
+            {
+                source = allCards.Where(c => c.rarity >= CardRarity.Rare).ToList();
+                if (source.Count == 0)
+                {
+                    Debug.LogWarning("[TurnManager] Boosted reward requested but reward library has no Rare+ cards. Falling back to full reward library.");
+                    source = allCards.ToList();
+                }
+            }
+            else
+            {
+                source = allCards.ToList();
+            }
 
             if (source.Count == 0)
             {
                 Debug.LogWarning("[TurnManager] No reward cards available.");
                 return;
+            }
+
+            if (UIManager.Instance == null)
+            {
+                throw new InvalidOperationException("[TurnManager] Reward selection requires UIManager in scene.");
             }
 
             var options = new CardData[3];

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BaoZuPo.Core;
 using BaoZuPo.Economy;
@@ -47,6 +48,7 @@ namespace BaoZuPo.UI
 
             BaoZuPoMartianTooltipIntegration.Install();
             ConfigureFeedbackBootstrap();
+            ValidateRequiredSceneReferences();
             InitializeCardDragController();
             RefreshAll();
             phasePanel?.UpdatePhase(CurrentPhase.ToString());
@@ -105,7 +107,12 @@ namespace BaoZuPo.UI
 
         private void OnCardRewardOffered(GameEvents.CardRewardOffered e)
         {
-            _cardRewardPanel?.Show(e.Options, e.Boosted);
+            if (_cardRewardPanel == null)
+            {
+                throw new InvalidOperationException("[UIManager] _cardRewardPanel 未在 Inspector 中赋值。奖励三选一属于主流程必需引用。");
+            }
+
+            _cardRewardPanel.Show(e.Options, e.Boosted);
         }
 
         private void OnLanguageChanged()
@@ -172,6 +179,14 @@ namespace BaoZuPo.UI
             }
 
             cardDragController.BindDragLayer(null);
+        }
+
+        private void ValidateRequiredSceneReferences()
+        {
+            if (_cardRewardPanel == null)
+            {
+                throw new InvalidOperationException("[UIManager] _cardRewardPanel 未在 Inspector 中赋值。奖励三选一属于主流程必需引用。");
+            }
         }
 
         private void ConfigureFeedbackBootstrap()

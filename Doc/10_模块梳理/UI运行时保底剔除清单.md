@@ -1,5 +1,7 @@
 # UI 运行时保底剔除清单
 
+> 状态说明：这是一份 UI 去运行时保底的长期 backlog 与阶段记录，不是当前实现真源。当前真实结构请优先看 [06_UI系统.md](./06_UI系统.md) 和 [UI手动配置与验收.md](./UI手动配置与验收.md)。
+
 ## 背景与目标
 
 - 当前项目里仍有不少 UI 运行时保底逻辑，包括裸 `new GameObject`、运行时 `AddComponent`、缺引用时动态补节点，以及部分临时容器自建。
@@ -33,12 +35,12 @@
 
 ## 当前批次
 
-- 批次名称：Tooltip 模块可选化与抽离
+- 批次名称：Martian Tooltip 模块可选化与接线收口
 - 范围：
-  - `UI/Common/Tooltip/`
-  - `UI/Common/Tooltip/Runtime/`
+  - `Assets/_Assets/Martian/Tooltip/`
+  - `Assets/_Assets/Martian/Tooltip/Runtime/`
+  - `Assets/_Assets/Scripts/Integration/Martian/Tooltip/`
   - `UICardView`
-  - `UIEquipmentCardView`
   - `UIManager`
   - `UICardDragController`
   - `Card.prefab`
@@ -60,6 +62,7 @@
 - Tooltip root 改为运行时按所属 `Canvas` 懒创建。
 - 不再要求场景中存在 `HoverPreviewRoot`。
 - presenter 通过注册表选择，不再由业务代码直接持有具体 controller。
+- BaoZuPo 项目接线已移到 `Assets/_Assets/Scripts/Integration/Martian/Tooltip/**`。
 
 ### 3. 业务侧接入
 

@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
 using BaoZuPo.Deck;
 using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
+using Martian.EventBus;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace BaoZuPo.Tests.Card
 {
@@ -19,6 +22,7 @@ namespace BaoZuPo.Tests.Card
         [SetUp]
         public void SetUp()
         {
+            EventBus.ClearAll();
             CardLibraryDatabase.Clear();
             CardEffectFactory.ClearAll();
             CardEffectRegistration.EnsureRegistered();
@@ -27,6 +31,7 @@ namespace BaoZuPo.Tests.Card
         [TearDown]
         public void TearDown()
         {
+            EventBus.ClearAll();
             CardLibraryDatabase.Clear();
             CardEffectFactory.ClearAll();
 
@@ -132,7 +137,7 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
-        public void RewardGeneration_UsesConfiguredRewardLibrary()
+        public void RewardGeneration_OffersConfiguredRewardLibraryOptions()
         {
             var rewardCard = CreateCardData(40, "Reward");
             var context = CreateGameplayContext(
@@ -143,10 +148,145 @@ namespace BaoZuPo.Tests.Card
                 normalTurnDrawCount: 0,
                 maxHandSize: 5);
 
+            GameEvents.CardRewardOffered? offered = null;
+            void OnRewardOffered(GameEvents.CardRewardOffered e) => offered = e;
+            EventBus.Subscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+
+            try
+            {
+                InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+            }
+
+            Assert.IsTrue(offered.HasValue);
+            Assert.AreEqual(3, offered.Value.Options.Length);
+            foreach (var option in offered.Value.Options)
+            {
+                Assert.AreSame(rewardCard, option);
+            }
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+            Assert.IsTrue(context.TurnManager.IsRewardSelectionPending);
+        }
+
+        [Test]
+        public void RewardSelection_AddsChosenCardToHand_AndClearsPending()
+        {
+            var rewardCard = CreateCardData(50, "Reward");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(51, "First")),
+                CreateLibrary("NormalPool", CreateCardData(52, "Normal")),
+                CreateLibrary("RewardPool", rewardCard),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
             InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
+            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = rewardCard });
 
             Assert.AreEqual(1, context.DeckManager.HandCount);
             Assert.AreSame(rewardCard, context.DeckManager.Hand[0].Data);
+            Assert.IsFalse(context.TurnManager.IsRewardSelectionPending);
+        }
+
+        [Test]
+        public void RewardSelection_SkipClearsPending_WithoutAddingCard()
+        {
+            var rewardCard = CreateCardData(60, "Reward");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(61, "First")),
+                CreateLibrary("NormalPool", CreateCardData(62, "Normal")),
+                CreateLibrary("RewardPool", rewardCard),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", false);
+            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = null });
+
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+            Assert.IsFalse(context.TurnManager.IsRewardSelectionPending);
+        }
+
+        [Test]
+        public void RewardGeneration_BoostedWithoutRareCards_LogsWarning_AndFallsBackToFullPool()
+        {
+            var commonReward = CreateCardData(70, "Common Reward");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(71, "First")),
+                CreateLibrary("NormalPool", CreateCardData(72, "Normal")),
+                CreateLibrary("RewardPool", commonReward),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            GameEvents.CardRewardOffered? offered = null;
+            void OnRewardOffered(GameEvents.CardRewardOffered e) => offered = e;
+            EventBus.Subscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+
+            try
+            {
+                LogAssert.Expect(LogType.Warning, "[TurnManager] Boosted reward requested but reward library has no Rare+ cards. Falling back to full reward library.");
+                InvokePrivateMethod(context.TurnManager, "AwardOneCardFromThreeOptions", true);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
+            }
+
+            Assert.IsTrue(offered.HasValue);
+            Assert.AreEqual(3, offered.Value.Options.Length);
+            foreach (var option in offered.Value.Options)
+            {
+                Assert.AreSame(commonReward, option);
+            }
+            Assert.IsTrue(offered.Value.Boosted);
+        }
+
+        [Test]
+        public void InitializeSystems_ThrowsWhenBoardManagerIsMissing()
+        {
+            CreateComponent<MoneyManager>("MoneyManager");
+            CreateComponent<DeckManager>("DeckManager");
+
+            var gameConfig = CreateGameConfig(
+                CreateLibrary("FirstPool", CreateCardData(80, "First")),
+                CreateLibrary("NormalPool", CreateCardData(81, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(82, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
+            StringAssert.Contains("BoardManager", exception.Message);
+        }
+
+        [Test]
+        public void InitializeSystems_ThrowsWhenDeckManagerIsMissing()
+        {
+            var roomsRoot = CreateGameObject("RoomsRoot").transform;
+            var boardManager = CreateComponent<BoardManager>("BoardManager");
+            SetPrivateField(boardManager, "_roomRoot", roomsRoot);
+            CreateComponent<MoneyManager>("MoneyManager");
+
+            var gameConfig = CreateGameConfig(
+                CreateLibrary("FirstPool", CreateCardData(90, "First")),
+                CreateLibrary("NormalPool", CreateCardData(91, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(92, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
+            StringAssert.Contains("DeckManager", exception.Message);
         }
 
         private GameplayContext CreateGameplayContext(
@@ -164,7 +304,31 @@ namespace BaoZuPo.Tests.Card
             var moneyManager = CreateComponent<MoneyManager>("MoneyManager");
             var deckManager = CreateComponent<DeckManager>("DeckManager");
             var turnManager = CreateComponent<TurnManager>("TurnManager");
+            CreateComponent<UIManager>("UIManager");
 
+            var gameConfig = CreateGameConfig(
+                firstTurnLibrary,
+                normalTurnLibrary,
+                rewardLibrary,
+                firstTurnDrawCount,
+                normalTurnDrawCount,
+                maxHandSize);
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+            InvokePrivateMethod(gameManager, "InitializeSystems");
+
+            return new GameplayContext(gameManager, turnManager, deckManager, boardManager, moneyManager);
+        }
+
+        private GameConfig CreateGameConfig(
+            CardLibrary firstTurnLibrary,
+            CardLibrary normalTurnLibrary,
+            CardLibrary rewardLibrary,
+            int firstTurnDrawCount,
+            int normalTurnDrawCount,
+            int maxHandSize)
+        {
             var gameConfig = CreateScriptableObject<GameConfig>();
             gameConfig.startingMoney = 1000;
             gameConfig.firstTurnDrawCount = firstTurnDrawCount;
@@ -176,12 +340,7 @@ namespace BaoZuPo.Tests.Card
             gameConfig.firstTurnDrawLibrary = firstTurnLibrary;
             gameConfig.normalTurnDrawLibrary = normalTurnLibrary;
             gameConfig.rewardLibrary = rewardLibrary;
-
-            var gameManager = CreateComponent<GameManager>("GameManager");
-            gameManager.gameConfig = gameConfig;
-            InvokePrivateMethod(gameManager, "InitializeSystems");
-
-            return new GameplayContext(gameManager, turnManager, deckManager, boardManager, moneyManager);
+            return gameConfig;
         }
 
         private T CreateComponent<T>(string name) where T : Component
@@ -237,7 +396,15 @@ namespace BaoZuPo.Tests.Card
         {
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
-            method.Invoke(target, args);
+            try
+            {
+                method.Invoke(target, args);
+            }
+            catch (TargetInvocationException exception) when (exception.InnerException != null)
+            {
+                ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+                throw;
+            }
         }
 
         private sealed class GameplayContext

@@ -50,28 +50,38 @@ namespace BaoZuPo.Core
             ValidateConfiguredLibraries();
             ValidateLoadedCardEffects();
 
+            var moneyManager = Economy.MoneyManager.Instance;
+            if (moneyManager == null)
+            {
+                throw new InvalidOperationException("[GameManager] MoneyManager is required in scene.");
+            }
+
+            var boardManager = Board.BoardManager.Instance;
+            if (boardManager == null)
+            {
+                throw new InvalidOperationException("[GameManager] BoardManager is required in scene.");
+            }
+
+            var deckManager = Deck.DeckManager.Instance;
+            if (deckManager == null)
+            {
+                throw new InvalidOperationException("[GameManager] DeckManager is required in scene.");
+            }
+
             Debug.Log($"[GameManager] Config loaded. Money={gameConfig.startingMoney}, Rooms={gameConfig.initialRoomCount}, LoanGrowth={gameConfig.loanGrowthFactor}");
-            Economy.MoneyManager.Instance.Initialize(gameConfig.startingMoney);
-
-            if (Board.BoardManager.Instance != null)
-            {
-                Board.BoardManager.Instance.Initialize(
-                    gameConfig.initialRoomCount,
-                    gameConfig.defaultTenantSlots,
-                    gameConfig.defaultEquipmentSlots
-                );
-            }
-
-            if (Deck.DeckManager.Instance != null)
-            {
-                Deck.DeckManager.Instance.Initialize(gameConfig.maxHandSize);
-            }
+            moneyManager.Initialize(gameConfig.startingMoney);
+            boardManager.Initialize(
+                gameConfig.initialRoomCount,
+                gameConfig.defaultTenantSlots,
+                gameConfig.defaultEquipmentSlots
+            );
+            deckManager.Initialize(gameConfig.maxHandSize);
 
             GameContext = new GameContext
             {
-                MoneyManager = Economy.MoneyManager.Instance,
-                BoardManager = Board.BoardManager.Instance,
-                DeckManager = Deck.DeckManager.Instance,
+                MoneyManager = moneyManager,
+                BoardManager = boardManager,
+                DeckManager = deckManager,
             };
 
             Debug.Log("[GameManager] All systems initialized.");
