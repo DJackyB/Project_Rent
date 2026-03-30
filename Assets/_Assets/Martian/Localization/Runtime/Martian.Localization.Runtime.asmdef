@@ -1,0 +1,8 @@
+{
+  "name": "Martian.Localization.Runtime",
+  "references": [
+    "Martian.Localization.Abstractions",
+    "Unity.TextMeshPro",
+    "Unity.UI"
+  ]
+}

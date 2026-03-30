@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_2004
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2004
-  cardName: WiFi Router
-  description: Life necessity.
+  cardName: 路由器
+  description: 现代生活必需品。
   cardType: 1
   rarity: 1
   cardArt: {fileID: 0}

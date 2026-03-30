@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1009
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1009
-  cardName: Painter
-  description: Needs time to settle in.
+  cardName: 画家
+  description: 需要时间适应新环境。
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}

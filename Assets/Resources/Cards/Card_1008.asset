@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1008
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1008
-  cardName: Chef
-  description: Sturdy and reliable.
+  cardName: 厨师
+  description: 可靠踏实，收入稳定。
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}

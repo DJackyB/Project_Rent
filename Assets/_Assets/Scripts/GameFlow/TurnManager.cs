@@ -5,6 +5,7 @@ using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
 using BaoZuPo.Economy;
+using BaoZuPo.Localization;
 using BaoZuPo.Integration.Martian.Feedback;
 using Martian.EventBus;
 using UnityEngine;
@@ -530,10 +531,10 @@ namespace BaoZuPo.GameFlow
         {
             return sourceKind switch
             {
-                GameEvents.SettlementSourceKind.Room when room != null => UIStrings.SettlementRoomTitle(room.RoomIndex + 1),
-                GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
-                GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
-                _ => UIStrings.SettlementFallbackTitle
+                GameEvents.SettlementSourceKind.Room when room != null => GameText.SettlementRoomTitle(room.RoomIndex + 1),
+                GameEvents.SettlementSourceKind.Contract when card != null => CardTextResolver.ResolveName(card),
+                GameEvents.SettlementSourceKind.Event when card != null => CardTextResolver.ResolveName(card),
+                _ => GameText.SettlementFallbackTitle
             };
         }
 

@@ -1,4 +1,6 @@
 using BaoZuPo.Card;
+using BaoZuPo.Localization;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -123,8 +125,8 @@ namespace BaoZuPo.UI
                 var existingLabel = _placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (existingLabel != null)
                 {
-                    UIFontCatalog.ApplyToText(existingLabel);
-                    existingLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+                    LocalizationFontUtility.ApplyToText(existingLabel);
+                    existingLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
                 }
                 return;
             }
@@ -153,7 +155,7 @@ namespace BaoZuPo.UI
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.font = ResolveFont();
-            label.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+            label.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
             label.alignment = TextAlignmentOptions.Center;
             label.fontSize = 20f;
             label.color = new Color(1f, 1f, 1f, 0.45f);
@@ -170,7 +172,7 @@ namespace BaoZuPo.UI
 
         private static TMP_FontAsset ResolveFont()
         {
-            return UIFontCatalog.GetPreferredFontAsset();
+            return LocalizationFontUtility.GetPreferredFontAsset();
         }
     }
 }

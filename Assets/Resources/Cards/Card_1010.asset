@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1010
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1010
-  cardName: Courier
-  description: Comes fast, goes fast.
+  cardName: 快递员
+  description: 来得快，走得也快。
   cardType: 0
   rarity: 0
   cardArt: {fileID: 0}

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_2001
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2001
-  cardName: Air Conditioner
-  description: Improves comfort.
+  cardName: 空调
+  description: 提升居住舒适度。
   cardType: 1
   rarity: 1
   cardArt: {fileID: 0}

@@ -19,7 +19,15 @@ namespace BaoZuPo.Editor
 
         private const string Col_CardId = "cardId";
         private const string Col_CardName = "cardName";
+        private const string Col_DefaultName = "defaultName";
+        private const string Col_NameTextKey = "nameTextKey";
         private const string Col_Description = "description";
+        private const string Col_DefaultDescription = "defaultDescription";
+        private const string Col_DescriptionTextKey = "descriptionTextKey";
+        private const string Col_CardNameZhHans = "cardName_zhHans";
+        private const string Col_CardNameEn = "cardName_en";
+        private const string Col_DescriptionZhHans = "description_zhHans";
+        private const string Col_DescriptionEn = "description_en";
         private const string Col_CardType = "cardType";
         private const string Col_Rarity = "rarity";
         private const string Col_ArtPath = "cardArt";
@@ -36,8 +44,6 @@ namespace BaoZuPo.Editor
         private static readonly string[] RequiredColumns =
         {
             Col_CardId,
-            Col_CardName,
-            Col_Description,
             Col_CardType,
             Col_Rarity,
             Col_ArtPath,
@@ -130,12 +136,6 @@ namespace BaoZuPo.Editor
 
                 int cardId = GetRequiredIntValue(row, columnMap, Col_CardId, rowIndex);
 
-                string cardName = GetStringValue(row, columnMap, Col_CardName);
-                if (string.IsNullOrWhiteSpace(cardName))
-                {
-                    throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: cardName is required.");
-                }
-
                 string assetPath = $"{OutputFolder}/Card_{cardId}.asset";
                 CardData cardData = AssetDatabase.LoadAssetAtPath<CardData>(assetPath);
                 bool isNew = cardData == null;
@@ -146,8 +146,18 @@ namespace BaoZuPo.Editor
                 }
 
                 cardData.cardId = cardId;
-                cardData.cardName = cardName;
-                cardData.description = GetStringValue(row, columnMap, Col_Description);
+                cardData.defaultName = ResolveCardText(row, columnMap,
+                    Col_DefaultName,
+                    Col_CardName,
+                    Col_CardNameZhHans,
+                    Col_CardNameEn);
+                cardData.defaultDescription = ResolveCardText(row, columnMap,
+                    Col_DefaultDescription,
+                    Col_Description,
+                    Col_DescriptionZhHans,
+                    Col_DescriptionEn);
+                cardData.nameTextKey = ResolveTextKey(row, columnMap, Col_NameTextKey, $"card.{cardId}.name");
+                cardData.descriptionTextKey = ResolveTextKey(row, columnMap, Col_DescriptionTextKey, $"card.{cardId}.description");
                 cardData.cardType = ParseCardType(GetStringValue(row, columnMap, Col_CardType), rowIndex, cardId);
                 cardData.rarity = (CardRarity)GetRequiredIntValue(row, columnMap, Col_Rarity, rowIndex);
                 cardData.cost = GetRequiredIntValue(row, columnMap, Col_Cost, rowIndex);
@@ -186,7 +196,7 @@ namespace BaoZuPo.Editor
                     updated++;
                 }
 
-                Debug.Log($"[CardDataImporter] {(isNew ? "Created" : "Updated")} card: [{cardId}] {cardName}");
+                Debug.Log($"[CardDataImporter] {(isNew ? "Created" : "Updated")} card: [{cardId}] {cardData.DefaultName}");
             }
 
             AssetDatabase.SaveAssets();
@@ -308,6 +318,49 @@ namespace BaoZuPo.Editor
                     throw new InvalidDataException($"[CardDataImporter] Missing required column '{requiredColumn}'.");
                 }
             }
+
+            if (!HasAnyColumn(columnMap, Col_DefaultName, Col_CardName, Col_CardNameZhHans, Col_CardNameEn))
+            {
+                throw new InvalidDataException("[CardDataImporter] Missing card name column. Expected one of defaultName/cardName/cardName_zhHans/cardName_en.");
+            }
+
+            if (!HasAnyColumn(columnMap, Col_DefaultDescription, Col_Description, Col_DescriptionZhHans, Col_DescriptionEn))
+            {
+                throw new InvalidDataException("[CardDataImporter] Missing card description column. Expected one of defaultDescription/description/description_zhHans/description_en.");
+            }
+        }
+
+        private static string ResolveCardText(IRow row, Dictionary<string, int> columnMap, params string[] columnNames)
+        {
+            foreach (string columnName in columnNames)
+            {
+                string value = GetStringValue(row, columnMap, columnName);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveTextKey(IRow row, Dictionary<string, int> columnMap, string columnName, string fallbackKey)
+        {
+            string key = GetStringValue(row, columnMap, columnName);
+            return string.IsNullOrWhiteSpace(key) ? fallbackKey : key;
+        }
+
+        private static bool HasAnyColumn(Dictionary<string, int> columnMap, params string[] columnNames)
+        {
+            foreach (string columnName in columnNames)
+            {
+                if (columnMap.ContainsKey(columnName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsRowEmpty(IRow row)

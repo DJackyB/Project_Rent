@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1007
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1007
-  cardName: Doctor
-  description: High deposit, long lease.
+  cardName: 医生
+  description: 押金高，租期长。
   cardType: 0
   rarity: 2
   cardArt: {fileID: 0}

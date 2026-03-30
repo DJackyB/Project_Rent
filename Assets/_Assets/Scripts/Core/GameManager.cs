@@ -1,4 +1,5 @@
 using BaoZuPo.Card;
+using BaoZuPo.Localization;
 using BaoZuPo.GameFlow;
 using Martian.EventBus;
 using NodeCanvas.StateMachines;
@@ -107,7 +108,7 @@ namespace BaoZuPo.Core
                 return;
             }
 
-            errors.Add($"Invalid {fieldName} on card [{card.cardId}] {card.cardName}: {effectString}. {error}");
+            errors.Add($"Invalid {fieldName} on card [{card.cardId}] {CardTextResolver.ResolveName(card)}: {effectString}. {error}");
         }
 
         private static void ValidateTargetKind(CardData card, List<string> errors)
@@ -117,7 +118,7 @@ namespace BaoZuPo.Core
                 return;
             }
 
-            errors.Add($"Card [{card.cardId}] {card.cardName} target kind mismatch. {warning}");
+            errors.Add($"Card [{card.cardId}] {CardTextResolver.ResolveName(card)} target kind mismatch. {warning}");
         }
 
         private void OnGameOver(GameEvents.GameOver e)

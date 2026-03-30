@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1005
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1005
-  cardName: Student
-  description: Cheap but short lease.
+  cardName: 学生
+  description: 租金低，但租期短。
   cardType: 0
   rarity: 0
   cardArt: {fileID: 0}

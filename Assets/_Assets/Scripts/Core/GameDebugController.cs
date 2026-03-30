@@ -1,28 +1,27 @@
+using BaoZuPo.Board;
+using BaoZuPo.Deck;
+using BaoZuPo.Economy;
+using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using BaoZuPo.GameFlow;
-using BaoZuPo.Deck;
-using BaoZuPo.Board;
-using BaoZuPo.Economy;
 
 namespace BaoZuPo.Core
 {
     /// <summary>
-    /// 游戏调试控制器 (支持新 Input System)
-    /// 注意：如果依然报错，请确认 Unity Console 中没有其他编译错误阻止了脚本更新。
+    /// 游戏调试控制器（支持新版 Input System）
+    /// 如果仍然报错，请确认 Unity Console 中没有其他编译错误阻止脚本更新。
     /// </summary>
     public class GameDebugController : MonoBehaviour
     {
         private void Update()
         {
-            // 明确检查新输入系统的 Keyboard 是否可用
             var keyboard = Keyboard.current;
-            if (keyboard == null) 
+            if (keyboard == null)
             {
                 return;
             }
 
-            // [Space] 结束行动阶段
             if (keyboard.spaceKey.wasPressedThisFrame)
             {
                 if (!TurnManager.Instance.ActionPhaseEnded)
@@ -31,19 +30,16 @@ namespace BaoZuPo.Core
                 }
             }
 
-            // [D] 打印完整游戏状态
             if (keyboard.dKey.wasPressedThisFrame)
             {
                 PrintGameState();
             }
 
-            // [1-9] 打出手牌
             HandleCardInput(keyboard);
         }
 
         private void HandleCardInput(Keyboard keyboard)
         {
-            // 检查数字键 1-9
             if (keyboard.digit1Key.wasPressedThisFrame) PlayCardAtIndex(0);
             if (keyboard.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
             if (keyboard.digit3Key.wasPressedThisFrame) PlayCardAtIndex(2);
@@ -60,26 +56,23 @@ namespace BaoZuPo.Core
             var hand = DeckManager.Instance.Hand;
             if (index >= hand.Count)
             {
-                Debug.LogWarning($"[Debug] 手牌索引 {index + 1} 超出范围（当前手牌 {hand.Count} 张）");
+                Debug.LogWarning($"[Debug] 卡牌索引 {index + 1} 超出范围（当前手牌 {hand.Count} 张）");
                 return;
             }
 
             var card = hand[index];
-            
-            // 找一个可放置的房间
             var targetRoom = BoardManager.Instance.FindAvailableRoom(card.Data.cardType);
-            
-            // 如果是事件卡，targetRoom 可以为 null
+
             if (card.Data.cardType != Card.CardType.Event && targetRoom == null)
             {
-                Debug.LogWarning($"[Debug] 没有可用的房间来放置卡牌: {card.Data.cardName}");
+                Debug.LogWarning($"[Debug] 没有可用的房间来放置卡牌: {CardTextResolver.ResolveName(card)}");
                 return;
             }
 
             bool success = TurnManager.Instance.PlayCard(card, targetRoom);
             if (success)
             {
-                Debug.Log($"[Debug] 成功通过按键 [{index + 1}] 打出: {card.Data.cardName}");
+                Debug.Log($"[Debug] 成功通过按键 [{index + 1}] 打出: {CardTextResolver.ResolveName(card)}");
             }
         }
 
@@ -90,7 +83,7 @@ namespace BaoZuPo.Core
             sb.AppendLine($"回合数: {TurnManager.Instance.CurrentTurn}");
             sb.AppendLine($"当前金钱: {MoneyManager.Instance.CurrentMoney}");
             sb.AppendLine($"手牌数量: {DeckManager.Instance.HandCount}");
-            
+
             foreach (var card in DeckManager.Instance.Hand)
             {
                 sb.AppendLine($"  - [手牌] {card}");
@@ -99,12 +92,13 @@ namespace BaoZuPo.Core
             var rooms = BoardManager.Instance.GetAllRooms();
             foreach (var room in rooms)
             {
-                sb.AppendLine($"房间_{room.RoomIndex} (租客:{room.TenantCount}, 装备:{room.EquipmentCount})");
+                sb.AppendLine($"房间_{room.RoomIndex} (租客:{room.TenantCount}, 设备:{room.EquipmentCount})");
                 foreach (var card in room.GetAllCards())
                 {
                     sb.AppendLine($"  - [场上] {card}");
                 }
             }
+
             sb.AppendLine("================================");
             Debug.Log(sb.ToString());
         }

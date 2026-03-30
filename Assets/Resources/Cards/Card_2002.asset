@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_2002
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2002
-  cardName: Bunk Bed
-  description: One more tenant.
+  cardName: 上下铺
+  description: 让房间多容纳一名租客。
   cardType: 1
   rarity: 2
   cardArt: {fileID: 0}

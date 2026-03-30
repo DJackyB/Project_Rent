@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_3002
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3002
-  cardName: Agent Refer
-  description: Pay for 2 more cards.
+  cardName: 中介推荐
+  description: 支付费用，额外抽取 2 张牌。
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}

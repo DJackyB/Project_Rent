@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1004
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1004
-  cardName: Senior Teacher
-  description: Quiet old tenant, never leaves.
+  cardName: 老教师
+  description: 安静的老租客，很少搬走。
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}

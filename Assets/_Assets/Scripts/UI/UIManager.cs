@@ -4,9 +4,11 @@ using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Integration.Martian.Tooltip;
+using BaoZuPo.Localization;
 using BaoZuPo.UI.Settlement;
 using Martian.EventBus;
 using Martian.Feedback.Runtime;
+using Martian.Localization;
 using Martian.Tooltip;
 using UnityEngine;
 
@@ -29,11 +31,12 @@ namespace BaoZuPo.UI
 
         private void OnEnable()
         {
+            BaoZuPoLocalizationBootstrap.EnsureInitialized();
             EventBus.Subscribe<GameEvents.PhaseChanged>(OnPhaseChanged);
             EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
-            LocalizationManager.LanguageChanged += OnLanguageChanged;
+            LocalizationServices.Language.LanguageChanged += OnLanguageChanged;
         }
 
         private void Start()
@@ -55,7 +58,7 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
-            LocalizationManager.LanguageChanged -= OnLanguageChanged;
+            LocalizationServices.Language.LanguageChanged -= OnLanguageChanged;
         }
 
         private void OnPhaseChanged(GameEvents.PhaseChanged e)
@@ -99,9 +102,9 @@ namespace BaoZuPo.UI
             gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
         }
 
-        private void OnLanguageChanged()
+        private void OnLanguageChanged(string _)
         {
-            UIFontCatalog.ApplyToAllLoadedSceneTexts();
+            LocalizationFontUtility.ApplyToAllLoadedSceneTexts();
             RefreshAll();
             phasePanel?.UpdatePhase(CurrentPhase.ToString());
             gameOverPanel?.RefreshLocalization();
@@ -157,7 +160,7 @@ namespace BaoZuPo.UI
         {
             if (cardDragController == null)
             {
-                Debug.LogError("[UIManager] cardDragController 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 UICardDragController 组件。");
+                Debug.LogError("[UIManager] cardDragController is not assigned in the Inspector. Please create a child object under UIManager and add UICardDragController.");
                 return;
             }
 
@@ -168,7 +171,7 @@ namespace BaoZuPo.UI
         {
             if (_feedbackBootstrap == null)
             {
-                Debug.LogError("[UIManager] _feedbackBootstrap 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 FeedbackBootstrap 组件。");
+                Debug.LogError("[UIManager] _feedbackBootstrap is not assigned in the Inspector. Please create a child object under UIManager and add FeedbackBootstrap.");
                 return;
             }
 

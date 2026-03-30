@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_2005
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2005
-  cardName: Washer
-  description: Laundry convenience.
+  cardName: 洗衣机
+  description: 让洗衣更方便。
   cardType: 1
   rarity: 1
   cardArt: {fileID: 0}

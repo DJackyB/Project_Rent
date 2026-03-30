@@ -6,6 +6,7 @@ using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Economy;
 using Martian.EventBus;
 using Martian.Feedback;
+using Martian.Localization;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -472,7 +473,7 @@ namespace BaoZuPo.UI.Settlement
                 labelRect.offsetMax = new Vector2(-20f, -10f);
 
                 transferLabel = labelObject.GetComponent<TextMeshProUGUI>();
-                transferLabel.font = UIFontCatalog.GetPreferredFontAsset();
+                transferLabel.font = LocalizationFontUtility.GetPreferredFontAsset();
                 transferLabel.fontSize = 24f;
                 transferLabel.alignment = TextAlignmentOptions.Center;
                 transferLabel.color = transferTextColor;

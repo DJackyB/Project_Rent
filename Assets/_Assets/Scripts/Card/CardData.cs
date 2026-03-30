@@ -1,5 +1,6 @@
 using BaoZuPo.GameFlow;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace BaoZuPo.Card
 {
@@ -15,11 +16,19 @@ namespace BaoZuPo.Card
         public int cardId;
 
         [Tooltip("\u5361\u724c\u540d\u79f0")]
-        public string cardName;
+        [FormerlySerializedAs("cardName")]
+        public string defaultName;
 
         [Tooltip("\u5361\u724c\u63cf\u8ff0\u6587\u672c")]
         [TextArea(2, 4)]
-        public string description;
+        [FormerlySerializedAs("description")]
+        public string defaultDescription;
+
+        [Tooltip("\u5361\u724c\u540d\u79f0\u672c\u5730\u5316 Key")]
+        public string nameTextKey;
+
+        [Tooltip("\u5361\u724c\u63cf\u8ff0\u672c\u5730\u5316 Key")]
+        public string descriptionTextKey;
 
         [Tooltip("\u5361\u724c\u7c7b\u578b \u79df\u5ba2 \u88c5\u5907 \u4e8b\u4ef6 \u5408\u540c")]
         public CardType cardType;
@@ -59,5 +68,20 @@ namespace BaoZuPo.Card
 
         [Tooltip("\u7b49\u5f85\u56de\u5408\u6570 \u6bcf\u56de\u5408\u7ed3\u675f\u65f6\u9012\u51cf 1 0 \u8868\u793a\u65e0\u7b49\u5f85")]
         public int waitTurns;
+
+        public string cardName => defaultName;
+        public string description => defaultDescription;
+        public string DefaultName => string.IsNullOrWhiteSpace(defaultName) ? $"Card {cardId}" : defaultName;
+        public string DefaultDescription => defaultDescription ?? string.Empty;
+
+        public string ResolveNameTextKey()
+        {
+            return string.IsNullOrWhiteSpace(nameTextKey) ? $"card.{cardId}.name" : nameTextKey;
+        }
+
+        public string ResolveDescriptionTextKey()
+        {
+            return string.IsNullOrWhiteSpace(descriptionTextKey) ? $"card.{cardId}.description" : descriptionTextKey;
+        }
     }
 }

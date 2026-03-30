@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_2003
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2003
-  cardName: Water Heater
-  description: Basic facility, durable.
+  cardName: 热水器
+  description: 基础设施，十分耐用。
   cardType: 1
   rarity: 0
   cardArt: {fileID: 0}

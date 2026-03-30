@@ -1,4 +1,6 @@
 using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,15 +35,15 @@ namespace BaoZuPo.UI
         public void UpdatePhase(string phaseName)
         {
             EnsureRuntimeLayout();
-            UIFontCatalog.ApplyToText(phaseText);
-            UIFontCatalog.ApplyToText(buttonText);
+            LocalizationFontUtility.ApplyToText(phaseText);
+            LocalizationFontUtility.ApplyToText(buttonText);
 
             if (phaseText != null)
             {
-                phaseText.text = UIStrings.PhaseName(phaseName);
+                phaseText.text = GameText.PhaseName(phaseName);
             }
 
-            bool isAction = phaseName == "Action";
+            bool isAction = phaseName == GamePhase.Action.ToString();
             if (endTurnButton != null)
             {
                 endTurnButton.interactable = isAction;
@@ -49,7 +51,7 @@ namespace BaoZuPo.UI
 
             if (buttonText != null)
             {
-                buttonText.text = isAction ? UIStrings.EndTurnButton : UIStrings.WaitingButton;
+                buttonText.text = isAction ? GameText.EndTurnButton : GameText.WaitingButton;
             }
         }
 
@@ -93,8 +95,8 @@ namespace BaoZuPo.UI
                 image.color = new Color(0.16f, 0.35f, 0.19f, 0.94f);
             }
 
-            UIFontCatalog.ApplyToText(phaseText);
-            UIFontCatalog.ApplyToText(buttonText);
+            LocalizationFontUtility.ApplyToText(phaseText);
+            LocalizationFontUtility.ApplyToText(buttonText);
         }
 
         private static Button CreateRuntimeButton(Transform parent)
@@ -116,7 +118,7 @@ namespace BaoZuPo.UI
             labelRect.offsetMax = Vector2.zero;
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = UIFontCatalog.GetPreferredFontAsset();
+            label.font = LocalizationFontUtility.GetPreferredFontAsset();
             label.fontSize = 24f;
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;

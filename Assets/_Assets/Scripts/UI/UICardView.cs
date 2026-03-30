@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
 using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Common.Drag;
 using Martian.Tooltip;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -118,10 +120,10 @@ namespace BaoZuPo.UI
             request = new TooltipRequest(
                 this,
                 anchor,
-                new TooltipContent(
+                    new TooltipContent(
                     BaoZuPoTooltipContentIds.CardPreview,
                     Card,
-                    Card.Data != null ? Card.Data.cardName : null));
+                    CardTextResolver.ResolveName(Card)));
             return true;
         }
 
@@ -254,7 +256,7 @@ namespace BaoZuPo.UI
 
         private void RefreshPresentation()
         {
-            UIFontCatalog.ApplyToChildren(transform);
+            LocalizationFontUtility.ApplyToChildren(transform);
 
             if (Card == null || Card.Data == null)
             {
@@ -336,7 +338,7 @@ namespace BaoZuPo.UI
 
             if (nameText != null)
             {
-                nameText.text = Card.Data.cardName ?? string.Empty;
+                nameText.text = CardTextResolver.ResolveName(Card);
                 nameText.gameObject.SetActive(true);
             }
 
@@ -346,7 +348,7 @@ namespace BaoZuPo.UI
                 costText.gameObject.SetActive(showCost);
                 if (showCost)
                 {
-                    costText.text = UIStrings.Cost(Card.Data.cost);
+                    costText.text = GameText.Cost(Card.Data.cost);
                 }
             }
 
@@ -364,7 +366,7 @@ namespace BaoZuPo.UI
                 descText.gameObject.SetActive(showDescription);
                 if (showDescription)
                 {
-                    descText.text = Card.Data.description ?? string.Empty;
+                    descText.text = CardTextResolver.ResolveDescription(Card);
                 }
             }
         }
@@ -407,7 +409,7 @@ namespace BaoZuPo.UI
                 return string.Empty;
             }
 
-            return UIStrings.Wait(Card.CurrentWait);
+            return GameText.Wait(Card.CurrentWait);
         }
 
         private string ResolveDurabilityLabel()
@@ -417,10 +419,10 @@ namespace BaoZuPo.UI
                 && Card.Data.cardType == CardType.Tenant
                 && (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.TooltipPreview))
             {
-                return UIStrings.Lease;
+                return GameText.Lease;
             }
 
-            return UIStrings.Durability;
+            return GameText.Durability;
         }
 
         private void UpdateTooltipTrigger()
@@ -707,7 +709,7 @@ namespace BaoZuPo.UI
 
         private static string GetTypeLabel(CardType cardType)
         {
-            return UIStrings.TypeLabel(cardType);
+            return GameText.TypeLabel(cardType);
         }
 
         private static Sprite GetBuiltinSprite()

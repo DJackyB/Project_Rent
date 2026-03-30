@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1003
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1003
-  cardName: Programmer
-  description: High pay, often overtimes.
+  cardName: 程序员
+  description: 收入高，经常加班。
   cardType: 0
   rarity: 2
   cardArt: {fileID: 0}

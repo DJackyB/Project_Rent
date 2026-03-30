@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
 using BaoZuPo.UI.Common.Drag;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -98,8 +100,8 @@ namespace BaoZuPo.UI
                     labelRect.offsetMax = Vector2.zero;
 
                     var label = labelObject.GetComponent<TextMeshProUGUI>();
-                    label.font = UIFontCatalog.GetPreferredFontAsset();
-                    label.text = UIStrings.PlayArea;
+                    label.font = LocalizationFontUtility.GetPreferredFontAsset();
+                    label.text = GameText.PlayArea;
                     label.fontSize = 24f;
                     label.alignment = TextAlignmentOptions.Center;
                     label.color = Color.white;
@@ -112,8 +114,8 @@ namespace BaoZuPo.UI
             var zoneLabel = playAreaDropZone != null ? playAreaDropZone.GetComponentInChildren<TextMeshProUGUI>(true) : null;
             if (zoneLabel != null)
             {
-                UIFontCatalog.ApplyToText(zoneLabel);
-                zoneLabel.text = UIStrings.PlayArea;
+                LocalizationFontUtility.ApplyToText(zoneLabel);
+                zoneLabel.text = GameText.PlayArea;
             }
 
             playAreaDropZone.ZoneKind = CardPlayTargetKind.PlayArea;
@@ -222,8 +224,8 @@ namespace BaoZuPo.UI
             titleRect.offsetMax = new Vector2(-12f, -12f);
 
             var titleText = titleObject.GetComponent<TextMeshProUGUI>();
-            titleText.font = UIFontCatalog.GetPreferredFontAsset();
-            titleText.text = UIStrings.Contracts;
+            titleText.font = LocalizationFontUtility.GetPreferredFontAsset();
+            titleText.text = GameText.Contracts;
             titleText.fontSize = 22f;
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = Color.white;
@@ -252,7 +254,7 @@ namespace BaoZuPo.UI
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            UIFontCatalog.ApplyToChildren(panelRoot.transform);
+            LocalizationFontUtility.ApplyToChildren(panelRoot.transform);
         }
 
         private void RefreshContractPanelLocalization()
@@ -262,11 +264,11 @@ namespace BaoZuPo.UI
                 return;
             }
 
-            UIFontCatalog.ApplyToChildren(_contractPanelRoot);
+            LocalizationFontUtility.ApplyToChildren(_contractPanelRoot);
             var titleText = _contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
             if (titleText != null)
             {
-                titleText.text = UIStrings.Contracts;
+                titleText.text = GameText.Contracts;
             }
         }
 

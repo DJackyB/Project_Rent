@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BaoZuPo.UI.Common.Animation;
+using Martian.Localization;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -238,7 +239,7 @@ namespace BaoZuPo.UI.Common.Sequence
             labelRect.offsetMax = panelPadding * -1f;
 
             _label = labelObject.GetComponent<TextMeshProUGUI>();
-            _label.font = UIFontCatalog.GetPreferredFontAsset();
+            _label.font = LocalizationFontUtility.GetPreferredFontAsset();
             _label.color = defaultTextColor;
             _label.fontSize = 24f;
             _label.alignment = TextAlignmentOptions.Center;

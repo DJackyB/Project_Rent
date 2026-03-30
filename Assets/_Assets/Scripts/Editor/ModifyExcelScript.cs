@@ -50,62 +50,107 @@ public static class ModifyExcelScript
             switch (chName)
             {
                 case "CardID":
+                case "cardId":
                     enName = "cardId";
                     typeName = "int";
                     break;
                 case "CardName":
-                    enName = "cardName";
+                case "cardName":
+                    enName = "defaultName";
                     typeName = "string";
                     break;
                 case "Description":
-                    enName = "description";
+                case "description":
+                    enName = "defaultDescription";
+                    typeName = "string";
+                    break;
+                case "NameTextKey":
+                case "nameTextKey":
+                    enName = "nameTextKey";
+                    typeName = "string";
+                    break;
+                case "DescriptionTextKey":
+                case "descriptionTextKey":
+                    enName = "descriptionTextKey";
+                    typeName = "string";
+                    break;
+                case "CardNameZhHans":
+                case "cardName_zhHans":
+                    enName = "cardName_zhHans";
+                    typeName = "string";
+                    break;
+                case "CardNameEn":
+                case "cardName_en":
+                    enName = "cardName_en";
+                    typeName = "string";
+                    break;
+                case "DescriptionZhHans":
+                case "description_zhHans":
+                    enName = "description_zhHans";
+                    typeName = "string";
+                    break;
+                case "DescriptionEn":
+                case "description_en":
+                    enName = "description_en";
                     typeName = "string";
                     break;
                 case "CardType":
+                case "cardType":
                     enName = "cardType";
                     typeName = "enum";
                     break;
                 case "Rarity":
+                case "rarity":
                     enName = "rarity";
                     typeName = "int";
                     break;
                 case "CardArt":
+                case "cardArt":
                     enName = "cardArt";
                     typeName = "string";
                     break;
                 case "Cost":
+                case "cost":
                     enName = "cost";
                     typeName = "int";
                     break;
                 case "BaseRent":
+                case "baseRent":
                     enName = "baseRent";
                     typeName = "int";
                     break;
                 case "TargetKind":
+                case "targetKind":
                     enName = "targetKind";
                     typeName = "enum";
                     break;
                 case "Wait":
+                case "waitTurns":
                     enName = "waitTurns";
                     typeName = "int";
                     break;
                 case "Durability":
+                case "durability":
                     enName = "durability";
                     typeName = "int";
                     break;
                 case "PreEffect":
+                case "preEffect":
                     enName = "preEffect";
                     typeName = "string";
                     break;
                 case "InstantEffect":
+                case "instantEffect":
                     enName = "instantEffect";
                     typeName = "string";
                     break;
                 case "SettleEffect":
+                case "settleEffect":
                     enName = "settleEffect";
                     typeName = "string";
                     break;
                 case "DestroyEffect":
+                case "destroyEffect":
                     enName = "destroyEffect";
                     typeName = "string";
                     break;

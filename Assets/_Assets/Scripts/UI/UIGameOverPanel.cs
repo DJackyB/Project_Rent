@@ -1,5 +1,7 @@
 using UnityEngine;
 using TMPro;
+using BaoZuPo.Localization;
+using Martian.Localization;
 
 namespace BaoZuPo.UI
 {
@@ -19,7 +21,7 @@ namespace BaoZuPo.UI
 
         private void Start()
         {
-            UIFontCatalog.ApplyToChildren(transform);
+            LocalizationFontUtility.ApplyToChildren(transform);
             if (panel != null)
             {
                 panel.SetActive(false);
@@ -37,23 +39,23 @@ namespace BaoZuPo.UI
                 panel.SetActive(true);
             }
 
-            UIFontCatalog.ApplyToText(titleText);
-            UIFontCatalog.ApplyToText(infoText);
+            LocalizationFontUtility.ApplyToText(titleText);
+            LocalizationFontUtility.ApplyToText(infoText);
 
             if (titleText != null)
             {
-                titleText.text = UIStrings.GameOverTitle;
+                titleText.text = GameText.GameOverTitle;
             }
 
             if (infoText != null)
             {
-                infoText.text = UIStrings.GameOverInfo(totalTurns, finalMoney);
+                infoText.text = GameText.GameOverInfo(totalTurns, finalMoney);
             }
         }
 
         public void RefreshLocalization()
         {
-            UIFontCatalog.ApplyToChildren(transform);
+            LocalizationFontUtility.ApplyToChildren(transform);
             if (_hasShownResult)
             {
                 Show(_lastTotalTurns, _lastFinalMoney);

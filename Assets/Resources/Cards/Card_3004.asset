@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_3004
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3004
-  cardName: Maintenance
-  description: Repair all equipment.
+  cardName: 维修保养
+  description: 修复所有设备耐久。
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}

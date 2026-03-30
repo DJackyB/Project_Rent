@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
+using BaoZuPo.Localization;
 using UnityEngine;
 
 namespace BaoZuPo.Deck
@@ -113,12 +114,12 @@ namespace BaoZuPo.Deck
             if (_hand.Count >= _maxHandSize)
             {
                 _discardPile.Add(card);
-                Debug.Log($"[DeckManager] Hand full, reward card sent to discard: {data.cardName}");
+                Debug.Log($"[DeckManager] Hand full, reward card sent to discard: {CardTextResolver.ResolveName(data)}");
             }
             else
             {
                 _hand.Add(card);
-                Debug.Log($"[DeckManager] Added reward card to hand: {data.cardName}");
+                Debug.Log($"[DeckManager] Added reward card to hand: {CardTextResolver.ResolveName(data)}");
             }
 
             UpdateDebugInfo();

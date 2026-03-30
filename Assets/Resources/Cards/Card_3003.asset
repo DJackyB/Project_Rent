@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_3003
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3003
-  cardName: Renewal
-  description: Persuade all to stay.
+  cardName: 续约
+  description: 说服所有租客继续留下。
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}

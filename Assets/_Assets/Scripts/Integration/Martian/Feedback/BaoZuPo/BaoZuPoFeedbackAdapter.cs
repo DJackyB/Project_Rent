@@ -1,6 +1,7 @@
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
+using BaoZuPo.Localization;
 using BaoZuPo.UI;
 using Martian.Feedback;
 using Martian.Feedback.Runtime;
@@ -62,13 +63,13 @@ namespace BaoZuPo.Integration.Martian.Feedback
 
             FeedbackServiceLocator.Current.Publish(new FeedbackRequest
             {
-                DebugLabel = $"{card.Data.cardName}_Cost",
+                DebugLabel = $"{CardTextResolver.ResolveName(card)}_Cost",
                 TargetKey = targetKey,
                 TargetKind = targetKind,
                 Anchor = anchor,
                 UseScreenCenterFallback = useCenterFallback,
                 ScreenOffset = screenOffset,
-                Text = UIStrings.FeedbackCost(cost),
+                Text = GameText.FeedbackCost(cost),
                 NumericDelta = -cost,
                 Category = FeedbackCategory.Cost
             });
@@ -85,7 +86,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
 
             FeedbackServiceLocator.Current.Publish(new FeedbackRequest
             {
-                DebugLabel = $"{card.Data.cardName}_InstantMoney",
+                DebugLabel = $"{CardTextResolver.ResolveName(card)}_InstantMoney",
                 TargetKey = targetKey,
                 TargetKind = targetKind,
                 Anchor = anchor,
@@ -114,7 +115,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 Anchor = anchor,
                 UseScreenCenterFallback = useCenterFallback,
                 ScreenOffset = screenOffset,
-                Text = UIStrings.FeedbackLoan(amount),
+                Text = GameText.FeedbackLoan(amount),
                 NumericDelta = -amount,
                 Category = FeedbackCategory.Loan
             });

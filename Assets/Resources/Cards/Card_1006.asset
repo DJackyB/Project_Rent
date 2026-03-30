@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1006
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1006
-  cardName: Streamer
-  description: Lavish pay but moves often.
+  cardName: 主播
+  description: 出手阔绰，但经常搬家。
   cardType: 0
   rarity: 2
   cardArt: {fileID: 0}

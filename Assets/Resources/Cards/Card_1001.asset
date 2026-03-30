@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1001
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1001
-  cardName: Worker
-  description: Simple worker, pays on time.
+  cardName: 打工人
+  description: 普通打工人，按时交租。
   cardType: 0
   rarity: 0
   cardArt: {fileID: 0}

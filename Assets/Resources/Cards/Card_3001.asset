@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_3001
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3001
-  cardName: Rent Bonus
-  description: Extra rent income.
+  cardName: 租金红利
+  description: 额外获得一笔租金收入。
   cardType: 2
   rarity: 0
   cardArt: {fileID: 0}

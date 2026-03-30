@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_3005
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3005
-  cardName: Urgent Loan
-  description: Bank emergency cash.
+  cardName: 紧急贷款
+  description: 向银行获取一笔应急现金。
   cardType: 2
   rarity: 2
   cardArt: {fileID: 0}

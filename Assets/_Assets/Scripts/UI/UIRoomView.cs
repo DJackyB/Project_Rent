@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
 using BaoZuPo.UI.Common.Drag;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -76,13 +78,13 @@ namespace BaoZuPo.UI
 
         private void RefreshTitle()
         {
-            UIFontCatalog.ApplyToText(titleText);
+            LocalizationFontUtility.ApplyToText(titleText);
             if (titleText == null || _room == null)
             {
                 return;
             }
 
-            titleText.text = UIStrings.RoomSummary(
+            titleText.text = GameText.RoomSummary(
                 _room.RoomIndex + 1,
                 _room.TenantCount,
                 _room.TenantSlotCapacity,
@@ -163,7 +165,7 @@ namespace BaoZuPo.UI
                 rect.offsetMax = new Vector2(-12f, -8f);
 
                 titleText = titleObject.GetComponent<TextMeshProUGUI>();
-                titleText.font = UIFontCatalog.GetPreferredFontAsset();
+                titleText.font = LocalizationFontUtility.GetPreferredFontAsset();
                 titleText.fontSize = 20f;
                 titleText.color = Color.white;
                 titleText.alignment = TextAlignmentOptions.Left;

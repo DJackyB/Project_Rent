@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Card_1002
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1002
-  cardName: White Collar
-  description: Stable income, clean room.
+  cardName: 白领
+  description: 收入稳定，房间整洁。
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}

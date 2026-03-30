@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using BaoZuPo.Localization;
 using UnityEngine;
 
 namespace BaoZuPo.Card
@@ -31,7 +32,7 @@ namespace BaoZuPo.Card
                 {
                     CardData existing = _cards[card.cardId];
                     throw new InvalidOperationException(
-                        $"[CardDatabase] Duplicate cardId detected: {card.cardId}. Existing={existing.cardName}, Incoming={card.cardName}");
+                        $"[CardDatabase] Duplicate cardId detected: {card.cardId}. Existing={CardTextResolver.ResolveName(existing)}, Incoming={CardTextResolver.ResolveName(card)}");
                 }
 
                 _cards[card.cardId] = card;
@@ -54,7 +55,7 @@ namespace BaoZuPo.Card
             if (_cards.TryGetValue(data.cardId, out var existing) && existing != data)
             {
                 throw new InvalidOperationException(
-                    $"[CardDatabase] Duplicate cardId detected during Register: {data.cardId}. Existing={existing.cardName}, Incoming={data.cardName}");
+                    $"[CardDatabase] Duplicate cardId detected during Register: {data.cardId}. Existing={CardTextResolver.ResolveName(existing)}, Incoming={CardTextResolver.ResolveName(data)}");
             }
 
             _cards[data.cardId] = data;

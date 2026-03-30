@@ -1,8 +1,10 @@
 using BaoZuPo.Core;
 using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Localization;
 using BaoZuPo.UI.Common.Animation;
 using Martian.EventBus;
+using Martian.Localization;
 using TMPro;
 using UnityEngine;
 
@@ -52,10 +54,10 @@ namespace BaoZuPo.UI
 
         public void RefreshTurn(int turn)
         {
-            UIFontCatalog.ApplyToText(turnText);
+            LocalizationFontUtility.ApplyToText(turnText);
             if (turnText != null)
             {
-                turnText.text = UIStrings.Turn(turn);
+                turnText.text = GameText.Turn(turn);
             }
         }
 
@@ -105,19 +107,19 @@ namespace BaoZuPo.UI
 
         private void UpdateMoneyLabel()
         {
-            UIFontCatalog.ApplyToText(moneyText);
+            LocalizationFontUtility.ApplyToText(moneyText);
             if (moneyText != null)
             {
-                moneyText.text = UIStrings.Money(_displayedMoney);
+                moneyText.text = GameText.Money(_displayedMoney);
             }
         }
 
         public void RefreshSummary()
         {
-            UIFontCatalog.ApplyToText(deckText);
+            LocalizationFontUtility.ApplyToText(deckText);
             if (deckText != null)
             {
-                deckText.text = UIStrings.Spent(MoneyManager.Instance.TotalSpent);
+                deckText.text = GameText.Spent(MoneyManager.Instance.TotalSpent);
             }
         }
 
@@ -164,9 +166,9 @@ namespace BaoZuPo.UI
             turnText.transform.SetParent(rootCanvas.transform, false);
             deckText.transform.SetParent(rootCanvas.transform, false);
             moneyText.transform.SetParent(rootCanvas.transform, false);
-            UIFontCatalog.ApplyToText(turnText);
-            UIFontCatalog.ApplyToText(deckText);
-            UIFontCatalog.ApplyToText(moneyText);
+            LocalizationFontUtility.ApplyToText(turnText);
+            LocalizationFontUtility.ApplyToText(deckText);
+            LocalizationFontUtility.ApplyToText(moneyText);
 
             ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
             ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
@@ -220,7 +222,7 @@ namespace BaoZuPo.UI
             labelObject.transform.SetParent(parent, false);
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = UIFontCatalog.GetPreferredFontAsset();
+            label.font = LocalizationFontUtility.GetPreferredFontAsset();
             label.color = Color.white;
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.fontSize = 24f;
