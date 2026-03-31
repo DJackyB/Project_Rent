@@ -160,7 +160,6 @@ namespace BaoZuPo.Editor
                 cardData.destroyEffect = GetStringValue(row, columnMap, Col_DestroyEffect);
                 cardData.targetKind = ParseTargetKind(
                     GetStringValue(row, columnMap, Col_TargetKind),
-                    cardData.cardType,
                     rowIndex,
                     cardId);
 
@@ -168,6 +167,7 @@ namespace BaoZuPo.Editor
                 ValidateEffectField(rowIndex, cardId, Col_InstantEffect, cardData.instantEffect);
                 ValidateEffectField(rowIndex, cardId, Col_SettleEffect, cardData.settleEffect);
                 ValidateEffectField(rowIndex, cardId, Col_DestroyEffect, cardData.destroyEffect);
+                ValidateConfiguredTarget(rowIndex, cardId, cardData);
 
                 string artPath = GetStringValue(row, columnMap, Col_ArtPath);
                 if (!string.IsNullOrEmpty(artPath))
@@ -267,7 +267,7 @@ namespace BaoZuPo.Editor
                 $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}, field '{fieldName}' is invalid: {effectString}. {error}");
         }
 
-        private static CardPlayTargetKind ParseTargetKind(string configuredTarget, CardType cardType, int rowIndex, int cardId)
+        private static CardPlayTargetKind ParseTargetKind(string configuredTarget, int rowIndex, int cardId)
         {
             if (string.IsNullOrWhiteSpace(configuredTarget))
             {
@@ -290,13 +290,18 @@ namespace BaoZuPo.Editor
                     $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: invalid targetKind '{configuredTarget}'.");
             }
 
-            if ((cardType == CardType.Tenant || cardType == CardType.Equipment) && parsedTarget != CardPlayTargetKind.Room)
+            return parsedTarget;
+        }
+
+        private static void ValidateConfiguredTarget(int rowIndex, int cardId, CardData cardData)
+        {
+            if (CardTargeting.TryValidateConfiguredTargetKind(cardData, out var warning))
             {
-                throw new InvalidDataException(
-                    $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: {cardType} cards must use targetKind Room.");
+                return;
             }
 
-            return parsedTarget;
+            throw new InvalidDataException(
+                $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: {warning}");
         }
 
         private static void ValidateRequiredColumns(Dictionary<string, int> columnMap)

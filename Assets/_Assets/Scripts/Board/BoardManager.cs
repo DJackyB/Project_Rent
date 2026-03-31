@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
+using BaoZuPo.GameFlow;
 using UnityEngine;
 
 namespace BaoZuPo.Board
@@ -62,17 +63,29 @@ namespace BaoZuPo.Board
 
         public IReadOnlyList<RoomSlot> GetAllRooms() => _rooms;
 
-        public RoomSlot FindAvailableRoom(CardType cardType)
+        public RoomSlot FindAvailableRoom(CardData card)
         {
+            if (card == null || CardTargeting.GetRequiredTargetKind(card) != CardPlayTargetKind.Room)
+            {
+                return null;
+            }
+
             foreach (var room in _rooms)
             {
-                switch (cardType)
+                if (CardTargeting.PersistsInRoom(card))
                 {
-                    case CardType.Tenant when room.CanPlaceTenant:
-                        return room;
-                    case CardType.Equipment when room.CanPlaceEquipment:
-                        return room;
+                    switch (card.cardType)
+                    {
+                        case CardType.Tenant when room.CanPlaceTenant:
+                            return room;
+                        case CardType.Equipment when room.CanPlaceEquipment:
+                            return room;
+                    }
+
+                    continue;
                 }
+
+                return room;
             }
 
             return null;

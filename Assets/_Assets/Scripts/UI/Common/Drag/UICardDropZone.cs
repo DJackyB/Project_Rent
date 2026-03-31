@@ -110,14 +110,17 @@ namespace BaoZuPo.UI.Common.Drag
                 return false;
             }
 
-            if (card.Data.cardType == CardType.Tenant)
+            if (CardTargeting.PersistsInRoom(card.Data))
             {
-                return _boundRoom.CanPlaceTenant;
-            }
+                if (card.Data.cardType == CardType.Tenant)
+                {
+                    return _boundRoom.CanPlaceTenant;
+                }
 
-            if (card.Data.cardType == CardType.Equipment)
-            {
-                return _boundRoom.CanPlaceEquipment;
+                if (card.Data.cardType == CardType.Equipment)
+                {
+                    return _boundRoom.CanPlaceEquipment;
+                }
             }
 
             return true;

@@ -1,0 +1,4 @@
+interface:
+  display_name: "中文 Git 交付"
+  short_description: "提交、推送和 PR 使用中文标题与完整详情。"
+  default_prompt: "Use $chinese-git-delivery to package the current changes with Chinese commit and PR details."

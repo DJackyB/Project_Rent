@@ -33,7 +33,7 @@ namespace BaoZuPo.Card
         public int baseRent;
 
         [Header("Play Target")]
-        [Tooltip("Tenant and Equipment cards always use Room. Event and Contract cards read this field.")]
+        [Tooltip("Controls whether this card needs a Room target or can be played directly in the PlayArea.")]
         public CardPlayTargetKind targetKind = CardPlayTargetKind.PlayArea;
 
         [Header("Effect Configuration")]
