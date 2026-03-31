@@ -1,0 +1,29 @@
+﻿%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5b4d1350bc5dd245aad8bb5a387c48a, type: 3}
+  m_Name: Card_4004
+  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
+  cardId: 4004
+  cardName: "Closing Statement"
+  description: "A short contract that pushes a final money-and-cards burst."
+  cardType: 3
+  rarity: 2
+  cardArt: {fileID: 0}
+  cost: 130
+  baseRent: 0
+  targetKind: 0
+  preEffect: ""
+  instantEffect: ""
+  settleEffect: "AddMoney;35|DrawCard;1"
+  destroyEffect: ""
+  durability: 3
+  waitTurns: 0

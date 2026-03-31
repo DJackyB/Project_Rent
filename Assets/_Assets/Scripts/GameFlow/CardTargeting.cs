@@ -1,10 +1,22 @@
 using System;
+using System.Collections.Generic;
 using BaoZuPo.Card;
 
 namespace BaoZuPo.GameFlow
 {
     public static class CardTargeting
     {
+        private static readonly HashSet<string> ExplicitRoomTargetEffects = new(StringComparer.Ordinal)
+        {
+            "AddMoneyBySelectedRoomTenantCount",
+            "AddTenantDurabilityInSelectedRoom",
+            "EvictTenantInSelectedRoom",
+            "ExpandSlot",
+            "MoveTenantToEmptyRoom",
+            "SpawnRandomTenantInSelectedRoom",
+            "TriggerSelectedRoomSettle",
+        };
+
         public static CardPlayTargetKind GetRequiredTargetKind(CardData card)
         {
             if (card == null)
@@ -53,7 +65,7 @@ namespace BaoZuPo.GameFlow
 
             if (HasSelectedRoomEffect(card) && card.targetKind != CardPlayTargetKind.Room)
             {
-                warning = "Cards that use SelectedRoom effects must use targetKind Room.";
+                warning = "Cards that use room-dependent effects must use targetKind Room.";
                 return false;
             }
 
@@ -62,15 +74,37 @@ namespace BaoZuPo.GameFlow
 
         private static bool HasSelectedRoomEffect(CardData card)
         {
-            return ContainsSelectedRoom(card.preEffect)
-                || ContainsSelectedRoom(card.instantEffect)
-                || ContainsSelectedRoom(card.settleEffect)
-                || ContainsSelectedRoom(card.destroyEffect);
+            return ContainsRoomDependentEffect(card.preEffect)
+                || ContainsRoomDependentEffect(card.instantEffect)
+                || ContainsRoomDependentEffect(card.settleEffect)
+                || ContainsRoomDependentEffect(card.destroyEffect);
         }
 
-        private static bool ContainsSelectedRoom(string effectString)
+        private static bool ContainsRoomDependentEffect(string effectString)
         {
-            return !string.IsNullOrWhiteSpace(effectString) && effectString.Contains("SelectedRoom");
+            if (string.IsNullOrWhiteSpace(effectString))
+            {
+                return false;
+            }
+
+            var segments = effectString.Split('|');
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var segment = segments[i].Trim();
+                if (string.IsNullOrWhiteSpace(segment))
+                {
+                    continue;
+                }
+
+                int separatorIndex = segment.IndexOf(';');
+                string effectId = separatorIndex >= 0 ? segment[..separatorIndex] : segment;
+                if (ExplicitRoomTargetEffects.Contains(effectId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

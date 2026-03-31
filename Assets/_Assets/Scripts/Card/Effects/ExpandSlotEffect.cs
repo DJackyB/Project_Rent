@@ -19,14 +19,20 @@ namespace BaoZuPo.Card.Effects
 
         public void Execute(CardInstance card, GameContext context)
         {
-            if (card.PlacedRoom != null)
+            var targetRoom = card != null && card.PlacedRoom != null
+                ? card.PlacedRoom
+                : context != null
+                    ? context.EffectContext.SelectedRoom
+                    : null;
+
+            if (targetRoom != null)
             {
-                card.PlacedRoom.ExpandTenantSlots(_count);
-                Debug.Log($"[Effect] Room {card.PlacedRoom.RoomIndex} tenant slots +{_count}.");
+                targetRoom.ExpandTenantSlots(_count);
+                Debug.Log($"[Effect] Room {targetRoom.RoomIndex} tenant slots +{_count}.");
             }
             else
             {
-                Debug.LogWarning("[Effect] ExpandSlot: card is not placed in a room, effect skipped.");
+                Debug.LogWarning("[Effect] ExpandSlot: no target room available, effect skipped.");
             }
         }
     }

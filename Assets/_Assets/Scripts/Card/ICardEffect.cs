@@ -17,6 +17,11 @@ namespace BaoZuPo.Card
 
         /// <summary>Optional settlement capture hook used during settle phase.</summary>
         public SettlementCaptureContext SettlementCapture { get; set; }
+
+        /// <summary>
+        /// Guards extra room settlement so TriggerSelectedRoomSettle cannot recurse into itself.
+        /// </summary>
+        public bool IsExtraRoomSettlementActive { get; set; }
     }
 
     /// <summary>

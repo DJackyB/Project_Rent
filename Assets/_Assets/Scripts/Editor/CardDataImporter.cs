@@ -6,6 +6,7 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using UnityEditor;
 using UnityEngine;
+using BaoZuPo.Core;
 
 namespace BaoZuPo.Editor
 {
@@ -13,6 +14,8 @@ namespace BaoZuPo.Editor
     {
         private const string ExcelRelativePath = "Assets/_Assets/Data/Excel/CardData.xlsx";
         private const string OutputFolder = "Assets/Resources/Cards";
+        private const string LibraryOutputFolder = "Assets/Resources/CardLibraries";
+        private const string GameConfigAssetPath = "Assets/_Assets/Data/Config/GameConfig.asset";
         private const int HeaderRowIndex = 1;
         private const int DataStartRowIndex = 3;
         private const int SheetIndex = 0;
@@ -119,6 +122,7 @@ namespace BaoZuPo.Editor
 
             int created = 0;
             int updated = 0;
+            var importedCardIds = new HashSet<int>();
 
             for (int rowIndex = DataStartRowIndex; rowIndex <= sheet.LastRowNum; rowIndex++)
             {
@@ -129,6 +133,7 @@ namespace BaoZuPo.Editor
                 }
 
                 int cardId = GetRequiredIntValue(row, columnMap, Col_CardId, rowIndex);
+                importedCardIds.Add(cardId);
 
                 string cardName = GetStringValue(row, columnMap, Col_CardName);
                 if (string.IsNullOrWhiteSpace(cardName))
@@ -170,10 +175,9 @@ namespace BaoZuPo.Editor
                 ValidateConfiguredTarget(rowIndex, cardId, cardData);
 
                 string artPath = GetStringValue(row, columnMap, Col_ArtPath);
-                if (!string.IsNullOrEmpty(artPath))
-                {
-                    cardData.cardArt = AssetDatabase.LoadAssetAtPath<Sprite>(artPath);
-                }
+                cardData.cardArt = string.IsNullOrWhiteSpace(artPath)
+                    ? null
+                    : AssetDatabase.LoadAssetAtPath<Sprite>(artPath);
 
                 if (isNew)
                 {
@@ -189,10 +193,63 @@ namespace BaoZuPo.Editor
                 Debug.Log($"[CardDataImporter] {(isNew ? "Created" : "Updated")} card: [{cardId}] {cardName}");
             }
 
+            DeleteStaleCardAssets(importedCardIds);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             Debug.Log($"[CardDataImporter] Done. Created {created}, updated {updated}.");
+        }
+
+        [MenuItem("Tools/BaoZuPo/Sync Card Libraries")]
+        public static void SyncCardLibraries()
+        {
+            if (!AssetDatabase.IsValidFolder(LibraryOutputFolder))
+            {
+                CreateFolderRecursive(LibraryOutputFolder);
+            }
+
+            var cardsById = LoadManagedCardsById();
+            var librariesById = new Dictionary<string, CardLibrary>();
+
+            foreach (var spec in CardSheetCatalog.Libraries)
+            {
+                string assetPath = $"{LibraryOutputFolder}/{spec.AssetName}.asset";
+                var library = AssetDatabase.LoadAssetAtPath<CardLibrary>(assetPath);
+                bool isNew = library == null;
+                if (isNew)
+                {
+                    library = ScriptableObject.CreateInstance<CardLibrary>();
+                }
+
+                library.libraryId = spec.LibraryId;
+                library.displayName = spec.DisplayName;
+                library.cards = ResolveLibraryCards(spec, cardsById);
+
+                if (isNew)
+                {
+                    AssetDatabase.CreateAsset(library, assetPath);
+                }
+                else
+                {
+                    EditorUtility.SetDirty(library);
+                }
+
+                librariesById[spec.LibraryId] = library;
+                Debug.Log($"[CardDataImporter] {(isNew ? "Created" : "Updated")} library '{spec.LibraryId}' with {library.cards.Count} entries.");
+            }
+
+            SyncGameConfig(librariesById);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        [MenuItem("Tools/BaoZuPo/Rebuild 50 Card Content")]
+        public static void RebuildCardContent()
+        {
+            FillCardDataScript.FillCards();
+            Import();
+            SyncCardLibraries();
+            Debug.Log("[CardDataImporter] Rebuilt Excel, imported cards, and synced card libraries.");
         }
 
         private static string GetStringValue(IRow row, Dictionary<string, int> columnMap, string columnName)
@@ -348,6 +405,80 @@ namespace BaoZuPo.Editor
                 }
 
                 currentPath = nextPath;
+            }
+        }
+
+        private static Dictionary<int, CardData> LoadManagedCardsById()
+        {
+            var cardsById = new Dictionary<int, CardData>();
+            string[] guids = AssetDatabase.FindAssets("t:CardData", new[] { OutputFolder });
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var card = AssetDatabase.LoadAssetAtPath<CardData>(path);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                cardsById[card.cardId] = card;
+            }
+
+            return cardsById;
+        }
+
+        private static List<CardData> ResolveLibraryCards(CardSheetCatalog.LibraryRow spec, Dictionary<int, CardData> cardsById)
+        {
+            var cards = new List<CardData>(spec.CardIds.Length);
+            foreach (int cardId in spec.CardIds)
+            {
+                if (!cardsById.TryGetValue(cardId, out var card))
+                {
+                    throw new InvalidDataException($"[CardDataImporter] Library '{spec.LibraryId}' references missing cardId {cardId}. Import cards first.");
+                }
+
+                cards.Add(card);
+            }
+
+            return cards;
+        }
+
+        private static void SyncGameConfig(Dictionary<string, CardLibrary> librariesById)
+        {
+            var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigAssetPath);
+            if (gameConfig == null)
+            {
+                Debug.LogWarning($"[CardDataImporter] GameConfig not found at '{GameConfigAssetPath}', skipping config sync.");
+                return;
+            }
+
+            gameConfig.firstTurnDrawLibrary = librariesById["FirstTurnPool"];
+            gameConfig.normalTurnDrawLibrary = librariesById["NormalTurnPool"];
+            gameConfig.rewardLibrary = librariesById["RewardPool"];
+            EditorUtility.SetDirty(gameConfig);
+
+            Debug.Log("[CardDataImporter] Synced GameConfig draw libraries to FirstTurnPool / NormalTurnPool / RewardPool.");
+        }
+
+        private static void DeleteStaleCardAssets(HashSet<int> importedCardIds)
+        {
+            string[] guids = AssetDatabase.FindAssets("t:CardData", new[] { OutputFolder });
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var card = AssetDatabase.LoadAssetAtPath<CardData>(path);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                if (importedCardIds.Contains(card.cardId))
+                {
+                    continue;
+                }
+
+                Debug.Log($"[CardDataImporter] Deleting stale card asset: {path}");
+                AssetDatabase.DeleteAsset(path);
             }
         }
     }

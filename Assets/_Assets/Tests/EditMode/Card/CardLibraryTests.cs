@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using BaoZuPo.Board;
@@ -23,6 +24,7 @@ namespace BaoZuPo.Tests.Card
         public void SetUp()
         {
             EventBus.ClearAll();
+            CardDatabase.Clear();
             CardLibraryDatabase.Clear();
             CardEffectFactory.ClearAll();
             CardEffectRegistration.EnsureRegistered();
@@ -32,6 +34,7 @@ namespace BaoZuPo.Tests.Card
         public void TearDown()
         {
             EventBus.ClearAll();
+            CardDatabase.Clear();
             CardLibraryDatabase.Clear();
             CardEffectFactory.ClearAll();
 
@@ -54,7 +57,32 @@ namespace BaoZuPo.Tests.Card
             var library = CardLibraryDatabase.GetById("AllCards");
 
             Assert.NotNull(library);
-            Assert.Greater(library.cards.Count, 0);
+            Assert.AreEqual(50, library.cards.Count);
+        }
+
+        [Test]
+        public void LoadAll_ContainsExpectedConfiguredLibraries()
+        {
+            CardLibraryDatabase.LoadAll();
+
+            var libraries = CardLibraryDatabase.GetAll();
+
+            CollectionAssert.IsSupersetOf(libraries.Keys, new[] { "AllCards", "FirstTurnPool", "NormalTurnPool", "RewardPool" });
+            Assert.AreEqual(4, libraries.Count);
+        }
+
+        [Test]
+        public void CardDatabase_LoadAll_HasExpectedCardCountAndTypeDistribution()
+        {
+            CardDatabase.LoadAll();
+
+            var allCards = CardDatabase.GetAll().Values.ToArray();
+
+            Assert.AreEqual(50, allCards.Length);
+            Assert.AreEqual(20, allCards.Count(card => card.cardType == CardType.Tenant));
+            Assert.AreEqual(13, allCards.Count(card => card.cardType == CardType.Equipment));
+            Assert.AreEqual(13, allCards.Count(card => card.cardType == CardType.Event));
+            Assert.AreEqual(4, allCards.Count(card => card.cardType == CardType.Contract));
         }
 
         [Test]
@@ -94,6 +122,15 @@ namespace BaoZuPo.Tests.Card
 
             Assert.IsFalse(CardEffectFactory.TryValidate("DrawCard;2;MissingPool", out var error));
             StringAssert.Contains("does not exist", error);
+        }
+
+        [Test]
+        public void EffectValidation_SupportsNewCardExpansionEffects()
+        {
+            Assert.IsTrue(CardEffectFactory.TryValidate("AddRoom", out var addRoomError), addRoomError);
+            Assert.IsTrue(
+                CardEffectFactory.TryValidate("AddMoneyBySelectedRoomTenantCount;30", out var selectedRoomMoneyError),
+                selectedRoomMoneyError);
         }
 
         [Test]
@@ -331,7 +368,31 @@ namespace BaoZuPo.Tests.Card
             card.instantEffect = "AddTenantDurabilityInSelectedRoom;2";
 
             Assert.IsFalse(CardTargeting.TryValidateConfiguredTargetKind(card, out var warning));
-            StringAssert.Contains("SelectedRoom", warning);
+            StringAssert.Contains("room-dependent", warning);
+        }
+
+        [Test]
+        public void TargetValidation_RejectsExpandSlotWithoutRoomTarget()
+        {
+            var card = CreateCardData(1220, "Broken Expand");
+            card.cardType = CardType.Event;
+            card.targetKind = CardPlayTargetKind.PlayArea;
+            card.instantEffect = "ExpandSlot;1";
+
+            Assert.IsFalse(CardTargeting.TryValidateConfiguredTargetKind(card, out var warning));
+            StringAssert.Contains("room-dependent", warning);
+        }
+
+        [Test]
+        public void TargetValidation_RejectsMoveTenantWithoutRoomTarget()
+        {
+            var card = CreateCardData(1221, "Broken Move");
+            card.cardType = CardType.Event;
+            card.targetKind = CardPlayTargetKind.PlayArea;
+            card.instantEffect = "MoveTenantToEmptyRoom";
+
+            Assert.IsFalse(CardTargeting.TryValidateConfiguredTargetKind(card, out var warning));
+            StringAssert.Contains("room-dependent", warning);
         }
 
         [Test]
@@ -409,6 +470,153 @@ namespace BaoZuPo.Tests.Card
             Assert.AreEqual(1, room.TenantCount);
             Assert.IsNull(card.PlacedRoom);
             Assert.AreEqual(0, context.DeckManager.HandCount);
+        }
+
+        [Test]
+        public void PlayCard_RoomEventExpandSlot_ExpandsSelectedRoomCapacity()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(131, "First")),
+                CreateLibrary("NormalPool", CreateCardData(132, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(133, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var room = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 1);
+
+            var roomEvent = CreateCardData(134, "Expand Event");
+            roomEvent.cardType = CardType.Event;
+            roomEvent.targetKind = CardPlayTargetKind.Room;
+            roomEvent.instantEffect = "ExpandSlot;1";
+
+            context.DeckManager.AddCardToHand(roomEvent);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            bool played = context.TurnManager.PlayCard(card, room);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(2, room.TenantSlotCapacity);
+            Assert.AreEqual(0, room.TenantCount);
+            Assert.IsNull(card.PlacedRoom);
+        }
+
+        [Test]
+        public void PlayCard_AddRoomEvent_IncreasesBoardRoomCount()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(135, "First")),
+                CreateLibrary("NormalPool", CreateCardData(136, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(137, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var roomEvent = CreateCardData(138, "Add Room");
+            roomEvent.cardType = CardType.Event;
+            roomEvent.targetKind = CardPlayTargetKind.PlayArea;
+            roomEvent.instantEffect = "AddRoom";
+
+            context.DeckManager.AddCardToHand(roomEvent);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+            int roomCountBefore = context.BoardManager.RoomCount;
+
+            bool played = context.TurnManager.PlayCard(card);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(roomCountBefore + 1, context.BoardManager.RoomCount);
+        }
+
+        [Test]
+        public void PlayCard_RoomEventAddMoneyBySelectedRoomTenantCount_UsesOnlySelectedRoom()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(139, "First")),
+                CreateLibrary("NormalPool", CreateCardData(140, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(141, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var targetRoom = context.BoardManager.AddRoom(tenantSlots: 2, equipmentSlots: 1);
+            var otherRoom = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 1);
+
+            Assert.IsTrue(targetRoom.PlaceCard(CreateTenantInstance(142, "Tenant A")));
+            Assert.IsTrue(targetRoom.PlaceCard(CreateTenantInstance(143, "Tenant B")));
+            Assert.IsTrue(otherRoom.PlaceCard(CreateTenantInstance(144, "Other Tenant")));
+
+            var roomEvent = CreateCardData(145, "Tenant Count Bonus");
+            roomEvent.cardType = CardType.Event;
+            roomEvent.targetKind = CardPlayTargetKind.Room;
+            roomEvent.instantEffect = "AddMoneyBySelectedRoomTenantCount;30";
+
+            context.DeckManager.AddCardToHand(roomEvent);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            bool played = context.TurnManager.PlayCard(card, targetRoom);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(1060, context.MoneyManager.CurrentMoney);
+        }
+
+        [Test]
+        public void PlayCard_RoomEventTriggerSelectedRoomSettle_DoesNotReduceDurability_AndSkipsRecursiveExtraSettle()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(146, "First")),
+                CreateLibrary("NormalPool", CreateCardData(147, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(148, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var room = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 2);
+
+            var tenantData = CreateCardData(149, "Burst Tenant");
+            tenantData.cardType = CardType.Tenant;
+            tenantData.targetKind = CardPlayTargetKind.Room;
+            tenantData.baseRent = 40;
+            tenantData.durability = 5;
+            var tenant = new CardInstance(tenantData);
+
+            var recursiveEquipmentData = CreateCardData(150, "Recursive Equipment");
+            recursiveEquipmentData.cardType = CardType.Equipment;
+            recursiveEquipmentData.targetKind = CardPlayTargetKind.Room;
+            recursiveEquipmentData.settleEffect = "TriggerSelectedRoomSettle";
+            var recursiveEquipment = new CardInstance(recursiveEquipmentData);
+
+            var supportEquipmentData = CreateCardData(151, "Support Equipment");
+            supportEquipmentData.cardType = CardType.Equipment;
+            supportEquipmentData.targetKind = CardPlayTargetKind.Room;
+            supportEquipmentData.settleEffect = "AddMoney;10";
+            var supportEquipment = new CardInstance(supportEquipmentData);
+
+            Assert.IsTrue(room.PlaceCard(tenant));
+            Assert.IsTrue(room.PlaceCard(recursiveEquipment));
+            Assert.IsTrue(room.PlaceCard(supportEquipment));
+
+            var roomEvent = CreateCardData(152, "Burst Trigger");
+            roomEvent.cardType = CardType.Event;
+            roomEvent.targetKind = CardPlayTargetKind.Room;
+            roomEvent.instantEffect = "TriggerSelectedRoomSettle";
+
+            context.DeckManager.AddCardToHand(roomEvent);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            bool played = context.TurnManager.PlayCard(card, room);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(1050, context.MoneyManager.CurrentMoney);
+            Assert.AreEqual(5, tenant.CurrentDurability);
+            Assert.IsFalse(context.GameManager.GameContext.EffectContext.IsExtraRoomSettlementActive);
         }
 
         [Test]
@@ -549,6 +757,15 @@ namespace BaoZuPo.Tests.Card
             card.waitTurns = 0;
             card.durability = 0;
             return card;
+        }
+
+        private CardInstance CreateTenantInstance(int cardId, string cardName)
+        {
+            var tenantData = CreateCardData(cardId, cardName);
+            tenantData.cardType = CardType.Tenant;
+            tenantData.targetKind = CardPlayTargetKind.Room;
+            tenantData.durability = 5;
+            return new CardInstance(tenantData);
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)

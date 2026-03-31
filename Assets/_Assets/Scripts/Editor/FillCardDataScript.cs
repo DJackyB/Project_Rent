@@ -4,110 +4,87 @@ using NPOI.XSSF.UserModel;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>
-/// One-off script that fills the Excel sheet with 20 sample cards.
-/// </summary>
-public static class FillCardDataScript
+namespace BaoZuPo.Editor
 {
-    [MenuItem("Tools/BaoZuPo/Fill 20 Cards")]
-    public static void FillCards()
+    /// <summary>
+    /// Rewrites the card Excel source of truth from the editor-side catalog.
+    /// </summary>
+    public static class FillCardDataScript
     {
-        string excelPath = "Assets/_Assets/Data/Excel/CardData.xlsx";
+        private const string ExcelPath = "Assets/_Assets/Data/Excel/CardData.xlsx";
+        private const int DataStartRowIndex = 3;
+        private const int SheetIndex = 0;
+        private const int ColumnCount = 16;
 
-        if (!File.Exists(excelPath))
+        [MenuItem("Tools/BaoZuPo/Fill 50 Cards")]
+        public static void FillCards()
         {
-            Debug.LogError($"[FillCardDataScript] File not found: {excelPath}");
-            return;
+            if (!File.Exists(ExcelPath))
+            {
+                Debug.LogError($"[FillCardDataScript] File not found: {ExcelPath}");
+                return;
+            }
+
+            IWorkbook workbook;
+            using (var stream = new FileStream(ExcelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                workbook = new XSSFWorkbook(stream);
+            }
+
+            ISheet sheet = workbook.GetSheetAt(SheetIndex);
+            if (sheet == null)
+            {
+                Debug.LogError($"[FillCardDataScript] Sheet {SheetIndex} not found.");
+                return;
+            }
+
+            for (int rowIndex = sheet.LastRowNum; rowIndex >= DataStartRowIndex; rowIndex--)
+            {
+                IRow row = sheet.GetRow(rowIndex);
+                if (row != null)
+                {
+                    sheet.RemoveRow(row);
+                }
+            }
+
+            int rowIdx = DataStartRowIndex;
+            foreach (var card in CardSheetCatalog.Rows)
+            {
+                WriteRow(sheet, rowIdx++, card);
+            }
+
+            using (var stream = new FileStream(ExcelPath, FileMode.Create, FileAccess.Write))
+            {
+                workbook.Write(stream);
+            }
+
+            Debug.Log($"[FillCardDataScript] Wrote {rowIdx - DataStartRowIndex} cards to Excel. Run Tools/BaoZuPo/Import Card Data on the main thread to generate assets.");
         }
 
-        IWorkbook workbook;
-        using (var stream = new FileStream(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        private static void WriteRow(ISheet sheet, int rowIdx, CardSheetCatalog.CardRow card)
         {
-            workbook = new XSSFWorkbook(stream);
+            IRow row = sheet.CreateRow(rowIdx);
+            row.CreateCell(0).SetCellValue(card.CardId);
+            row.CreateCell(1).SetCellValue(card.CardName);
+            row.CreateCell(2).SetCellValue(card.Description);
+            row.CreateCell(3).SetCellValue(card.CardType);
+            row.CreateCell(4).SetCellValue(card.Rarity);
+            row.CreateCell(5).SetCellValue(card.CardArt);
+            row.CreateCell(6).SetCellValue(card.Cost);
+            row.CreateCell(7).SetCellValue(card.BaseRent);
+            row.CreateCell(8).SetCellValue(card.TargetKind);
+            row.CreateCell(9).SetCellValue(card.WaitTurns);
+            row.CreateCell(10).SetCellValue(card.Durability);
+            row.CreateCell(11).SetCellValue(card.PreEffect);
+            row.CreateCell(12).SetCellValue(card.InstantEffect);
+            row.CreateCell(13).SetCellValue(card.SettleEffect);
+            row.CreateCell(14).SetCellValue(card.DestroyEffect);
+            row.CreateCell(15).SetCellValue(card.Tag);
+
+            for (int col = row.LastCellNum; col < ColumnCount; col++)
+            {
+                row.CreateCell(col);
+            }
         }
-
-        ISheet sheet = workbook.GetSheetAt(0);
-
-        for (int i = sheet.LastRowNum; i >= 3; i--)
-        {
-            IRow row = sheet.GetRow(i);
-            if (row != null) sheet.RemoveRow(row);
-        }
-
-        int rowIdx = 3;
-
-        WriteRow(sheet, rowIdx++, 1001, "Worker", "Simple worker, pays on time.",
-            "Card_Tenant", 0, "", 50, 0, 0, 5, "Room", "", "AddMoney;60", "AddMoney;30", "ReduceMoney;30");
-        WriteRow(sheet, rowIdx++, 1002, "White Collar", "Stable income, clean room.",
-            "Card_Tenant", 1, "", 120, 0, 0, 8, "Room", "", "AddMoney;120", "AddMoney;60", "ReduceMoney;60");
-        WriteRow(sheet, rowIdx++, 1003, "Programmer", "High pay, often overtimes.",
-            "Card_Tenant", 2, "", 200, 0, 0, 4, "Room", "", "AddMoney;200", "AddMoney;100", "ReduceMoney;100");
-        WriteRow(sheet, rowIdx++, 1004, "Senior Teacher", "Quiet old tenant, never leaves.",
-            "Card_Tenant", 1, "", 80, 0, 0, 0, "Room", "", "AddMoney;50", "AddMoney;25", "ReduceMoney;25");
-        WriteRow(sheet, rowIdx++, 1005, "Student", "Cheap but short lease.",
-            "Card_Tenant", 0, "", 30, 0, 0, 4, "Room", "", "AddMoney;40", "AddMoney;20", "ReduceMoney;20");
-        WriteRow(sheet, rowIdx++, 1006, "Streamer", "Lavish pay but moves often.",
-            "Card_Tenant", 2, "", 150, 0, 0, 3, "Room", "", "AddMoney;240", "AddMoney;120", "ReduceMoney;120");
-        WriteRow(sheet, rowIdx++, 1007, "Doctor", "High deposit, long lease.",
-            "Card_Tenant", 2, "", 250, 0, 0, 10, "Room", "", "AddMoney;160", "AddMoney;80", "ReduceMoney;80");
-        WriteRow(sheet, rowIdx++, 1008, "Chef", "Sturdy and reliable.",
-            "Card_Tenant", 1, "", 100, 0, 0, 6, "Room", "", "AddMoney;100", "AddMoney;50", "ReduceMoney;50");
-        WriteRow(sheet, rowIdx++, 1009, "Painter", "Needs time to settle in.",
-            "Card_Tenant", 1, "", 60, 0, 2, 6, "Room", "", "AddMoney;80", "AddMoney;40", "ReduceMoney;40");
-        WriteRow(sheet, rowIdx++, 1010, "Courier", "Comes fast, goes fast.",
-            "Card_Tenant", 0, "", 40, 0, 0, 3, "Room", "", "AddMoney;70", "AddMoney;35", "ReduceMoney;35");
-
-        WriteRow(sheet, rowIdx++, 2001, "Air Conditioner", "Improves comfort.",
-            "Card_Equipt", 1, "", 80, 0, 0, 5, "Room", "", "", "AddMoney;10", "");
-        WriteRow(sheet, rowIdx++, 2002, "Bunk Bed", "One more tenant.",
-            "Card_Equipt", 2, "", 100, 0, 0, 0, "Room", "", "ExpandSlot;1", "", "");
-        WriteRow(sheet, rowIdx++, 2003, "Water Heater", "Basic facility, durable.",
-            "Card_Equipt", 0, "", 60, 0, 0, 8, "Room", "", "", "AddMoney;5", "");
-        WriteRow(sheet, rowIdx++, 2004, "WiFi Router", "Life necessity.",
-            "Card_Equipt", 1, "", 90, 0, 0, 6, "Room", "", "", "AddMoney;15", "");
-        WriteRow(sheet, rowIdx++, 2005, "Washer", "Laundry convenience.",
-            "Card_Equipt", 1, "", 70, 0, 0, 7, "Room", "", "", "AddMoney;8", "");
-
-        WriteRow(sheet, rowIdx++, 3001, "Rent Bonus", "Extra rent income.",
-            "Card_Event", 0, "", 0, 0, 0, 0, "PlayArea", "", "AddMoney;200", "", "");
-        WriteRow(sheet, rowIdx++, 3002, "Agent Refer", "Pay for 2 more cards.",
-            "Card_Event", 1, "", 50, 0, 0, 0, "PlayArea", "", "DrawCard;2", "", "");
-        WriteRow(sheet, rowIdx++, 3003, "Renewal", "Persuade all to stay.",
-            "Card_Event", 1, "", 80, 0, 0, 0, "PlayArea", "", "AddTenantDurability;3", "", "");
-        WriteRow(sheet, rowIdx++, 3004, "Maintenance", "Repair all equipment.",
-            "Card_Event", 1, "", 60, 0, 0, 0, "PlayArea", "", "AddEquipmentDurability;3", "", "");
-        WriteRow(sheet, rowIdx++, 3005, "Urgent Loan", "Bank emergency cash.",
-            "Card_Event", 2, "", 0, 0, 0, 0, "PlayArea", "", "AddMoney;500", "", "");
-
-        using (var stream = new FileStream(excelPath, FileMode.Create, FileAccess.Write))
-        {
-            workbook.Write(stream);
-        }
-
-        Debug.Log($"[FillCardDataScript] Wrote {rowIdx - 3} cards to Excel. Run Tools/BaoZuPo/Import Card Data.");
-    }
-
-    private static void WriteRow(ISheet sheet, int rowIdx,
-        int cardId, string cardName, string description,
-        string cardType, int rarity, string cardArt,
-        int cost, int baseRent, int waitTurns, int durability, string targetKind,
-        string preEffect, string instantEffect, string settleEffect, string destroyEffect)
-    {
-        IRow row = sheet.CreateRow(rowIdx);
-        row.CreateCell(0).SetCellValue(cardId);
-        row.CreateCell(1).SetCellValue(cardName);
-        row.CreateCell(2).SetCellValue(description);
-        row.CreateCell(3).SetCellValue(cardType);
-        row.CreateCell(4).SetCellValue(rarity);
-        row.CreateCell(5).SetCellValue(cardArt);
-        row.CreateCell(6).SetCellValue(cost);
-        row.CreateCell(7).SetCellValue(baseRent);
-        row.CreateCell(8).SetCellValue(targetKind);
-        row.CreateCell(9).SetCellValue(waitTurns);
-        row.CreateCell(10).SetCellValue(durability);
-        row.CreateCell(11).SetCellValue(preEffect);
-        row.CreateCell(12).SetCellValue(instantEffect);
-        row.CreateCell(13).SetCellValue(settleEffect);
-        row.CreateCell(14).SetCellValue(destroyEffect);
     }
 }

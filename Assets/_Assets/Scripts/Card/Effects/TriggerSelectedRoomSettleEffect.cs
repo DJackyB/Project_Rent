@@ -1,3 +1,4 @@
+using BaoZuPo.UI;
 using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
@@ -23,13 +24,62 @@ namespace BaoZuPo.Card.Effects
                 return;
             }
 
-            foreach (var card in room.GetAllCards())
+            if (context.EffectContext.IsExtraRoomSettlementActive)
             {
-                if (card.IsDestroyed) continue;
-                card.SettleEffect?.Execute(card, context);
+                Debug.LogWarning($"[Effect] {source.Data.cardName}: Nested extra settlement is blocked.");
+                return;
             }
 
-            Debug.Log($"[Effect] {source.Data.cardName}: Triggered settle once for room {room.RoomIndex}.");
+            // 额外结算只重放本房间收益逻辑，不再扣耐久，也不允许再次触发额外结算。
+            context.EffectContext.IsExtraRoomSettlementActive = true;
+            try
+            {
+                foreach (var tenant in room.GetTenants())
+                {
+                    if (tenant == null || tenant.IsDestroyed)
+                    {
+                        continue;
+                    }
+
+                    int baseRent = Mathf.Max(0, tenant.Data != null ? tenant.Data.baseRent : 0);
+                    if (baseRent > 0)
+                    {
+                        context.MoneyManager.AddMoney(baseRent);
+                        context.SettlementCapture.RecordBase(baseRent, GameText.SettlementBase);
+                    }
+
+                    if (ShouldSkipExtraSettlementEffect(tenant))
+                    {
+                        continue;
+                    }
+
+                    tenant.SettleEffect?.Execute(tenant, context);
+                }
+
+                foreach (var equipment in room.GetEquipments())
+                {
+                    if (equipment == null || equipment.IsDestroyed || ShouldSkipExtraSettlementEffect(equipment))
+                    {
+                        continue;
+                    }
+
+                    equipment.SettleEffect?.Execute(equipment, context);
+                }
+            }
+            finally
+            {
+                context.EffectContext.IsExtraRoomSettlementActive = false;
+            }
+
+            Debug.Log($"[Effect] {source.Data.cardName}: Triggered extra settle once for room {room.RoomIndex} without durability loss.");
+        }
+
+        private static bool ShouldSkipExtraSettlementEffect(CardInstance card)
+        {
+            return card != null
+                && card.Data != null
+                && !string.IsNullOrWhiteSpace(card.Data.settleEffect)
+                && card.Data.settleEffect.Contains("TriggerSelectedRoomSettle");
         }
     }
 }

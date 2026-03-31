@@ -14,7 +14,9 @@ namespace BaoZuPo.Card
             CardEffectFactory.Register("AddEquipmentDurability", 1, args => new AddEquipmentDurabilityEffect(int.Parse(args[0])));
             CardEffectFactory.Register("AddMoneyByEmptyRooms", 1, args => new AddMoneyByEmptyRoomsEffect(int.Parse(args[0])));
             CardEffectFactory.Register("AddMoneyByRoomCount", 1, args => new AddMoneyByRoomCountEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddMoneyBySelectedRoomTenantCount", 1, args => new AddMoneyBySelectedRoomTenantCountEffect(int.Parse(args[0])));
             CardEffectFactory.Register("AddTenantDurabilityInSelectedRoom", 1, args => new AddTenantDurabilityInSelectedRoomEffect(int.Parse(args[0])));
+            CardEffectFactory.Register("AddRoom", _ => new AddRoomEffect());
             CardEffectFactory.Register("MoveTenantToEmptyRoom", _ => new MoveTenantToEmptyRoomEffect());
             CardEffectFactory.Register("EvictTenantInSelectedRoom", _ => new EvictTenantInSelectedRoomEffect());
             CardEffectFactory.Register("TriggerSelectedRoomSettle", _ => new TriggerSelectedRoomSettleEffect());
