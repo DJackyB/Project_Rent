@@ -1,0 +1,4 @@
+interface:
+  display_name: "开发任务分派"
+  short_description: "启动新开发任务时拆分子任务、分派执行者并安排联调验收"
+  default_prompt: "Use $development-task-routing to decide whether this task needs plan mode, split the work, and assign each part to the right owner."
