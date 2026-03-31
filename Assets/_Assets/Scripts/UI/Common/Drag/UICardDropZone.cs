@@ -167,7 +167,7 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (_raycastGraphic == null)
             {
-                Debug.LogError("[UICardDropZone] 缺少 Graphic 组件用于 raycast。请在 Prefab 上预配 Image 组件。", gameObject);
+                Debug.LogError("[UICardDropZone] Missing a Graphic component for raycast detection. Add an Image component to the prefab.", gameObject);
             }
             else
             {
@@ -185,7 +185,7 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (highlightGraphic == null)
             {
-                Debug.LogError("[UICardDropZone] 缺少 highlightGraphic。请在 Prefab 中创建 DropHighlight 子节点 (Image) 并拖入 highlightGraphic 字段。", gameObject);
+                Debug.LogError("[UICardDropZone] Missing highlightGraphic. Create a DropHighlight child (Image) in the prefab and assign it.", gameObject);
             }
             else
             {

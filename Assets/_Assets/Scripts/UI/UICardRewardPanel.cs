@@ -9,34 +9,28 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
-    /// <summary>
-    /// 三选一卡牌奖励面板。
-    /// 结算动画播完后由 UIManager 调用 Show()，玩家点击卡牌或跳过后发布 CardRewardSelected 事件。
-    /// 所有 UI 元素在 Editor 中拼接，脚本只通过 SerializeField 引用。
-    /// </summary>
     public class UICardRewardPanel : MonoBehaviour
     {
-        [Header("面板根节点")]
+        [Header("Panel Root")]
         [SerializeField] private GameObject _panelRoot;
 
-        [Header("标题")]
+        [Header("Title")]
         [SerializeField] private TextMeshProUGUI _titleText;
 
-        [Header("卡牌槽位（Inspector 拖入 3 个 Transform 容器）")]
+        [Header("Card Slots")]
         [SerializeField] private Transform _cardSlot0;
         [SerializeField] private Transform _cardSlot1;
         [SerializeField] private Transform _cardSlot2;
 
-        [Header("卡牌 Prefab（与 UIHandPanel 相同）")]
+        [Header("Card Prefab")]
         [SerializeField] private GameObject _cardPrefab;
 
-        [Header("跳过按钮")]
+        [Header("Skip Button")]
         [SerializeField] private Button _skipButton;
         [SerializeField] private TextMeshProUGUI _skipButtonText;
 
         private CardData[] _options;
         private readonly List<GameObject> _spawnedCards = new();
-        private bool _isShowing;
         private bool _isBoosted;
 
         private void Start()
@@ -55,15 +49,13 @@ namespace BaoZuPo.UI
 
             _options = options;
             _isBoosted = boosted;
-            _isShowing = true;
 
             _panelRoot.SetActive(true);
-            ApplyLocalizedTexts();
+            ApplyText();
 
             _skipButton.onClick.RemoveAllListeners();
             _skipButton.onClick.AddListener(OnSkipClicked);
 
-            // 在 3 个槽位中生成卡牌
             ClearSpawnedCards();
             var slots = new[] { _cardSlot0, _cardSlot1, _cardSlot2 };
 
@@ -83,11 +75,9 @@ namespace BaoZuPo.UI
                     throw new InvalidOperationException("[UICardRewardPanel] Reward card prefab must contain UICardView.");
                 }
 
-                // 用临时 CardInstance 驱动显示
                 var instance = new CardInstance(options[i]);
                 cardView.Setup(instance, CardViewContext.RewardPick);
 
-                // 启用按钮点击，绑定选择回调
                 var button = go.GetComponent<Button>();
                 if (button == null)
                 {
@@ -103,7 +93,6 @@ namespace BaoZuPo.UI
 
         public void Hide()
         {
-            _isShowing = false;
             ClearSpawnedCards();
 
             if (_skipButton != null)
@@ -114,25 +103,6 @@ namespace BaoZuPo.UI
             if (_panelRoot != null)
             {
                 _panelRoot.SetActive(false);
-            }
-        }
-
-        public void RefreshLocalization()
-        {
-            if (!_isShowing || _options == null)
-            {
-                return;
-            }
-
-            ApplyLocalizedTexts();
-
-            for (int i = 0; i < _spawnedCards.Count; i++)
-            {
-                var cardView = _spawnedCards[i] != null ? _spawnedCards[i].GetComponent<UICardView>() : null;
-                if (cardView != null && cardView.Card != null)
-                {
-                    cardView.Setup(cardView.Card, CardViewContext.RewardPick);
-                }
             }
         }
 
@@ -167,45 +137,42 @@ namespace BaoZuPo.UI
             _spawnedCards.Clear();
         }
 
-        private void ApplyLocalizedTexts()
+        private void ApplyText()
         {
-            _titleText.text = _isBoosted ? UIStrings.RewardBoostedTitle : UIStrings.RewardTitle;
-            UIFontCatalog.ApplyToText(_titleText);
-
-            _skipButtonText.text = UIStrings.RewardSkip;
-            UIFontCatalog.ApplyToText(_skipButtonText);
+            _titleText.text = _isBoosted ? GameText.RewardBoostedTitle : GameText.RewardTitle;
+            _skipButtonText.text = GameText.RewardSkip;
         }
 
         private void EnsureConfigured()
         {
             if (_panelRoot == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] _panelRoot 未在 Inspector 中赋值。");
+                throw new InvalidOperationException("[UICardRewardPanel] _panelRoot is not assigned in the Inspector.");
             }
 
             if (_titleText == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] _titleText 未在 Inspector 中赋值。");
+                throw new InvalidOperationException("[UICardRewardPanel] _titleText is not assigned in the Inspector.");
             }
 
             if (_cardSlot0 == null || _cardSlot1 == null || _cardSlot2 == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] 3 个卡牌槽位必须全部显式配置。");
+                throw new InvalidOperationException("[UICardRewardPanel] All three reward card slots must be explicitly assigned.");
             }
 
             if (_cardPrefab == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] _cardPrefab 未在 Inspector 中赋值。");
+                throw new InvalidOperationException("[UICardRewardPanel] _cardPrefab is not assigned in the Inspector.");
             }
 
             if (_skipButton == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] _skipButton 未在 Inspector 中赋值。");
+                throw new InvalidOperationException("[UICardRewardPanel] _skipButton is not assigned in the Inspector.");
             }
 
             if (_skipButtonText == null)
             {
-                throw new InvalidOperationException("[UICardRewardPanel] _skipButtonText 未在 Inspector 中赋值。");
+                throw new InvalidOperationException("[UICardRewardPanel] _skipButtonText is not assigned in the Inspector.");
             }
         }
     }

@@ -10,7 +10,7 @@ namespace BaoZuPo.UI
 {
     public class UITopBar : MonoBehaviour
     {
-        [Header("\u53ef\u9009\u573a\u666f\u5f15\u7528")]
+        [Header("Optional Scene References")]
         public TextMeshProUGUI turnText;
         public TextMeshProUGUI moneyText;
         public TextMeshProUGUI deckText;
@@ -54,10 +54,9 @@ namespace BaoZuPo.UI
 
         public void RefreshTurn(int turn)
         {
-            UIFontCatalog.ApplyToText(turnText);
             if (turnText != null)
             {
-                turnText.text = UIStrings.Turn(turn);
+                turnText.text = GameText.Turn(turn);
             }
         }
 
@@ -107,19 +106,17 @@ namespace BaoZuPo.UI
 
         private void UpdateMoneyLabel()
         {
-            UIFontCatalog.ApplyToText(moneyText);
             if (moneyText != null)
             {
-                moneyText.text = UIStrings.Money(_displayedMoney);
+                moneyText.text = GameText.Money(_displayedMoney);
             }
         }
 
         public void RefreshSummary()
         {
-            UIFontCatalog.ApplyToText(deckText);
             if (deckText != null)
             {
-                deckText.text = UIStrings.Spent(MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
+                deckText.text = GameText.Spent(MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
             }
         }
 
@@ -166,9 +163,6 @@ namespace BaoZuPo.UI
             turnText.transform.SetParent(rootCanvas.transform, false);
             deckText.transform.SetParent(rootCanvas.transform, false);
             moneyText.transform.SetParent(rootCanvas.transform, false);
-            UIFontCatalog.ApplyToText(turnText);
-            UIFontCatalog.ApplyToText(deckText);
-            UIFontCatalog.ApplyToText(moneyText);
 
             ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
             ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
@@ -222,7 +216,6 @@ namespace BaoZuPo.UI
             labelObject.transform.SetParent(parent, false);
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = UIFontCatalog.GetPreferredFontAsset();
             label.color = Color.white;
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.fontSize = 24f;

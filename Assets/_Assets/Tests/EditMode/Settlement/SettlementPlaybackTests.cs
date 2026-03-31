@@ -106,7 +106,7 @@ namespace BaoZuPo.Tests.Settlement
                 Assert.AreEqual(1, feedback.Requests.Count);
                 Assert.AreEqual(1, completionCount);
 
-                Assert.AreEqual(UIStrings.SettlementBase, feedback.SequenceRequests[0].Steps[0].Label);
+                Assert.AreEqual(GameText.SettlementBase, feedback.SequenceRequests[0].Steps[0].Label);
                 Assert.AreEqual("Worker A", feedback.SequenceRequests[0].Steps[1].Label);
                 Assert.AreEqual("Worker B", feedback.SequenceRequests[1].Steps[1].Label);
                 Assert.AreNotEqual(feedback.SequenceRequests[0].ScreenOffset.x, feedback.SequenceRequests[1].ScreenOffset.x);

@@ -256,8 +256,6 @@ namespace BaoZuPo.UI
 
         private void RefreshPresentation()
         {
-            UIFontCatalog.ApplyToChildren(transform);
-
             if (Card == null || Card.Data == null)
             {
                 ClearPresentation();
@@ -336,7 +334,7 @@ namespace BaoZuPo.UI
                 costText.gameObject.SetActive(showCost);
                 if (showCost)
                 {
-                    costText.text = UIStrings.Cost(Card.Data.cost);
+                    costText.text = GameText.Cost(Card.Data.cost);
                 }
             }
 
@@ -398,7 +396,7 @@ namespace BaoZuPo.UI
                 return string.Empty;
             }
 
-            return UIStrings.Wait(Card.CurrentWait);
+            return GameText.Wait(Card.CurrentWait);
         }
 
         private string ResolveDurabilityLabel()
@@ -408,10 +406,10 @@ namespace BaoZuPo.UI
                 && Card.Data.cardType == CardType.Tenant
                 && (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.TooltipPreview))
             {
-                return UIStrings.Lease;
+                return GameText.Lease;
             }
 
-            return UIStrings.Durability;
+            return GameText.Durability;
         }
 
         private void UpdateTooltipTrigger()
@@ -640,7 +638,7 @@ namespace BaoZuPo.UI
 
         private static string GetTypeLabel(CardType cardType)
         {
-            return UIStrings.TypeLabel(cardType);
+            return GameText.TypeLabel(cardType);
         }
 
         private void CacheInitialVisualState()

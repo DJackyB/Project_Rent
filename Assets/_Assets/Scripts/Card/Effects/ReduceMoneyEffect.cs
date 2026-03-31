@@ -2,9 +2,6 @@ using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
-    /// <summary>
-    /// Reduce a fixed amount of money.
-    /// </summary>
     public class ReduceMoneyEffect : ICardEffect
     {
         private readonly int _amount;
@@ -22,7 +19,7 @@ namespace BaoZuPo.Card.Effects
                 context?.SettlementCapture?.RecordDelta(-_amount, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
-            Debug.Log($"[镜像效果] {source.Data.cardName} 触发 ReduceMoney({_amount}), 成功: {success}");
+            Debug.Log($"[MirrorEffect] {source.Data.cardName} triggered ReduceMoney({_amount}), success: {success}");
         }
     }
 }

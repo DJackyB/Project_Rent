@@ -91,7 +91,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 Anchor = anchor,
                 UseScreenCenterFallback = useCenterFallback,
                 ScreenOffset = screenOffset,
-                Text = UIStrings.FeedbackCost(cost),
+                Text = GameText.FeedbackCost(cost),
                 NumericDelta = -cost,
                 Category = FeedbackCategory.Cost
             });
@@ -137,7 +137,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 Anchor = anchor,
                 UseScreenCenterFallback = useCenterFallback,
                 ScreenOffset = screenOffset,
-                Text = UIStrings.FeedbackLoan(amount),
+                Text = GameText.FeedbackLoan(amount),
                 NumericDelta = -amount,
                 Category = FeedbackCategory.Loan
             });
@@ -167,10 +167,10 @@ namespace BaoZuPo.Integration.Martian.Feedback
 
             return step.Kind switch
             {
-                GameEvents.SettlementStepKind.Base => UIStrings.SettlementBase,
-                GameEvents.SettlementStepKind.Delta => UIStrings.SettlementBonus,
-                GameEvents.SettlementStepKind.Multiplier => UIStrings.SettlementMultiplier,
-                GameEvents.SettlementStepKind.Final => UIStrings.SettlementFinal,
+                GameEvents.SettlementStepKind.Base => GameText.SettlementBase,
+                GameEvents.SettlementStepKind.Delta => GameText.SettlementBonus,
+                GameEvents.SettlementStepKind.Multiplier => GameText.SettlementMultiplier,
+                GameEvents.SettlementStepKind.Final => GameText.SettlementFinal,
                 _ => null
             };
         }

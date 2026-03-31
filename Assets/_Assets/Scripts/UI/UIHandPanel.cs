@@ -7,11 +7,11 @@ namespace BaoZuPo.UI
 {
     public class UIHandPanel : MonoBehaviour
     {
-        [Header("\u573A\u666F\u5F15\u7528")]
-        [Tooltip("\u624B\u724C\u5361\u724C prefab\uff0c\u9700\u8981\u6302\u8F7D UICardView")]
+        [Header("Scene References")]
+        [Tooltip("Hand card prefab. Must contain UICardView.")]
         public GameObject cardPrefab;
 
-        [Tooltip("\u624B\u724C\u5BB9\u5668\uff1B\u5982\u679C\u4E3A\u7A7A\uff0C\u5F53\u524D\u5B9E\u73B0\u4F1A\u5728\u8FD0\u884C\u65F6\u4E34\u65F6\u521B\u5EFA")]
+        [Tooltip("Hand container. This should be assigned explicitly.")]
         public Transform handContainer;
 
         private readonly List<UICardView> _cardViews = new();
@@ -48,7 +48,7 @@ namespace BaoZuPo.UI
         {
             if (handContainer == null)
             {
-                Debug.LogError("[UIHandPanel] handContainer 未在 Inspector 中赋值。请在 UIHandPanel 下创建子对象 HandContainer (RectTransform) 并拖入。");
+                Debug.LogError("[UIHandPanel] handContainer is not assigned in the Inspector. Create a HandContainer child under UIHandPanel and assign it.");
             }
 
             return handContainer;

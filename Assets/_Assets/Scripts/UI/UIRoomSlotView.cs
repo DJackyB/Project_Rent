@@ -153,8 +153,7 @@ namespace BaoZuPo.UI
 
                 if (placeholderLabel != null)
                 {
-                    UIFontCatalog.ApplyToText(placeholderLabel);
-                    placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+                    placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
                 }
                 return;
             }
@@ -182,8 +181,7 @@ namespace BaoZuPo.UI
             labelRect.offsetMax = Vector2.zero;
 
             placeholderLabel = labelObject.GetComponent<TextMeshProUGUI>();
-            placeholderLabel.font = ResolveFont();
-            placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? UIStrings.EmptyEquipmentSlot : UIStrings.EmptyTenantSlot;
+            placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
             placeholderLabel.alignment = TextAlignmentOptions.Center;
             placeholderLabel.fontSize = 20f;
             placeholderLabel.color = new Color(1f, 1f, 1f, 0.45f);
@@ -196,11 +194,6 @@ namespace BaoZuPo.UI
             {
                 placeholderObject.SetActive(false);
             }
-        }
-
-        private static TMP_FontAsset ResolveFont()
-        {
-            return UIFontCatalog.GetPreferredFontAsset();
         }
     }
 }

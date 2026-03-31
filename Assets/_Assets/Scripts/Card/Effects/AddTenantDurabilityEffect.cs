@@ -1,13 +1,9 @@
-using UnityEngine;
-using BaoZuPo.Card;
 using BaoZuPo.Board;
+using BaoZuPo.Card;
+using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
-    /// <summary>
-    /// 给场上所有租客增加耐久（续租）
-    /// 格式：AddTenantDurability;数量
-    /// </summary>
     public class AddTenantDurabilityEffect : ICardEffect
     {
         private readonly int _amount;
@@ -32,7 +28,8 @@ namespace BaoZuPo.Card.Effects
                     }
                 }
             }
-            Debug.Log($"[效果] 续租：{count} 个租客耐久 +{_amount}");
+
+            Debug.Log($"[Effect] Renew lease: {count} tenant card(s) durability +{_amount}");
         }
     }
 }

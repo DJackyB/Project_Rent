@@ -31,7 +31,7 @@ namespace BaoZuPo.UI
         public void RefreshBoard()
         {
             EnsurePlayAreaDropZone();
-            RefreshContractPanelLocalization();
+            RefreshContractPanelText();
 
             var cardPrefab = ResolveCardPrefab();
             if (cardPrefab == null)
@@ -101,8 +101,7 @@ namespace BaoZuPo.UI
                     labelRect.offsetMax = Vector2.zero;
 
                     var label = labelObject.GetComponent<TextMeshProUGUI>();
-                    label.font = UIFontCatalog.GetPreferredFontAsset();
-                    label.text = UIStrings.PlayArea;
+                    label.text = GameText.PlayArea;
                     label.fontSize = 24f;
                     label.alignment = TextAlignmentOptions.Center;
                     label.color = Color.white;
@@ -119,8 +118,7 @@ namespace BaoZuPo.UI
                     : null;
             if (zoneLabel != null)
             {
-                UIFontCatalog.ApplyToText(zoneLabel);
-                zoneLabel.text = UIStrings.PlayArea;
+                zoneLabel.text = GameText.PlayArea;
                 playAreaLabel = zoneLabel;
             }
 
@@ -183,7 +181,7 @@ namespace BaoZuPo.UI
                 _contractLookup[contracts[i]] = cardView;
             }
 
-            RefreshContractPanelLocalization();
+            RefreshContractPanelText();
         }
 
         private GameObject ResolveCardPrefab()
@@ -200,7 +198,7 @@ namespace BaoZuPo.UI
         {
             if (_contractContainer != null)
             {
-                RefreshContractPanelLocalization();
+                RefreshContractPanelText();
                 return;
             }
 
@@ -208,7 +206,7 @@ namespace BaoZuPo.UI
             {
                 _contractContainer = contractContainer;
                 EnsureContractContainerLayout(_contractContainer);
-                RefreshContractPanelLocalization();
+                RefreshContractPanelText();
                 return;
             }
 
@@ -237,7 +235,7 @@ namespace BaoZuPo.UI
                 {
                     _contractContainer = contractContainer;
                     EnsureContractContainerLayout(_contractContainer);
-                    RefreshContractPanelLocalization();
+                    RefreshContractPanelText();
                     return;
                 }
             }
@@ -268,8 +266,7 @@ namespace BaoZuPo.UI
             titleRect.offsetMax = new Vector2(-12f, -12f);
 
             var titleText = titleObject.GetComponent<TextMeshProUGUI>();
-            titleText.font = UIFontCatalog.GetPreferredFontAsset();
-            titleText.text = UIStrings.Contracts;
+            titleText.text = GameText.Contracts;
             titleText.fontSize = 22f;
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = Color.white;
@@ -291,23 +288,21 @@ namespace BaoZuPo.UI
             var layout = listObject.GetComponent<VerticalLayoutGroup>();
             EnsureContractContainerLayout(listObject.transform);
 
-            UIFontCatalog.ApplyToChildren(panelRoot.transform);
         }
 
-        private void RefreshContractPanelLocalization()
+        private void RefreshContractPanelText()
         {
             if (contractPanelRoot == null)
             {
                 return;
             }
 
-            UIFontCatalog.ApplyToChildren(contractPanelRoot);
             var titleText = contractTitleText != null
                 ? contractTitleText
                 : contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
             if (titleText != null)
             {
-                titleText.text = UIStrings.Contracts;
+                titleText.text = GameText.Contracts;
                 contractTitleText = titleText;
             }
         }

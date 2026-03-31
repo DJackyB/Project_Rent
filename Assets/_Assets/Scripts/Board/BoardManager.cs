@@ -5,9 +5,6 @@ using UnityEngine;
 
 namespace BaoZuPo.Board
 {
-    /// <summary>
-    /// Board manager that owns all rooms and contracts.
-    /// </summary>
     public class BoardManager : Singleton<BoardManager>
     {
         [Header("Debug Info")]
@@ -17,20 +14,14 @@ namespace BaoZuPo.Board
         [Header("Scene References")]
         [SerializeField] private Transform _roomRoot;
 
-        /// <summary>Current room count.</summary>
         public int RoomCount => _rooms.Count;
-
-        /// <summary>Current contract count.</summary>
         public int ContractCount => _contracts.Count;
 
-        /// <summary>
-        /// Initialize the board.
-        /// </summary>
         public void Initialize(int roomCount, int tenantSlots, int equipmentSlots)
         {
             if (_roomRoot == null)
             {
-                Debug.LogError("[BoardManager] _roomRoot 未在 Inspector 中赋值。请在场景中创建空 GameObject 'Rooms' 并拖入。");
+                Debug.LogError("[BoardManager] _roomRoot is not assigned in the Inspector. Create an empty GameObject named 'Rooms' in the scene and assign it.");
                 return;
             }
 
@@ -45,9 +36,6 @@ namespace BaoZuPo.Board
             Debug.Log($"[BoardManager] Initialized {roomCount} rooms.");
         }
 
-        /// <summary>
-        /// Add a new room dynamically.
-        /// </summary>
         public RoomSlot AddRoom(int tenantSlots = 1, int equipmentSlots = 3)
         {
             var roomGO = new GameObject($"Room_{_rooms.Count}");
@@ -61,9 +49,6 @@ namespace BaoZuPo.Board
             return room;
         }
 
-        /// <summary>
-        /// Get a room by index.
-        /// </summary>
         public RoomSlot GetRoom(int index)
         {
             if (index < 0 || index >= _rooms.Count)
@@ -75,14 +60,8 @@ namespace BaoZuPo.Board
             return _rooms[index];
         }
 
-        /// <summary>
-        /// Get all rooms.
-        /// </summary>
         public IReadOnlyList<RoomSlot> GetAllRooms() => _rooms;
 
-        /// <summary>
-        /// Find the first room that can accept the given card type.
-        /// </summary>
         public RoomSlot FindAvailableRoom(CardType cardType)
         {
             foreach (var room in _rooms)
@@ -99,9 +78,6 @@ namespace BaoZuPo.Board
             return null;
         }
 
-        /// <summary>
-        /// Get all field cards, including room cards and contracts.
-        /// </summary>
         public List<CardInstance> GetAllFieldCards()
         {
             var allCards = new List<CardInstance>();
@@ -114,9 +90,6 @@ namespace BaoZuPo.Board
             return allCards;
         }
 
-        /// <summary>
-        /// Add a contract card.
-        /// </summary>
         public void AddContract(CardInstance contract)
         {
             if (contract == null || contract.IsDestroyed)
@@ -127,9 +100,6 @@ namespace BaoZuPo.Board
             _contracts.Add(contract);
         }
 
-        /// <summary>
-        /// Get all contracts.
-        /// </summary>
         public IReadOnlyList<CardInstance> GetAllContracts() => _contracts;
 
         public CardInstance GetContractAt(int index)
@@ -149,9 +119,6 @@ namespace BaoZuPo.Board
             return false;
         }
 
-        /// <summary>
-        /// Remove destroyed cards.
-        /// </summary>
         public void CleanupDestroyedCards()
         {
             foreach (var room in _rooms)

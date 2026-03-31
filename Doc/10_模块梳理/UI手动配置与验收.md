@@ -11,7 +11,8 @@
 - 主链路优先跑通，但主链路缺失的必需引用必须尽早暴露。
 - Tooltip 和反馈模块允许“缺失只影响表现，不影响流程”。
 - 奖励面板不属于可选模块；缺失时应直接暴露配置错误。
-- 当前运行时本地化真源仍是 `LocalizationManager + UIStrings + UIFontCatalog`。
+- 当前固定文案真源是 [GameText.cs](../../Assets/_Assets/Scripts/UI/GameText.cs)。
+- 当前没有语言切换，也没有运行时字体切换链路。
 
 ## 1. UIManager
 
@@ -33,8 +34,8 @@
 
 当前要求：
 
-- `cardDragController` 和 `_feedbackBootstrap` 当前已经有显式报错。
-- `_cardRewardPanel` 现在已经按主链路必需引用处理，运行时缺失会直接 fail-fast。
+- `cardDragController` 和 `_feedbackBootstrap` 缺失时会报错。
+- `_cardRewardPanel` 属于主流程必需引用，缺失时会 fail-fast。
 
 ## 2. 手牌区
 
@@ -87,8 +88,8 @@
 
 重点确认：
 
-- 槽位数量由 `RoomSlot` 容量驱动，不应再依赖手写死槽位布局假设
-- 房间容量变化后，UI 是否能同步刷新
+- 槽位数量由 `RoomSlot` 容量驱动，不依赖手写死槽位布局。
+- 房间容量变化后，UI 能同步刷新。
 
 ## 5. 卡牌 prefab
 
@@ -107,12 +108,9 @@
 - `TooltipTrigger`
 - `CanvasGroup`
 - `LayoutElement`
-
-允许运行时补齐：
-
-- `typeText`
-- `statsText`
-- 部分纯展示型装饰图层
+- `frameImage`
+- `artImage`
+- `skinDatabase`
 
 ## 6. 拖拽层与公共落点
 
@@ -129,8 +127,8 @@
 
 当前现状：
 
-- 缺失时部分节点仍会由代码补齐最小可运行版本
-- 这适合原型阶段，但会增加后续排错成本
+- 缺失时仍有少量运行时补齐逻辑
+- 适合原型阶段，但会增加排错成本
 
 ## 7. Tooltip 与结算反馈
 
@@ -146,12 +144,8 @@
 
 当前现状：
 
-- Tooltip 不再要求场景里预先配置 `HoverPreviewRoot`
-- Tooltip Root 会在首次显示时按所属 `Canvas` 运行时创建
-- 移除 Tooltip 运行时模块后，会通过 `NullTooltipService` 安全降级
-- Tooltip 模块本体位于 `Assets/_Assets/Martian/Tooltip/**`，项目接线位于 `Assets/_Assets/Scripts/Integration/Martian/Tooltip/**`
-- 反馈模块关闭或未初始化时，会退化为 no-op，但不阻断结算
-- 反馈模块本体位于 `Assets/_Assets/Martian/Feedback/**`，项目接线位于 `Assets/_Assets/Scripts/Integration/Martian/Feedback/**`
+- Tooltip 运行时模块缺失时，会通过 `NullTooltipService` 安全降级。
+- 反馈模块关闭或未初始化时，会退化为 no-op，但不阻断结算。
 
 ## 8. 奖励面板
 
@@ -175,44 +169,29 @@
 当前现状：
 
 - 奖励链路不会自动补一个最小可运行奖励 UI
-- `UIManager` 缺失 `_cardRewardPanel` 时会直接报错
-- `UICardRewardPanel` 缺失槽位、按钮、标题或卡牌 prefab 时也会直接报错
-- 因此奖励面板当前必须按主链路配置处理，而不是按可选模块处理
+- 缺失时会直接报错
 
-## 9. 当前本地化真源验收
+## 9. 文案真源验收
 
 必须认清当前运行时真源：
 
-- [LocalizationManager.cs](../../Assets/_Assets/Scripts/UI/LocalizationManager.cs)
-- [UIStrings.cs](../../Assets/_Assets/Scripts/UI/UIStrings.cs)
-- [UIFontCatalog.cs](../../Assets/_Assets/Scripts/UI/UIFontCatalog.cs)
+- [GameText.cs](../../Assets/_Assets/Scripts/UI/GameText.cs)
 
 验收时需要确认：
 
-- 新增固定文案是否接入 `UIStrings`
-- 切语言时是否能触发对应界面刷新
-- 新增 TMP 文本是否能正确应用中文字体
+- 新增固定文案是否接入 `GameText`
+- 是否没有重新引入语言切换状态
+- 是否没有重新引入字体切换或中文字体依赖
 
 ## 10. 最短验收顺序
 
-1. 开局后能看到手牌、房间、顶栏和结束行动按钮
-2. 手牌、房间租客、房间设备、合同区 Tooltip 正常
-3. 租客拖到房间能成功
-4. 设备拖到房间能成功
-5. 事件拖到 `Play Area` 能成功
-6. 非法拖放会回弹
-7. 拖拽开始、阶段切换、回合切换、GameOver 时 Tooltip 会自动关闭
-8. 结算跳字按顺序播放
-9. 结算后奖励面板会弹出
-10. 选择奖励或跳过都能进入下一回合
-11. 切语言后，奖励面板标题、跳过按钮和其它固定文案都同步刷新
-
-## 11. Tooltip 模块缺席时的降级验收
-
-建议在一次验收中临时禁用 Tooltip 运行时模块，确认以下行为仍正常：
-
-1. 项目能正常进入场景
-2. 手牌、房间、合同区仍能刷新显示
-3. 拖拽出牌与合法性校验不受影响
-4. 阶段切换、回合切换、GameOver 不报错
-5. 唯一差异只是 Tooltip 不再显示
+1. 开局后能看到手牌、房间、顶栏和结束行动按钮。
+2. 手牌、房间租客、房间设备、合同区 Tooltip 正常。
+3. 租客拖到房间能成功。
+4. 设备拖到房间能成功。
+5. 事件拖到 `Play Area` 能成功。
+6. 非法拖放会回弹。
+7. 拖拽开始、阶段切换、回合切换、GameOver 时 Tooltip 会自动关闭。
+8. 结算跳字按顺序播放。
+9. 结算后奖励面板会弹出。
+10. 选择奖励或跳过都能进入下一回合。

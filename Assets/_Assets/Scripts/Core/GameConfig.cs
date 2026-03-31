@@ -6,56 +6,56 @@ namespace BaoZuPo.Core
     [CreateAssetMenu(fileName = "GameConfig", menuName = "BaoZuPo/GameConfig")]
     public class GameConfig : ScriptableObject
     {
-        [Header("经济")]
-        [Tooltip("初始资金")]
+        [Header("Economy")]
+        [Tooltip("Starting money.")]
         public int startingMoney = 1000;
 
-        [Tooltip("每次还贷金额")]
+        [Tooltip("Loan payment amount per cycle.")]
         public int loanAmount = 500;
 
-        [Tooltip("每隔多少回合还贷一次")]
+        [Tooltip("Number of turns between loan payments.")]
         public int loanInterval = 5;
 
-        [Tooltip("后续每次还贷金额的增长系数")]
+        [Tooltip("Growth factor applied to later loan payments.")]
         public float loanGrowthFactor = 2f;
 
-        [Header("抽牌")]
-        [Tooltip("首回合抽牌数")]
+        [Header("Draw")]
+        [Tooltip("Cards drawn on the first turn.")]
         public int firstTurnDrawCount = 5;
 
-        [Tooltip("普通回合抽牌数")]
+        [Tooltip("Cards drawn on a normal turn.")]
         public int normalTurnDrawCount = 3;
 
-        [Tooltip("最大手牌上限")]
+        [Tooltip("Maximum hand size.")]
         public int maxHandSize = 7;
 
-        [Tooltip("首回合抽牌所使用的牌库")]
+        [Tooltip("Card library used for the first turn draw.")]
         public CardLibrary firstTurnDrawLibrary;
 
-        [Tooltip("普通回合抽牌所使用的牌库")]
+        [Tooltip("Card library used for the normal turn draw.")]
         public CardLibrary normalTurnDrawLibrary;
 
-        [Tooltip("奖励三选一所使用的牌库")]
+        [Tooltip("Card library used for reward selection.")]
         public CardLibrary rewardLibrary;
 
-        [Header("房间")]
-        [Tooltip("初始房间数量")]
+        [Header("Rooms")]
+        [Tooltip("Initial room count.")]
         public int initialRoomCount = 3;
 
-        [Tooltip("每个房间默认租客槽位数")]
+        [Tooltip("Default tenant slot count per room.")]
         public int defaultTenantSlots = 1;
 
-        [Tooltip("每个房间默认装备槽位数")]
+        [Tooltip("Default equipment slot count per room.")]
         public int defaultEquipmentSlots = 3;
 
-        [Header("跳字反馈")]
-        [Tooltip("是否启用通用跳字反馈模块")]
+        [Header("Feedback")]
+        [Tooltip("Enable the shared floating feedback module.")]
         public bool enableFeedback = true;
 
-        [Tooltip("是否启用资金变化的跳字反馈")]
+        [Tooltip("Enable money delta floating feedback.")]
         public bool enableMoneyFeedback = true;
 
-        [Tooltip("是否输出跳字反馈模块调试日志")]
+        [Tooltip("Enable debug logs for the feedback module.")]
         public bool enableFeedbackLogs = true;
     }
 }

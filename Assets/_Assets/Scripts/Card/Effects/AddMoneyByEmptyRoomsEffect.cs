@@ -2,9 +2,6 @@ using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
-    /// <summary>
-    /// Add money based on current empty room count.
-    /// </summary>
     public class AddMoneyByEmptyRoomsEffect : ICardEffect
     {
         private readonly int _amountPerRoom;
@@ -32,7 +29,7 @@ namespace BaoZuPo.Card.Effects
                 context?.SettlementCapture?.RecordDelta(total, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
-            Debug.Log($"[镜像效果] {source.Data.cardName}: 空房 {emptyCount} 间，资金变化 {total}");
+            Debug.Log($"[MirrorEffect] {source.Data.cardName}: {emptyCount} empty room(s), money delta {total}");
         }
     }
 }

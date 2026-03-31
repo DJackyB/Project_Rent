@@ -1,20 +1,14 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BaoZuPo.Card
 {
-    /// <summary>
-    /// 卡牌数据库 用于加载和查询所有 CardData 资源
-    /// </summary>
     public static class CardDatabase
     {
         private static readonly Dictionary<int, CardData> _cards = new();
-        private static bool _isLoaded = false;
+        private static bool _isLoaded;
 
-        /// <summary>
-        /// 从 Resources 路径加载全部 CardData
-        /// </summary>
         public static void LoadAll(string resourcePath = "Cards")
         {
             _cards.Clear();
@@ -38,12 +32,9 @@ namespace BaoZuPo.Card
             }
 
             _isLoaded = true;
-            Debug.Log($"[CardDatabase] \u5df2\u52a0\u8f7d {_cards.Count} \u5f20\u5361\u724c");
+            Debug.Log($"[CardDatabase] Loaded {_cards.Count} cards.");
         }
 
-        /// <summary>
-        /// 手动注册单张卡牌 通常用于导入后补登记
-        /// </summary>
         public static void Register(CardData data)
         {
             if (data == null)
@@ -60,9 +51,6 @@ namespace BaoZuPo.Card
             _cards[data.cardId] = data;
         }
 
-        /// <summary>
-        /// 根据 ID 获取卡牌数据
-        /// </summary>
         public static CardData GetById(int cardId)
         {
             if (!_isLoaded)
@@ -74,9 +62,6 @@ namespace BaoZuPo.Card
             return data;
         }
 
-        /// <summary>
-        /// 获取当前已加载的全部卡牌
-        /// </summary>
         public static IReadOnlyDictionary<int, CardData> GetAll()
         {
             if (!_isLoaded)
@@ -87,9 +72,6 @@ namespace BaoZuPo.Card
             return _cards;
         }
 
-        /// <summary>
-        /// 清空数据库缓存
-        /// </summary>
         public static void Clear()
         {
             _cards.Clear();

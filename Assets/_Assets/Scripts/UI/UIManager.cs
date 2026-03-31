@@ -36,7 +36,6 @@ namespace BaoZuPo.UI
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
             EventBus.Subscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
-            LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
 
         private void Start()
@@ -61,13 +60,12 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
             EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
-            LocalizationManager.LanguageChanged -= OnLanguageChanged;
         }
 
         private void OnPhaseChanged(GameEvents.PhaseChanged e)
         {
             CurrentPhase = e.Phase;
-            if (!string.IsNullOrWhiteSpace(e.PhaseName) && System.Enum.TryParse(e.PhaseName, true, out GamePhase parsedPhase))
+            if (!string.IsNullOrWhiteSpace(e.PhaseName) && Enum.TryParse(e.PhaseName, true, out GamePhase parsedPhase))
             {
                 CurrentPhase = parsedPhase;
             }
@@ -109,19 +107,10 @@ namespace BaoZuPo.UI
         {
             if (_cardRewardPanel == null)
             {
-                throw new InvalidOperationException("[UIManager] _cardRewardPanel 未在 Inspector 中赋值。奖励三选一属于主流程必需引用。");
+                throw new InvalidOperationException("[UIManager] _cardRewardPanel is not assigned in the Inspector. Reward selection is required for the main gameplay flow.");
             }
 
             _cardRewardPanel.Show(e.Options, e.Boosted);
-        }
-
-        private void OnLanguageChanged()
-        {
-            UIFontCatalog.ApplyToAllLoadedSceneTexts();
-            RefreshAll();
-            phasePanel?.UpdatePhase(CurrentPhase.ToString());
-            gameOverPanel?.RefreshLocalization();
-            _cardRewardPanel?.RefreshLocalization();
         }
 
         public void RefreshAll()
@@ -174,7 +163,7 @@ namespace BaoZuPo.UI
         {
             if (cardDragController == null)
             {
-                Debug.LogError("[UIManager] cardDragController 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 UICardDragController 组件。");
+                Debug.LogError("[UIManager] cardDragController is not assigned in the Inspector. Create a child object under UIManager and add UICardDragController.");
                 return;
             }
 
@@ -185,7 +174,7 @@ namespace BaoZuPo.UI
         {
             if (_cardRewardPanel == null)
             {
-                throw new InvalidOperationException("[UIManager] _cardRewardPanel 未在 Inspector 中赋值。奖励三选一属于主流程必需引用。");
+                throw new InvalidOperationException("[UIManager] _cardRewardPanel is not assigned in the Inspector. Reward selection is required for the main gameplay flow.");
             }
         }
 
@@ -193,7 +182,7 @@ namespace BaoZuPo.UI
         {
             if (_feedbackBootstrap == null)
             {
-                Debug.LogError("[UIManager] _feedbackBootstrap 未在 Inspector 中赋值。请在 UIManager 下创建子对象并挂载 FeedbackBootstrap 组件。");
+                Debug.LogError("[UIManager] _feedbackBootstrap is not assigned in the Inspector. Create a child object under UIManager and add FeedbackBootstrap.");
                 return;
             }
 

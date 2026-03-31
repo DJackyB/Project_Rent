@@ -505,7 +505,7 @@ namespace BaoZuPo.GameFlow
                 if (baseRent > 0)
                 {
                     MoneyManager.Instance.AddMoney(baseRent);
-                    tenantContext.SettlementCapture.RecordBase(baseRent, UIStrings.SettlementBase);
+                    tenantContext.SettlementCapture.RecordBase(baseRent, GameText.SettlementBase);
                 }
 
                 tenant.SettleEffect?.Execute(tenant, tenantContext);
@@ -693,10 +693,10 @@ namespace BaoZuPo.GameFlow
             return sourceKind switch
             {
                 GameEvents.SettlementSourceKind.Room when card != null => card.Data.cardName,
-                GameEvents.SettlementSourceKind.Room when room != null => UIStrings.SettlementRoomTitle(room.RoomIndex + 1),
+                GameEvents.SettlementSourceKind.Room when room != null => GameText.SettlementRoomTitle(room.RoomIndex + 1),
                 GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
                 GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
-                _ => UIStrings.SettlementFallbackTitle
+                _ => GameText.SettlementFallbackTitle
             };
         }
 

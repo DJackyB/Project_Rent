@@ -528,7 +528,6 @@ namespace BaoZuPo.UI.Settlement
                 labelRect.offsetMax = new Vector2(-20f, -10f);
 
                 transferLabel = labelObject.GetComponent<TextMeshProUGUI>();
-                transferLabel.font = UIFontCatalog.GetPreferredFontAsset();
                 transferLabel.fontSize = 24f;
                 transferLabel.alignment = TextAlignmentOptions.Center;
                 transferLabel.color = transferTextColor;

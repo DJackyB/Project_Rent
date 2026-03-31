@@ -239,7 +239,7 @@ namespace BaoZuPo.UI
                 }
                 else
                 {
-                    Debug.LogError("[UICardDragController] dragLayer 未在 Inspector 中赋值，也未在场景中找到 DragLayer。请在 Canvas 下创建 DragLayer (RectTransform, 全屏锚点) 并拖入。");
+                    Debug.LogError("[UICardDragController] dragLayer is not assigned in the Inspector and no DragLayer was found in the scene. Create a DragLayer child under the Canvas and assign it.");
                 }
             }
 
@@ -432,6 +432,7 @@ namespace BaoZuPo.UI
             {
                 _activeHandler.ResetToIdleVisual(false);
             }
+
             ClearActiveState(true);
         }
 

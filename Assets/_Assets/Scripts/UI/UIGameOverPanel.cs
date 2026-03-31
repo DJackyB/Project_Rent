@@ -1,25 +1,17 @@
-using UnityEngine;
 using TMPro;
+using UnityEngine;
 
 namespace BaoZuPo.UI
 {
-    /// <summary>
-    /// 游戏结束弹窗
-    /// </summary>
     public class UIGameOverPanel : MonoBehaviour
     {
-        [Header("UI 引用")]
+        [Header("UI References")]
         public TextMeshProUGUI titleText;
         public TextMeshProUGUI infoText;
         public GameObject panel;
 
-        private bool _hasShownResult;
-        private int _lastTotalTurns;
-        private int _lastFinalMoney;
-
         private void Start()
         {
-            UIFontCatalog.ApplyToChildren(transform);
             if (panel != null)
             {
                 panel.SetActive(false);
@@ -28,35 +20,19 @@ namespace BaoZuPo.UI
 
         public void Show(int totalTurns, int finalMoney)
         {
-            _hasShownResult = true;
-            _lastTotalTurns = totalTurns;
-            _lastFinalMoney = finalMoney;
-
             if (panel != null)
             {
                 panel.SetActive(true);
             }
 
-            UIFontCatalog.ApplyToText(titleText);
-            UIFontCatalog.ApplyToText(infoText);
-
             if (titleText != null)
             {
-                titleText.text = UIStrings.GameOverTitle;
+                titleText.text = GameText.GameOverTitle;
             }
 
             if (infoText != null)
             {
-                infoText.text = UIStrings.GameOverInfo(totalTurns, finalMoney);
-            }
-        }
-
-        public void RefreshLocalization()
-        {
-            UIFontCatalog.ApplyToChildren(transform);
-            if (_hasShownResult)
-            {
-                Show(_lastTotalTurns, _lastFinalMoney);
+                infoText.text = GameText.GameOverInfo(totalTurns, finalMoney);
             }
         }
     }
