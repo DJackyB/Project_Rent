@@ -1,3 +1,4 @@
+using System;
 using BaoZuPo.Card;
 
 namespace BaoZuPo.GameFlow
@@ -11,27 +12,29 @@ namespace BaoZuPo.GameFlow
                 return CardPlayTargetKind.PlayArea;
             }
 
-            if (card.cardType == CardType.Tenant || card.cardType == CardType.Equipment)
-            {
-                return CardPlayTargetKind.Room;
-            }
-
             return card.targetKind;
         }
 
-        public static CardPlayTargetKind InferTargetKindFromLegacyData(CardData card)
+        public static bool PersistsInRoom(CardData card)
         {
             if (card == null)
             {
-                return CardPlayTargetKind.PlayArea;
+                return false;
             }
 
-            if (card.cardType == CardType.Tenant || card.cardType == CardType.Equipment)
+            return GetRequiredTargetKind(card) == CardPlayTargetKind.Room
+                && (card.cardType == CardType.Tenant || card.cardType == CardType.Equipment);
+        }
+
+        public static bool PersistsAsContract(CardData card)
+        {
+            if (card == null)
             {
-                return CardPlayTargetKind.Room;
+                return false;
             }
 
-            return HasSelectedRoomEffect(card) ? CardPlayTargetKind.Room : CardPlayTargetKind.PlayArea;
+            return GetRequiredTargetKind(card) == CardPlayTargetKind.PlayArea
+                && card.cardType == CardType.Contract;
         }
 
         public static bool TryValidateConfiguredTargetKind(CardData card, out string warning)
@@ -42,18 +45,19 @@ namespace BaoZuPo.GameFlow
                 return true;
             }
 
-            CardPlayTargetKind configuredTarget = card.targetKind;
-            CardPlayTargetKind expectedTarget = card.cardType == CardType.Tenant || card.cardType == CardType.Equipment
-                ? CardPlayTargetKind.Room
-                : InferTargetKindFromLegacyData(card);
-
-            if (configuredTarget == expectedTarget)
+            if (!Enum.IsDefined(typeof(CardPlayTargetKind), card.targetKind))
             {
-                return true;
+                warning = $"Configured target kind '{(int)card.targetKind}' is invalid.";
+                return false;
             }
 
-            warning = $"Configured target kind '{configuredTarget}' does not match expected target kind '{expectedTarget}'.";
-            return false;
+            if (HasSelectedRoomEffect(card) && card.targetKind != CardPlayTargetKind.Room)
+            {
+                warning = "Cards that use SelectedRoom effects must use targetKind Room.";
+                return false;
+            }
+
+            return true;
         }
 
         private static bool HasSelectedRoomEffect(CardData card)

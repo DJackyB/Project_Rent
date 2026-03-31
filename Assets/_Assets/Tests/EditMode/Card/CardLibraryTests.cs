@@ -312,6 +312,106 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void TargetValidation_AllowsTenantCardsToUsePlayArea()
+        {
+            var card = CreateCardData(120, "Portable Tenant");
+            card.cardType = CardType.Tenant;
+            card.targetKind = CardPlayTargetKind.PlayArea;
+
+            Assert.IsTrue(CardTargeting.TryValidateConfiguredTargetKind(card, out var warning), warning);
+            Assert.AreEqual(CardPlayTargetKind.PlayArea, CardTargeting.GetRequiredTargetKind(card));
+        }
+
+        [Test]
+        public void TargetValidation_RejectsSelectedRoomEffectsWithoutRoomTarget()
+        {
+            var card = CreateCardData(121, "Broken Target");
+            card.cardType = CardType.Event;
+            card.targetKind = CardPlayTargetKind.PlayArea;
+            card.instantEffect = "AddTenantDurabilityInSelectedRoom;2";
+
+            Assert.IsFalse(CardTargeting.TryValidateConfiguredTargetKind(card, out var warning));
+            StringAssert.Contains("SelectedRoom", warning);
+        }
+
+        [Test]
+        public void PlayCard_TenantWithPlayAreaTarget_ResolvesWithoutRoomPlacement()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(122, "First")),
+                CreateLibrary("NormalPool", CreateCardData(123, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(124, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var portableTenant = CreateCardData(125, "Portable Tenant");
+            portableTenant.cardType = CardType.Tenant;
+            portableTenant.targetKind = CardPlayTargetKind.PlayArea;
+            portableTenant.instantEffect = "AddMoney;25";
+
+            context.DeckManager.AddCardToHand(portableTenant);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            var validation = context.TurnManager.ValidatePlay(card);
+            Assert.IsTrue(validation.IsValid);
+            Assert.AreEqual(CardPlayTargetKind.PlayArea, validation.RequiredTargetKind);
+
+            bool played = context.TurnManager.PlayCard(card);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(1025, context.MoneyManager.CurrentMoney);
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+            Assert.IsNull(card.PlacedRoom);
+            Assert.AreEqual(0, context.BoardManager.GetAllFieldCards().Count);
+        }
+
+        [Test]
+        public void PlayCard_EventWithRoomTarget_UsesSelectedRoomWithoutOccupyingRoom()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(126, "First")),
+                CreateLibrary("NormalPool", CreateCardData(127, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(128, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var room = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 1);
+
+            var existingTenantData = CreateCardData(129, "Existing Tenant");
+            existingTenantData.cardType = CardType.Tenant;
+            existingTenantData.targetKind = CardPlayTargetKind.Room;
+            existingTenantData.durability = 5;
+            var existingTenant = new CardInstance(existingTenantData);
+            Assert.IsTrue(room.PlaceCard(existingTenant));
+
+            var roomEvent = CreateCardData(130, "Room Event");
+            roomEvent.cardType = CardType.Event;
+            roomEvent.targetKind = CardPlayTargetKind.Room;
+            roomEvent.instantEffect = "AddTenantDurabilityInSelectedRoom;2";
+
+            context.DeckManager.AddCardToHand(roomEvent);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            var missingTargetValidation = context.TurnManager.ValidatePlay(card);
+            Assert.IsFalse(missingTargetValidation.IsValid);
+            Assert.AreEqual(CardPlayBlockReason.MissingTarget, missingTargetValidation.BlockReason);
+
+            bool played = context.TurnManager.PlayCard(card, room);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(7, existingTenant.CurrentDurability);
+            Assert.AreEqual(1, room.TenantCount);
+            Assert.IsNull(card.PlacedRoom);
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+        }
+
+        [Test]
         public void InitializeSystems_ThrowsWhenBoardManagerIsMissing()
         {
             CreateComponent<MoneyManager>("MoneyManager");

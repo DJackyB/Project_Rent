@@ -53,11 +53,11 @@ namespace BaoZuPo.Core
             }
 
             var card = hand[index];
-            var targetRoom = BoardManager.Instance.FindAvailableRoom(card.Data.cardType);
+            var targetRoom = BoardManager.Instance.FindAvailableRoom(card.Data);
 
-            if (card.Data.cardType != Card.CardType.Event && targetRoom == null)
+            if (TurnManager.Instance.GetRequiredTargetKind(card) == CardPlayTargetKind.Room && targetRoom == null)
             {
-                Debug.LogWarning($"[Debug] No room is available to place card: {card.Data.cardName}");
+                Debug.LogWarning($"[Debug] No valid room target is available for card: {card.Data.cardName}");
                 return;
             }
 

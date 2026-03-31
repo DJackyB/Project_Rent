@@ -127,16 +127,14 @@ namespace BaoZuPo.GameFlow
                     return CardPlayValidationResult.Failure(CardPlayBlockReason.MissingTarget, requiredTargetKind);
                 }
 
-                if (card.Data.cardType == CardType.Tenant)
+                if (CardTargeting.PersistsInRoom(card.Data))
                 {
-                    if (!targetRoom.CanPlaceTenant)
+                    if (card.Data.cardType == CardType.Tenant && !targetRoom.CanPlaceTenant)
                     {
                         return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
                     }
-                }
-                else if (card.Data.cardType == CardType.Equipment)
-                {
-                    if (!targetRoom.CanPlaceEquipment)
+
+                    if (card.Data.cardType == CardType.Equipment && !targetRoom.CanPlaceEquipment)
                     {
                         return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
                     }
@@ -158,20 +156,18 @@ namespace BaoZuPo.GameFlow
             var context = GameManager.Instance.GameContext;
             context.EffectContext.SelectedRoom = targetRoom;
 
-            if (card.Data.cardType == CardType.Event)
+            if (CardTargeting.PersistsAsContract(card.Data))
             {
-                return ResolveCardAfterPlay(card, context, null, null);
+                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), targetRoom);
             }
 
-            if (card.Data.cardType == CardType.Contract)
+            if (CardTargeting.PersistsInRoom(card.Data))
             {
-                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), null);
-            }
-
-            if (targetRoom == null || !targetRoom.PlaceCard(card))
-            {
-                Debug.LogWarning($"[TurnManager] Failed to place {card}");
-                return false;
+                if (targetRoom == null || !targetRoom.PlaceCard(card))
+                {
+                    Debug.LogWarning($"[TurnManager] Failed to place {card}");
+                    return false;
+                }
             }
 
             return ResolveCardAfterPlay(card, context, null, targetRoom);
@@ -433,7 +429,7 @@ namespace BaoZuPo.GameFlow
         {
             if (!MoneyManager.Instance.ReduceMoney(card.Data.cost))
             {
-                if (targetRoom != null && card != null && card.Data != null && card.Data.cardType != CardType.Event && card.Data.cardType != CardType.Contract)
+                if (targetRoom != null && card != null && card.PlacedRoom == targetRoom)
                 {
                     targetRoom.RemoveCard(card);
                 }
