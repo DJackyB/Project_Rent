@@ -1,0 +1,101 @@
+name: unity-build-artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        description: Optional build name override.
+        required: false
+        type: string
+      build_version:
+        description: Optional build version override.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows x64 Artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BUILD_OUTPUT: build/StandaloneWindows64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve build metadata
+        id: meta
+        shell: bash
+        run: |
+          sanitize() {
+            echo "$1" | sed -E 's#[[:space:]/\\:*?"<>|]+#-#g; s/^-+//; s/-+$//'
+          }
+
+          default_name=$(grep 'productName:' ProjectSettings/ProjectSettings.asset | head -n 1 | cut -d':' -f2- | sed 's/^ *//')
+          default_version=$(grep 'bundleVersion:' ProjectSettings/ProjectSettings.asset | head -n 1 | cut -d':' -f2- | sed 's/^ *//')
+
+          raw_name="${{ inputs.build_name }}"
+          raw_version="${{ inputs.build_version }}"
+
+          if [ -z "$raw_name" ]; then
+            raw_name="$default_name"
+          fi
+
+          if [ -z "$raw_version" ]; then
+            raw_version="$default_version"
+          fi
+
+          if [ -z "$raw_name" ]; then
+            raw_name="unity-player"
+          fi
+
+          if [ -z "$raw_version" ]; then
+            raw_version="build-${GITHUB_RUN_NUMBER}"
+          fi
+
+          build_name=$(sanitize "$raw_name")
+          build_version=$(sanitize "$raw_version")
+
+          if [ -z "$build_name" ]; then
+            echo "Failed to resolve build_name." >&2
+            exit 1
+          fi
+
+          if [ -z "$build_version" ]; then
+            echo "Failed to resolve build_version." >&2
+            exit 1
+          fi
+
+          artifact_name="windows-player-${build_name}-${build_version}"
+
+          echo "build_name=$build_name" >> "$GITHUB_OUTPUT"
+          echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+
+      - name: Build Windows x64 player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          targetPlatform: StandaloneWindows64
+          buildMethod: BaoZuPo.Editor.UnityCiBuildEntry.BuildStandaloneWindows64
+          customParameters: >-
+            -buildOutput ${{ env.BUILD_OUTPUT }}
+            -buildName ${{ steps.meta.outputs.build_name }}
+            -buildVersion ${{ steps.meta.outputs.build_version }}
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: ${{ env.BUILD_OUTPUT }}
+          if-no-files-found: error
+          compression-level: 6
