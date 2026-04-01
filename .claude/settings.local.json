@@ -16,7 +16,37 @@
       "Bash(wc -l \"D:\\\\Unity\\\\Project\\\\Project_Rent\\\\Assets\\\\_Assets\\\\Scripts\"/**/*.cs)",
       "Bash(find \"D:\\\\Unity\\\\Project\\\\Project_Rent\\\\Assets\\\\_Assets\\\\Scripts\" -name \"*.cs\" -type f -exec wc -l {} +)",
       "Bash(xargs cat:*)",
-      "Bash(find D:UnityProjectProject_RentAssetsScenes -name *.unity)"
+      "Bash(find D:UnityProjectProject_RentAssetsScenes -name *.unity)",
+      "Bash(find E:SDLPJProject_Rent -type f -name *[Cc]ard*)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|NotImplemented\\\\|throw new NotImplementedException\" E:SDLPJProject_Rent/Assets/_Assets/Scripts/Card --include=*.cs)",
+      "Bash(grep -E \"^Card_.*\\\\.asset$\")",
+      "Bash(xargs -I {} basename {})",
+      "Bash(grep \"\\\\.cs$\")",
+      "Bash(sed 's/.*\"\"\"\"//')",
+      "Bash(grep -r \"preEffect\\\\|instantEffect\\\\|settleEffect\\\\|destroyEffect\" E:SDLPJProject_Rent/Assets/Resources/Cards/Card_*.asset)",
+      "Bash(for type:*)",
+      "Bash(do echo:*)",
+      "Bash(grep 'cardType: ' E:SDLPJProject_Rent/Assets/Resources/Cards/Card_*.asset)",
+      "Bash(done)",
+      "Bash(git:*)",
+      "Skill(update-config)",
+      "Bash(where jq:*)",
+      "Bash(powershell -Command \"Write-Output 'ok'\")",
+      "Bash(where gh:*)",
+      "Skill(code-review)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ stdin=$(cat); file=$(echo \"$stdin\" | grep -o '\"file_path\": *\"[^\"]*\"' | sed 's/.*\"file_path\": *\"\\([^\"]*\\)\"/\\1/'); case \"$file\" in *.asset|*.unity) printf '{\"systemMessage\":\"⚠️ 修改了 .asset/.unity 文件，配置类资产建议在 Inspector 手动调整，非必要请勿修改。\"}\\n';; esac; } 2>/dev/null || true"
+          }
+        ]
+      }
     ]
   }
 }
