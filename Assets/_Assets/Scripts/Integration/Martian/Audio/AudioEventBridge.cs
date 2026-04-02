@@ -19,8 +19,6 @@ namespace BaoZuPo.Integration
             EventBus.Subscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
             EventBus.Subscribe<GameEvents.CardRewardSelected>(OnRewardSelected);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
-
-            AudioServices.Current.PlayMusic("bgm.main");
         }
 
         private void OnDisable()
@@ -31,6 +29,12 @@ namespace BaoZuPo.Integration
             EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnRewardOffered);
             EventBus.Unsubscribe<GameEvents.CardRewardSelected>(OnRewardSelected);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
+        }
+
+        private void Start()
+        {
+            // 等 AudioBootstrap.Awake 安装完后端后再播首段 BGM，避免首帧丢音乐。
+            AudioServices.Current.PlayMusic("bgm.main");
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed _)            => Play("sfx.card.play");
