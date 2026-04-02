@@ -3,7 +3,8 @@
   "references": [
     "Martian.Localization.Abstractions",
     "Martian.Localization.Runtime",
-    "Unity.Localization"
+    "Unity.Localization",
+    "Unity.ResourceManager"
   ],
   "defineConstraints": [
     "MARTIAN_LOCALIZATION_PACKAGE"
