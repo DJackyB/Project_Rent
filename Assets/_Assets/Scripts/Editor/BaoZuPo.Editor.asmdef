@@ -1,0 +1,16 @@
+{
+  "name": "BaoZuPo.Editor",
+  "references": [
+    "BaoZuPo"
+  ],
+  "precompiledReferences": [
+    "NPOI.dll",
+    "NPOI.OOXML.dll",
+    "NPOI.OpenXml4Net.dll",
+    "ICSharpCode.SharpZipLib.dll",
+    "BouncyCastle.Crypto.dll"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

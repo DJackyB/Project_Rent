@@ -42,14 +42,17 @@ namespace Martian.Tooltip.Runtime
                 DontDestroyOnLoad(serviceObject);
             }
 
-            return serviceObject.AddComponent<TooltipRuntimeService>();
+            var service = serviceObject.AddComponent<TooltipRuntimeService>();
+            _instance = service;
+            TooltipServices.SetCurrent(service);
+            return service;
         }
 
         private void Awake()
         {
             if (_instance != null && _instance != this)
             {
-                Destroy(gameObject);
+                DestroyPresenterObject(gameObject);
                 return;
             }
 

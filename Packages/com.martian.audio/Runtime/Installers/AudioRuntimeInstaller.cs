@@ -87,7 +87,11 @@ namespace Martian.Audio
         {
             var host = new GameObject(HostName);
             host.hideFlags = HideFlags.HideInHierarchy;
-            UnityEngine.Object.DontDestroyOnLoad(host);
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.DontDestroyOnLoad(host);
+            }
+
             return host;
         }
 

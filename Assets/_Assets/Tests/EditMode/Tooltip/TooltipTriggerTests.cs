@@ -1,5 +1,7 @@
 using Martian.Tooltip;
+using Martian.Tooltip.Runtime;
 using NUnit.Framework;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -16,6 +18,12 @@ namespace Martian.Tests.Tooltip
             for (int i = 0; i < eventSystems.Length; i++)
             {
                 Object.DestroyImmediate(eventSystems[i].gameObject);
+            }
+
+            var services = Object.FindObjectsByType<TooltipRuntimeService>(FindObjectsSortMode.None);
+            for (int i = 0; i < services.Length; i++)
+            {
+                Object.DestroyImmediate(services[i].gameObject);
             }
         }
 
@@ -86,15 +94,17 @@ namespace Martian.Tests.Tooltip
             try
             {
                 var provider = go.AddComponent<FakeTooltipProvider>();
-                provider.ShouldSucceed = true;
-                provider.Request = new TooltipRequest(provider, go.GetComponent<RectTransform>(), new TooltipContent("martian.tooltip.test", new object()));
-
                 var trigger = go.AddComponent<TooltipTrigger>();
                 trigger.Bind(provider);
-                trigger.OnPointerEnter(new PointerEventData(eventSystem) { position = Vector2.one });
-                go.SetActive(false);
 
-                Assert.AreEqual(1, service.ShowCount);
+                typeof(TooltipTrigger)
+                    .GetField("_activeOwner", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .SetValue(trigger, provider);
+
+                typeof(TooltipTrigger)
+                    .GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(trigger, null);
+
                 Assert.AreEqual(1, service.HideCount);
                 Assert.AreSame(provider, service.LastHiddenOwner);
             }

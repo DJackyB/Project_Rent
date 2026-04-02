@@ -1,0 +1,16 @@
+{
+  "name": "BaoZuPo",
+  "references": [
+    "Martian.Audio",
+    "Martian.Feedback",
+    "Martian.Feedback.Runtime",
+    "Martian.Tooltip.Abstractions",
+    "Martian.Tooltip.Presets",
+    "Martian.Tooltip.Runtime",
+    "Unity.TextMeshPro",
+    "Unity.InputSystem",
+    "NodeCanvas",
+    "ParadoxNotion",
+    "DOTween.Modules"
+  ]
+}
