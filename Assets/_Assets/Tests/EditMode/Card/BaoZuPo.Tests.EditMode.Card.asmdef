@@ -1,0 +1,12 @@
+{
+  "name": "BaoZuPo.Tests.EditMode.Card",
+  "references": [
+    "BaoZuPo"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}
