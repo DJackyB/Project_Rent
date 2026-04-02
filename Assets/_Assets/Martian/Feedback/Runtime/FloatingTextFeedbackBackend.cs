@@ -77,7 +77,7 @@ namespace Martian.Feedback.Runtime
                 if (track != null)
                 {
                     track.Clear();
-                    UnityEngine.Object.Destroy(track.gameObject);
+                    DestroyObject(track.gameObject);
                 }
             }
 
@@ -86,7 +86,7 @@ namespace Martian.Feedback.Runtime
                 if (track != null)
                 {
                     track.Clear();
-                    UnityEngine.Object.Destroy(track.gameObject);
+                    DestroyObject(track.gameObject);
                 }
             }
 
@@ -96,7 +96,7 @@ namespace Martian.Feedback.Runtime
 
             if (_layerRoot != null)
             {
-                UnityEngine.Object.Destroy(_layerRoot.gameObject);
+                DestroyObject(_layerRoot.gameObject);
                 _layerRoot = null;
             }
 
@@ -115,6 +115,23 @@ namespace Martian.Feedback.Runtime
             }
 
             return track.PendingCount;
+        }
+
+        private static void DestroyObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(target);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
         }
 
         internal void CompleteTrackForTesting(string laneKey)

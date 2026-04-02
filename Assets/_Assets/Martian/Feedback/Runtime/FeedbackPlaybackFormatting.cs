@@ -6,6 +6,8 @@ namespace Martian.Feedback.Runtime
 {
     internal static class FeedbackPlaybackFormatting
     {
+        private static readonly Vector2 LegacyDefaultScreenOffset = new(0f, 96f);
+
         public static FeedbackPlaybackRequest Create(FeedbackRuntimeOptions options, FeedbackRequest request)
         {
             if (request == null)
@@ -21,7 +23,7 @@ namespace Martian.Feedback.Runtime
                 TargetKind = request.TargetKind,
                 Anchor = request.Anchor,
                 UseScreenCenterFallback = request.UseScreenCenterFallback,
-                ScreenOffset = (request.ScreenOffset != Vector2.zero || options == null) ? request.ScreenOffset : options.DefaultScreenOffset,
+                ScreenOffset = ResolveScreenOffset(request.ScreenOffset, options != null ? options.DefaultScreenOffset : request.ScreenOffset),
                 GapSeconds = 0f
             };
 
@@ -55,7 +57,7 @@ namespace Martian.Feedback.Runtime
                 TargetKind = request.TargetKind,
                 Anchor = request.Anchor,
                 UseScreenCenterFallback = request.UseScreenCenterFallback,
-                ScreenOffset = (request.ScreenOffset != Vector2.zero || options == null) ? request.ScreenOffset : options.SequenceScreenOffset,
+                ScreenOffset = ResolveScreenOffset(request.ScreenOffset, options != null ? options.SequenceScreenOffset : request.ScreenOffset),
                 GapSeconds = request.GapSeconds > 0f ? request.GapSeconds : (options != null ? options.SequenceGapSeconds : 0.06f)
             };
 
@@ -94,6 +96,16 @@ namespace Martian.Feedback.Runtime
         {
             string sign = amount > 0 ? "+" : string.Empty;
             return $"{sign}{amount}";
+        }
+
+        private static Vector2 ResolveScreenOffset(Vector2 requestedOffset, Vector2 fallbackOffset)
+        {
+            if (requestedOffset != Vector2.zero && requestedOffset != LegacyDefaultScreenOffset)
+            {
+                return requestedOffset;
+            }
+
+            return fallbackOffset;
         }
 
         private static int CountValidSteps(IReadOnlyList<FeedbackStep> steps)

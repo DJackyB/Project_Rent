@@ -9,6 +9,7 @@ using BaoZuPo.Core;
 using BaoZuPo.Deck;
 using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
+using BaoZuPo.UI;
 using Martian.EventBus;
 using NUnit.Framework;
 using UnityEngine;
@@ -636,6 +637,7 @@ namespace BaoZuPo.Tests.Card
             var gameManager = CreateComponent<GameManager>("GameManager");
             gameManager.gameConfig = gameConfig;
 
+            LogAssert.Expect(LogType.Error, "[Singleton] No instance of BaoZuPo.Board.BoardManager found in scene!");
             var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
             StringAssert.Contains("BoardManager", exception.Message);
         }
@@ -659,6 +661,7 @@ namespace BaoZuPo.Tests.Card
             var gameManager = CreateComponent<GameManager>("GameManager");
             gameManager.gameConfig = gameConfig;
 
+            LogAssert.Expect(LogType.Error, "[Singleton] No instance of BaoZuPo.Deck.DeckManager found in scene!");
             var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
             StringAssert.Contains("DeckManager", exception.Message);
         }

@@ -26,6 +26,7 @@ namespace BaoZuPo.GameFlow
         private int _pendingSettlementPlaybackCount;
         private bool _settlementTurnEndedPublished;
         private bool _isRewardSelectionPending;
+        private bool _eventsSubscribed;
 
         // 缓存当前回合的 boosted 状态，供结算动画完成后使用
         private bool _pendingRewardBoosted;
@@ -40,14 +41,19 @@ namespace BaoZuPo.GameFlow
 
         private void OnEnable()
         {
-            EventBus.Subscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
-            EventBus.Subscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
+            EnsureEventSubscriptions();
         }
 
         private void OnDisable()
         {
+            if (!_eventsSubscribed)
+            {
+                return;
+            }
+
             EventBus.Unsubscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
             EventBus.Unsubscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
+            _eventsSubscribed = false;
         }
 
         public void ExecutePreparePhase()
@@ -766,6 +772,7 @@ namespace BaoZuPo.GameFlow
 
         private void AwardOneCardFromThreeOptions(bool boosted)
         {
+            EnsureEventSubscriptions();
             var rewardLibrary = GameManager.Instance != null && GameManager.Instance.gameConfig != null
                 ? GameManager.Instance.gameConfig.rewardLibrary
                 : null;
@@ -822,6 +829,18 @@ namespace BaoZuPo.GameFlow
                 Options = options,
                 Boosted = boosted
             });
+        }
+
+        private void EnsureEventSubscriptions()
+        {
+            if (_eventsSubscribed)
+            {
+                return;
+            }
+
+            EventBus.Subscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
+            EventBus.Subscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
+            _eventsSubscribed = true;
         }
 
         private static CardData[] BuildUniqueRewardOptions(List<CardData> source, int desiredCount)
