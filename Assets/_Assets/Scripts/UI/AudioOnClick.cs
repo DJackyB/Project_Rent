@@ -17,10 +17,14 @@ namespace BaoZuPo.UI
         private void Awake()
         {
             _button = GetComponent<Button>();
+        }
+
+        private void OnEnable()
+        {
             _button.onClick.AddListener(OnClick);
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
             if (_button != null)
                 _button.onClick.RemoveListener(OnClick);
