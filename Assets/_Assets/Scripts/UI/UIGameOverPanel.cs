@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 游戏结束屏幕，显示最终回合数和金钱成绩。
+    /// 在游戏结束时激活并填充结算数据。
+    /// </summary>
     public class UIGameOverPanel : MonoBehaviour
     {
         [Header("UI References")]

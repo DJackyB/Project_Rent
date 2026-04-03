@@ -8,6 +8,12 @@ using TweenSequence = DG.Tweening.Sequence;
 
 namespace BaoZuPo.UI.Common.Sequence
 {
+    /// <summary>
+    /// 顺序弹字文本控制器，管理浮动弹字序列的队列和播放。
+    /// 支持多个请求的异步队列执行，每步播放时显示动画化的浮动气泡。
+    /// 支持运行时动态创建 UI 元素，可配置气泡样式、速度和定位。
+    /// 在播放完成后触发事件。
+    /// </summary>
     public class UISequenceTextController : MonoBehaviour
     {
         public event System.Action PlaybackCompleted;

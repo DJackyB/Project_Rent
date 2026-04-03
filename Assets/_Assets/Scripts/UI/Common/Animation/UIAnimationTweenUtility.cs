@@ -5,6 +5,11 @@ using TweenSequence = DG.Tweening.Sequence;
 
 namespace BaoZuPo.UI.Common.Animation
 {
+    /// <summary>
+    /// 补间动画工具集，提供 UI 动画常用方法。
+    /// 包含浮动步骤序列构建（淡入/浮起/淡出）和数值脉冲效果。
+    /// 使用 DOTween 驱动所有动画。
+    /// </summary>
     public static class UIAnimationTweenUtility
     {
         public static TweenSequence BuildFloatingStepSequence(

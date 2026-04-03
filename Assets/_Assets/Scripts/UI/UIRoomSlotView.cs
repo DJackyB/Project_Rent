@@ -5,6 +5,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 房间插槽视图，代表房间内的单个租户或装备插槽。
+    /// 动态创建和绑定卡牌实例，显示占位符当插槽为空。
+    /// 支持不同的上下文（租户、装备）并应用对应的尺寸约束。
+    /// </summary>
     public class UIRoomSlotView : MonoBehaviour
     {
         [SerializeField] private CardViewContext slotContext = CardViewContext.RoomTenant;

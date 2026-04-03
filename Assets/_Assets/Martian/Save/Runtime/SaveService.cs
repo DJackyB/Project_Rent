@@ -6,12 +6,48 @@ using UnityEngine;
 
 namespace Martian.Save.Runtime
 {
+    /// <summary>
+    /// 核心存档服务。实现三层存档架构的协调。
+    ///
+    /// 三层架构：
+    /// 1. 数据层（ISaveSection）：各数据领域（经济、卡牌库等）定义自己的状态对象
+    /// 2. 序列化层（ISaveSerializer）：将状态对象与 JSON 相互转换
+    /// 3. 存储层（ISaveStorage）：将 JSON 写入文件或其他存储后端
+    ///
+    /// SaveService 的职责：
+    /// - 协调各片段的状态捕获和应用
+    /// - 构建/解析 SaveEnvelope（包含所有片段 + 元数据）
+    /// - 验证数据完整性和合法性
+    /// - 提供原子性保证（Save 全成功或全失败）
+    ///
+    /// 使用流程（保存）：
+    /// 1. 调用 Save()，传入片段列表
+    /// 2. SaveService 调用每个片段的 CaptureState()
+    /// 3. SaveService 序列化所有状态为 JSON
+    /// 4. SaveService 通过 Storage 写入文件
+    ///
+    /// 使用流程（加载）：
+    /// 1. 调用 TryPrepareLoad()，返回已验证的状态列表
+    /// 2. 调用 ApplyPreparedLoad()，应用状态到游戏世界
+    /// 这样分离准备和应用，允许在加载前执行异步操作。
+    /// </summary>
     public sealed class SaveService
     {
+        /// <summary>序列化实现。负责对象与 JSON 的转换。</summary>
         private readonly ISaveSerializer _serializer;
+
+        /// <summary>存储实现。负责文件 I/O。</summary>
         private readonly ISaveStorage _storage;
+
+        /// <summary>运行时选项（模式、扩展名等）。</summary>
         private readonly SaveRuntimeOptions _options;
 
+        /// <summary>
+        /// 构造 SaveService。
+        /// </summary>
+        /// <param name="serializer">序列化实现（必需）</param>
+        /// <param name="storage">存储实现（必需）</param>
+        /// <param name="options">运行时选项，或 null 使用默认值</param>
         public SaveService(ISaveSerializer serializer, ISaveStorage storage, SaveRuntimeOptions options = null)
         {
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
@@ -19,10 +55,24 @@ namespace Martian.Save.Runtime
             _options = options ?? new SaveRuntimeOptions();
         }
 
+        /// <summary>
+        /// 保存游戏。执行完整的保存流程：
+        /// 1. 捕获各片段状态
+        /// 2. 验证数据
+        /// 3. 序列化为 JSON
+        /// 4. 写入文件（带备份机制）
+        /// </summary>
+        /// <param name="relativePath">保存文件的相对路径（如 "Saves/slot1.json"）</param>
+        /// <param name="slotId">存档槽 ID（唯一标识，如 "slot1"）</param>
+        /// <param name="displayName">存档显示名称（如玩家自定义的名字）</param>
+        /// <param name="sections">参与保存的数据片段列表</param>
+        /// <param name="error">若保存失败，填入错误描述</param>
+        /// <returns>保存成功返回 true</returns>
         public bool Save(string relativePath, string slotId, string displayName, IReadOnlyList<ISaveSection> sections, out string error)
         {
             error = null;
 
+            // 第一步：构建信封（元数据 + 所有片段状态）
             if (!TryBuildEnvelope(slotId, displayName, sections, out var envelope, out error))
             {
                 return false;
@@ -30,7 +80,10 @@ namespace Martian.Save.Runtime
 
             try
             {
+                // 第二步：序列化
                 var json = _serializer.Serialize(envelope, _options.prettyPrintJson);
+
+                // 第三步：写入文件（Storage 负责原子性和备份）
                 _storage.WriteAllText(relativePath, json, _options.backupFileExtension);
                 return true;
             }
@@ -41,6 +94,30 @@ namespace Martian.Save.Runtime
             }
         }
 
+        /// <summary>
+        /// 准备加载：读取和验证存档文件，返回可应用的状态列表。
+        ///
+        /// 与 ApplyPreparedLoad 分离的好处：
+        /// - 允许在加载前执行异步操作（如显示进度条）
+        /// - 允许加载完成后再应用状态（可能涉及场景切换）
+        /// - 分离验证逻辑和应用逻辑，便于测试
+        ///
+        /// 执行步骤：
+        /// 1. 检查片段列表非空
+        /// 2. 读取文件并反序列化 SaveEnvelope
+        /// 3. 验证 Envelope 的基本合法性
+        /// 4. 遍历每个注册片段：
+        ///    - 如果在文件中找到对应记录，反序列化并验证
+        ///    - 如果未找到且片段标记为 Required，返回失败
+        ///    - 否则跳过该片段
+        /// 5. 返回已准备的片段列表
+        /// </summary>
+        /// <param name="relativePath">存档文件相对路径</param>
+        /// <param name="sections">当前定义的所有数据片段</param>
+        /// <param name="envelope">读取的存档信封（元数据 + 所有片段记录）</param>
+        /// <param name="preparedSections">已验证的片段状态列表（可直接应用）</param>
+        /// <param name="error">若失败，填入错误描述</param>
+        /// <returns>准备成功返回 true</returns>
         public bool TryPrepareLoad(
             string relativePath,
             IReadOnlyList<ISaveSection> sections,
@@ -52,6 +129,7 @@ namespace Martian.Save.Runtime
             preparedSections = null;
             error = null;
 
+            // 步骤 1：检查输入
             if (sections == null || sections.Count == 0)
             {
                 error = "No save sections were provided.";
@@ -64,6 +142,7 @@ namespace Martian.Save.Runtime
                 return false;
             }
 
+            // 步骤 2：读取和反序列化文件
             try
             {
                 var rawJson = _storage.ReadAllText(relativePath);
@@ -75,11 +154,13 @@ namespace Martian.Save.Runtime
                 return false;
             }
 
+            // 步骤 3：验证 Envelope 基本合法性
             if (!TryValidateEnvelope(envelope, out error))
             {
                 return false;
             }
 
+            // 步骤 4a：构建文件中存在的记录映射（检查重复）
             var recordLookup = new Dictionary<string, SaveSectionRecord>(StringComparer.Ordinal);
             for (int i = 0; i < envelope.sections.Count; i++)
             {
@@ -97,6 +178,7 @@ namespace Martian.Save.Runtime
                 }
             }
 
+            // 步骤 4b：遍历注册的片段，匹配文件中的记录
             var prepared = new List<PreparedSaveSectionState>(sections.Count);
             for (int i = 0; i < sections.Count; i++)
             {
@@ -109,15 +191,18 @@ namespace Martian.Save.Runtime
 
                 if (!recordLookup.TryGetValue(section.Key, out var record))
                 {
+                    // 文件中无此片段
                     if (section.IsRequired)
                     {
                         error = $"Missing required save section '{section.Key}'.";
                         return false;
                     }
 
+                    // 可选片段，跳过
                     continue;
                 }
 
+                // 文件中有此片段，反序列化和验证
                 object state;
                 try
                 {
@@ -150,6 +235,13 @@ namespace Martian.Save.Runtime
             return true;
         }
 
+        /// <summary>
+        /// 应用已准备的加载状态。
+        /// 按顺序调用每个片段的 ApplyState()，将状态应用到游戏世界。
+        /// </summary>
+        /// <param name="preparedSections">已验证的片段状态列表（来自 TryPrepareLoad）</param>
+        /// <param name="error">若应用失败，填入错误描述</param>
+        /// <returns>应用成功返回 true</returns>
         public bool ApplyPreparedLoad(IReadOnlyList<PreparedSaveSectionState> preparedSections, out string error)
         {
             error = null;
@@ -162,6 +254,7 @@ namespace Martian.Save.Runtime
 
             try
             {
+                // 依次应用每个片段的状态
                 for (int i = 0; i < preparedSections.Count; i++)
                 {
                     var preparedSection = preparedSections[i];
@@ -177,6 +270,13 @@ namespace Martian.Save.Runtime
             }
         }
 
+        /// <summary>
+        /// 列出指定目录下的所有存档槽。
+        /// 会扫描目录，读取每个文件的元数据（slotId、displayName、savedAt 等）。
+        /// 结果按保存时间从新到旧排序。
+        /// </summary>
+        /// <param name="relativeDirectory">存档目录相对路径（如 "Saves"）</param>
+        /// <returns>存档槽摘要列表（已排序）</returns>
         public IReadOnlyList<SaveSlotSummary> ListSlots(string relativeDirectory)
         {
             var files = _storage.ListFiles(relativeDirectory, _options.saveFileExtension);
@@ -184,6 +284,7 @@ namespace Martian.Save.Runtime
 
             for (int i = 0; i < files.Count; i++)
             {
+                // 尝试读取每个文件的信封，失败则跳过（可能是损坏的文件）
                 if (!TryReadEnvelope(files[i], out var envelope, out _))
                 {
                     continue;
@@ -199,10 +300,17 @@ namespace Martian.Save.Runtime
                 });
             }
 
+            // 按保存时间倒序排列（最新的在前）
             results.Sort((left, right) => CompareSavedTimes(right.savedAtUtc, left.savedAtUtc));
             return results;
         }
 
+        /// <summary>
+        /// 删除指定的存档文件及其备份。
+        /// </summary>
+        /// <param name="relativePath">存档文件相对路径</param>
+        /// <param name="error">若删除失败，填入错误描述</param>
+        /// <returns>删除成功返回 true</returns>
         public bool Delete(string relativePath, out string error)
         {
             error = null;
@@ -219,6 +327,15 @@ namespace Martian.Save.Runtime
             }
         }
 
+        /// <summary>
+        /// 只读取存档的信封（元数据和片段记录）。
+        /// 不加载或验证具体的片段状态。
+        /// 用于列出存档列表时快速读取元数据。
+        /// </summary>
+        /// <param name="relativePath">存档文件相对路径</param>
+        /// <param name="envelope">读取的信封</param>
+        /// <param name="error">若失败，填入错误描述</param>
+        /// <returns>读取成功返回 true</returns>
         public bool TryReadEnvelope(string relativePath, out SaveEnvelope envelope, out string error)
         {
             envelope = null;

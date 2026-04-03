@@ -9,6 +9,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 卡牌奖励选择面板，向玩家展示 3 张可选卡牌供选择或跳过。
+    /// 在游戏流程中由 UIManager 驱动，向 GameEvents.CardRewardSelected 发布玩家选择。
+    /// 支持普通和加强（Boosted）奖励的不同标题提示。
+    /// </summary>
     public class UICardRewardPanel : MonoBehaviour
     {
         [Header("Panel Root")]

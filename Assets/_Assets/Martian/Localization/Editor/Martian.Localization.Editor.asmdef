@@ -1,0 +1,13 @@
+{
+  "name": "Martian.Localization.Editor",
+  "references": [
+    "Martian.Localization.Runtime",
+    "Unity.Localization",
+    "Unity.Localization.Editor",
+    "Unity.TextMeshPro",
+    "Unity.TextMeshPro.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

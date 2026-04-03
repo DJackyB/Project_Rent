@@ -12,6 +12,12 @@ using UnityEngine;
 
 namespace BaoZuPo.UI.Settlement
 {
+    /// <summary>
+    /// 结算演示控制器，管理结算演示序列的队列、执行和金钱转账动画。
+    /// 支持并行、顺序和聚合等多种播放方式的阶段执行。
+    /// 在结算阶段订阅游戏事件，使用反馈系统播放结算视觉和音效。
+    /// 管理金钱转账动画，从源（房间/合约/放置区）飞向顶部金钱显示。
+    /// </summary>
     public class UISettlementSequenceController : MonoBehaviour
     {
         [Header("Transfer View")]

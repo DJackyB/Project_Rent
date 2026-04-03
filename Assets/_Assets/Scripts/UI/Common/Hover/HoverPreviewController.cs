@@ -6,6 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace BaoZuPo.UI.Common.Hover
 {
+    /// <summary>
+    /// 悬停预览管理器，控制悬停卡牌预览的显示、隐藏和位置更新。
+    /// 单例模式，跟踪鼠标位置并调用预览展示器渲染预览内容。
+    /// 支持多个悬停源的快速切换和防重复显示。
+    /// </summary>
     public class HoverPreviewController : MonoBehaviour
     {
         private static HoverPreviewController _instance;

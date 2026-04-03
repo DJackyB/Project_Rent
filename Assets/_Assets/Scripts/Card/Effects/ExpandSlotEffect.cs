@@ -17,6 +17,7 @@ namespace BaoZuPo.Card.Effects
             _count = count;
         }
 
+        // 执行：首选目标房间为卡牌自身所在房间（card.PlacedRoom），若无则取选中房间，然后扩充租客槽位。
         public void Execute(CardInstance card, GameContext context)
         {
             var targetRoom = card != null && card.PlacedRoom != null

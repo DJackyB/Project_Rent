@@ -3,36 +3,56 @@ using BaoZuPo.GameFlow;
 
 namespace BaoZuPo.Editor
 {
+    /// <summary>
+    /// 卡牌数据目录（代码侧定义）。
+    /// 在代码中定义所有卡牌和卡牌库，既可以直接用于编辑器工具，也可以序列化到 Excel。
+    ///
+    /// 职责：
+    /// - CardRow 数组：定义所有卡牌的数值、效果、标签
+    /// - LibraryRow 数组：定义各个卡牌库及其卡牌列表
+    /// - 导表工具从此读取数据，生成 CardData.asset 和 CardLibrary.asset
+    /// - 当前主要用于维护牌库定义与固定样例卡数据
+    /// </summary>
     internal static class CardSheetCatalog
     {
+        /// <summary>
+        /// 卡牌行定义。对应 Excel 中的一行卡牌数据。
+        /// </summary>
         internal sealed class CardRow
         {
-            public int CardId { get; set; }
-            public string CardName { get; set; }
-            public string Description { get; set; }
-            public string CardType { get; set; }
-            public int Rarity { get; set; }
-            public string CardArt { get; set; }
-            public int Cost { get; set; }
-            public int BaseRent { get; set; }
-            public string TargetKind { get; set; }
-            public int WaitTurns { get; set; }
-            public int Durability { get; set; }
-            public string PreEffect { get; set; }
-            public string InstantEffect { get; set; }
-            public string SettleEffect { get; set; }
-            public string DestroyEffect { get; set; }
-            public string Tag { get; set; }
+            public int CardId { get; set; }             // 卡牌唯一 ID
+            public string CardName { get; set; }         // 卡牌中文名
+            public string Description { get; set; }      // 卡牌描述
+            public string CardType { get; set; }         // 卡牌类型（Card_Tenant、Card_Equipt、Card_Event、Card_Contract）
+            public int Rarity { get; set; }              // 稀有度（0-3 或 0-4）
+            public string CardArt { get; set; }          // 美术资源路径
+            public int Cost { get; set; }                // 打出成本（金钱）
+            public int BaseRent { get; set; }            // 基础租金/收入
+            public string TargetKind { get; set; }       // 目标类型（Room、PlayArea 等）
+            public int WaitTurns { get; set; }           // 等待回合（放置后多少回合才生效）
+            public int Durability { get; set; }          // 耐久度（0=无限）
+            public string PreEffect { get; set; }        // 放置时触发的效果
+            public string InstantEffect { get; set; }    // 打出时立即触发的效果
+            public string SettleEffect { get; set; }     // 结算时触发的效果
+            public string DestroyEffect { get; set; }    // 销毁时触发的效果
+            public string Tag { get; set; }              // 标签（用于分类和策略识别）
         }
 
+        /// <summary>
+        /// 卡牌库行定义。定义一个卡牌库及其包含的卡牌列表。
+        /// </summary>
         internal sealed class LibraryRow
         {
-            public string AssetName { get; set; }
-            public string LibraryId { get; set; }
-            public string DisplayName { get; set; }
-            public int[] CardIds { get; set; }
+            public string AssetName { get; set; }        // 资产文件名（不含扩展名）
+            public string LibraryId { get; set; }         // 库的唯一标识
+            public string DisplayName { get; set; }       // 库的显示名（UI 中使用）
+            public int[] CardIds { get; set; }            // 库中包含的卡牌 ID 数组
         }
 
+        /// <summary>
+        /// 所有卡牌的数据定义。
+        /// 每一行对应一张卡牌，包含其完整的数值、效果、标签。
+        /// </summary>
         internal static readonly CardRow[] Rows =
         {
             R(1001, "Worker", "Simple worker, pays on time.", "Card_Tenant", 0, 50, 30, nameof(CardPlayTargetKind.Room), 0, 5, "", "AddMoney;60", "", "ReduceMoney;30", "SteadyRent|Core"),

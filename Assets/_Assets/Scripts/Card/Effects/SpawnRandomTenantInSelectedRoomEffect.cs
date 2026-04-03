@@ -9,6 +9,7 @@ namespace BaoZuPo.Card.Effects
     /// </summary>
     public class SpawnRandomTenantInSelectedRoomEffect : ICardEffect
     {
+        // 执行：验证选中房间可容纳租客，收集数据库中所有租客卡牌，随机抽一张，创建实例，放入房间，触发 InstantEffect。
         public void Execute(CardInstance source, GameContext context)
         {
             var room = context.EffectContext.SelectedRoom;

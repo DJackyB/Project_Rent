@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 运行时精灵加载工具，缓存并提供全局白色精灵用于运行时 UI 创建。
+    /// 避免每次都从纹理重新创建精灵，提高性能。
+    /// </summary>
     public static class UIRuntimeSpriteUtility
     {
         private static Sprite _whiteSprite;

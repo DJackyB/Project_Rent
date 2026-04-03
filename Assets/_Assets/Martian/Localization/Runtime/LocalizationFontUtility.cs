@@ -6,20 +6,63 @@ using UnityEngine.SceneManagement;
 
 namespace Martian.Localization
 {
+    /// <summary>
+    /// 本地化字体工具。负责根据当前语言为 TextMeshPro 应用合适的字体。
+    ///
+    /// 职责：
+    /// - 根据语言代码从 LocalizationFontProfile 查找对应的字体
+    /// - 缓存字体以减少查询开销
+    /// - 为 Text 组件应用字体及其备选字体
+    /// - 监听场景加载，自动为新加载的 Text 应用字体
+    ///
+    /// 字体加载：
+    /// 1. GetPreferredFontAsset() 根据当前语言查找字体
+    /// 2. 若缓存中有，返回缓存值
+    /// 3. 否则从 LocalizationFontProfile 查询，写入缓存
+    /// 4. 字体不可用时抛出异常（配置错误）
+    ///
+    /// 场景字体应用：
+    /// - 在 BeforeSceneLoad 注册场景加载钩子
+    /// - 在 AfterSceneLoad 应用所有已加载场景的 Text
+    /// - 每次场景加载时自动应用字体
+    /// </summary>
     public static class LocalizationFontUtility
     {
+        /// <summary>字体配置文件的资源路径。</summary>
         private const string FontProfileResourcePath = "Localization/LocalizationFontProfile";
 
+        /// <summary>
+        /// 字体缓存。Key = 语言代码（如 "zh-Hans"），Value = 对应的字体资产。
+        /// 当语言改变或字体配置更新时应清空此缓存。
+        /// </summary>
         private static readonly Dictionary<string, TMP_FontAsset> CachedFontsByLanguage =
             new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>场景加载钩子是否已注册。</summary>
         private static bool _sceneHookRegistered;
 
+        /// <summary>
+        /// 清空字体缓存。
+        /// 在语言改变或字体配置更新时调用。
+        /// </summary>
         public static void InvalidateCache()
         {
             CachedFontsByLanguage.Clear();
         }
 
+        /// <summary>
+        /// 获取当前语言的首选字体。
+        /// 流程：
+        /// 1. 从语言服务获取当前语言代码
+        /// 2. 检查缓存
+        /// 3. 若缓存无效或缺失，从配置文件查询
+        /// 4. 缓存并返回
+        /// </summary>
+        /// <returns>当前语言的 TMP 字体资产</returns>
+        /// <exception cref="InvalidOperationException">
+        /// - 语言服务未初始化
+        /// - 字体配置缺失或无效
+        /// </exception>
         public static TMP_FontAsset GetPreferredFontAsset()
         {
             string languageCode = LocalizationServices.Language != null
@@ -33,16 +76,22 @@ namespace Martian.Localization
                     "Initialize localization before applying language-specific fonts.");
             }
 
+            // 检查缓存
             if (CachedFontsByLanguage.TryGetValue(languageCode, out TMP_FontAsset cached) && IsFontAssetUsable(cached))
             {
                 return cached;
             }
 
+            // 从配置查询并缓存
             TMP_FontAsset resolved = ResolveConfiguredFont(languageCode);
             CachedFontsByLanguage[languageCode] = resolved;
             return resolved;
         }
 
+        /// <summary>
+        /// 为单个 TMP_Text 组件应用当前语言的字体。
+        /// 同时设置材质和备选字体。
+        /// </summary>
         public static void ApplyToText(TMP_Text text)
         {
             if (text == null)
@@ -56,14 +105,20 @@ namespace Martian.Localization
                 text.font = fontAsset;
             }
 
+            // 也应用共享材质
             if (fontAsset.material != null && text.fontSharedMaterial != fontAsset.material)
             {
                 text.fontSharedMaterial = fontAsset.material;
             }
 
+            // 更新 Mesh 内间距
             text.UpdateMeshPadding();
         }
 
+        /// <summary>
+        /// 为 Transform 下的所有 TMP_Text 子组件应用字体。
+        /// 包括禁用的组件。
+        /// </summary>
         public static void ApplyToChildren(Transform root)
         {
             if (root == null)
@@ -77,10 +132,15 @@ namespace Martian.Localization
             }
         }
 
+        /// <summary>
+        /// 为所有已加载场景中的 TMP_Text 组件应用字体。
+        /// 同时注册场景加载钩子，以在新场景加载时自动应用。
+        /// </summary>
         public static void ApplyToAllLoadedSceneTexts()
         {
             RegisterSceneHooks();
 
+            // 查找所有已加载场景中的 Text
             foreach (var text in Resources.FindObjectsOfTypeAll<TMP_Text>())
             {
                 if (text == null || text.gameObject == null)

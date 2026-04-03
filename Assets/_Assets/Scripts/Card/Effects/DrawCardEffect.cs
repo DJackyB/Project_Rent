@@ -24,6 +24,7 @@ namespace BaoZuPo.Card.Effects
             }
         }
 
+        // 执行：根据是否指定牌库ID，从默认牌库或特定牌库中抽取指定数量的卡牌。
         public void Execute(CardInstance card, GameContext context)
         {
             var deckManager = context?.DeckManager ?? Deck.DeckManager.Instance;
@@ -51,6 +52,7 @@ namespace BaoZuPo.Card.Effects
             Debug.Log($"[Effect] Drew {_count} extra cards from library '{library.DisplayName}'.");
         }
 
+        // 从牌库数据库根据 ID 解析具体牌库对象。
         private CardLibrary ResolveLibrary()
         {
             return CardLibraryDatabase.GetById(_libraryId);

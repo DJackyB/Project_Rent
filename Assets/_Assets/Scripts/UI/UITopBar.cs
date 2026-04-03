@@ -8,6 +8,11 @@ using UnityEngine;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 顶部信息条，显示回合数、当前金钱和累计花费。
+    /// 支持金钱的延迟显示模式，用于结算演示期间平滑动画更新金钱数值。
+    /// 提供金钱显示目标锚点供转账动画使用。
+    /// </summary>
     public class UITopBar : MonoBehaviour
     {
         [Header("Optional Scene References")]

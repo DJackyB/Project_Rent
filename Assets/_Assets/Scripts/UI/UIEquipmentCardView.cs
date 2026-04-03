@@ -4,6 +4,10 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 装备卡片视图，为房间装备插槽提供紧凑显示。
+    /// 包装 UICardView，应用装备专用的尺寸约束。
+    /// </summary>
     [RequireComponent(typeof(UICardView))]
     [RequireComponent(typeof(LayoutElement))]
     public class UIEquipmentCardView : MonoBehaviour

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace BaoZuPo.Card.Effects
 {
     /// <summary>
-    /// 按当前选中房间的租客数量结算金钱。
+    /// 按选中房间的租客数量计算增加的金额。
     /// 格式：AddMoneyBySelectedRoomTenantCount;每名租客金额
     /// </summary>
     public class AddMoneyBySelectedRoomTenantCountEffect : ICardEffect
@@ -15,6 +15,7 @@ namespace BaoZuPo.Card.Effects
             _amountPerTenant = amountPerTenant;
         }
 
+        // 执行：检查是否有选中房间，若无则跳过；获取房间租客数，乘以 _amountPerTenant 得出总额，然后增加金钱。
         public void Execute(CardInstance source, GameContext context)
         {
             var room = context?.EffectContext?.SelectedRoom;

@@ -15,6 +15,7 @@ namespace BaoZuPo.Card.Effects
             _amount = amount;
         }
 
+        // 执行：获取选中房间，遍历其中所有未销毁且具有耐久属性的租客，为其增加耐久值。
         public void Execute(CardInstance source, GameContext context)
         {
             var room = context.EffectContext.SelectedRoom;

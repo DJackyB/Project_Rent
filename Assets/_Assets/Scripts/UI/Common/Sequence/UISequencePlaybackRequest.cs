@@ -5,7 +5,9 @@ using UnityEngine;
 namespace BaoZuPo.UI.Common.Sequence
 {
     /// <summary>
-    /// 顺序弹字请求。
+    /// 顺序弹字播放请求，定义一系列文字步骤的播放参数和时序。
+    /// 包含定位锚点、屏幕偏移、步骤间隔等配置。
+    /// 可被克隆以支持队列复用。
     /// </summary>
     [Serializable]
     public class UISequencePlaybackRequest

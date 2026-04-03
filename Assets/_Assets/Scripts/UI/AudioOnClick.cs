@@ -5,8 +5,9 @@ using UnityEngine.UI;
 namespace BaoZuPo.UI
 {
     /// <summary>
-    /// 挂在 Button 上，点击时播放指定音效。
-    /// 通用按钮音效走此组件，不经过 EventBus。
+    /// 点击音效助手，挂在 Button 上自动播放点击音效。
+    /// 通用按钮音效在此处理，不经过事件总线，减少耦合。
+    /// 可配置音效 ID，默认为 "ui.button"。
     /// </summary>
     public sealed class AudioOnClick : MonoBehaviour
     {

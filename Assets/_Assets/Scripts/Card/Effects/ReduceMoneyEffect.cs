@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
+    /// <summary>
+    /// 直接扣除指定金额。
+    /// </summary>
     public class ReduceMoneyEffect : ICardEffect
     {
         private readonly int _amount;
@@ -11,6 +14,7 @@ namespace BaoZuPo.Card.Effects
             _amount = amount;
         }
 
+        // 执行：尝试扣除 _amount，仅在成功时记录结算变化（失败时不记录）。
         public void Execute(CardInstance source, GameContext context)
         {
             bool success = context.MoneyManager.ReduceMoney(_amount);

@@ -9,6 +9,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 房间面板，负责显示棋盘上的所有房间和已承诺合约。
+    /// 为每个房间创建房间视图及其内部的租户和装备插槽。
+    /// 管理放置区域（PlayArea）的拖拽验证，提供锚点解析用于拖拽反馈。
+    /// </summary>
     public class UIBoardPanel : MonoBehaviour
     {
         [Header("Optional Scene References")]

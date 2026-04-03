@@ -8,12 +8,43 @@ using UnityEditor.Build.Reporting;
 
 namespace BaoZuPo.Editor
 {
+    /// <summary>
+    /// Unity CI/CD 构建入口。
+    /// 供 CI 系统（例如 GitHub Actions、Jenkins）调用，无头构建游戏。
+    ///
+    /// 命令行用法：
+    ///   unity -projectPath <project> -executeMethod BaoZuPo.Editor.UnityCiBuildEntry.BuildStandaloneWindows64
+    ///          -buildOutput <output_path> [-buildName <name>] [-buildVersion <version>]
+    ///
+    /// 参数说明：
+    /// - -buildOutput：必需，输出目录的根路径
+    /// - -buildName：可选，构建名称（默认取 PlayerSettings.productName）
+    /// - -buildVersion：可选，版本号（默认取 PlayerSettings.bundleVersion）
+    ///
+    /// 工作流程：
+    /// 1. 解析命令行参数
+    /// 2. 从 EditorBuildSettings 读取启用的场景
+    /// 3. 创建输出目录
+    /// 4. 调用 BuildPipeline.BuildPlayer
+    /// 5. 检查构建结果，失败则抛异常
+    ///
+    /// 输出目录结构：
+    ///   buildOutput/
+    ///     GameName_1.0.0/
+    ///       GameName.exe
+    ///       GameName_Data/
+    ///       ...
+    /// </summary>
     public static class UnityCiBuildEntry
     {
         private const string BuildOutputArgument = "-buildOutput";
         private const string BuildNameArgument = "-buildName";
         private const string BuildVersionArgument = "-buildVersion";
 
+        /// <summary>
+        /// 构建 Windows 64 位独立游戏。
+        /// 从命令行参数读取输出路径、游戏名、版本号，执行构建。
+        /// </summary>
         public static void BuildStandaloneWindows64()
         {
             string buildOutputRoot = RequireArgument(BuildOutputArgument);

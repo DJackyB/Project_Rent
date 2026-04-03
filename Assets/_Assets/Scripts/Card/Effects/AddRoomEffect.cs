@@ -9,6 +9,7 @@ namespace BaoZuPo.Card.Effects
     /// </summary>
     public class AddRoomEffect : ICardEffect
     {
+        // 执行：从 GameConfig 读取房间默认配置（租客槽位数和装备槽位数），然后调用 BoardManager.AddRoom 创建新房间。
         public void Execute(CardInstance source, GameContext context)
         {
             if (context?.BoardManager == null)

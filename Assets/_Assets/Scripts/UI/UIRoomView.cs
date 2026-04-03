@@ -9,6 +9,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 房间视图，代表棋盘上的单个房间，包含标题、租户和装备插槽列表。
+    /// 配置房间的拖拽放置区域（DropZone）以接收卡牌放置。
+    /// 提供不同的锚点用于拖拽反馈和结算演示定位。
+    /// </summary>
     public class UIRoomView : MonoBehaviour
     {
         [Header("Optional Scene References")]

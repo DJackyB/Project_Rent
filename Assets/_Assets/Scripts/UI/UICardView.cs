@@ -10,6 +10,13 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 卡牌视图，负责渲染单张卡牌的所有视觉元素和信息。
+    /// 从 CardInstance 获取数据并在不同上下文（手牌、房间租户、装备、合约、奖励、预览）下显示。
+    /// 管理卡牌皮肤、徽章（类型、耐久度、等待）、文本内容和视觉效果。
+    /// 实现拖拽源接口，在手牌上下文时允许被拖动。
+    /// 实现提示内容提供者接口，支持悬停预览。
+    /// </summary>
     [RequireComponent(typeof(Button))]
     [RequireComponent(typeof(Image))]
     public class UICardView : MonoBehaviour, ITooltipContentProvider

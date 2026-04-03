@@ -8,8 +8,9 @@ using Martian.EventBus;
 namespace BaoZuPo.UI.Common
 {
     /// <summary>
-    /// 运行时事件总线桥接器。
-    /// 允许通过事件类型名，在不直接引用具体事件类型的情况下完成订阅和取消订阅。
+    /// 运行时事件总线桥接器，支持通过类型名称动态订阅事件而无需编译时引用。
+    /// 使用反射和表达式树动态生成委托，便于动态场景接线和配置驱动的事件绑定。
+    /// 允许序列化事件处理器的类型和方法名称。
     /// </summary>
     public static class RuntimeEventBusBridge
     {

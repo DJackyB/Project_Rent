@@ -8,8 +8,29 @@ using UnityEngine;
 
 namespace BaoZuPo.Integration.Martian.Feedback
 {
+    /// <summary>
+    /// 反馈适配器。
+    /// 将游戏逻辑事件（GameEvents）转换为反馈系统请求（FeedbackRequest/FeedbackSequenceRequest）。
+    ///
+    /// 主要职责：
+    /// - 结算序列反馈：将游戏结算步骤转化为 step-by-step 浮动数字
+    /// - 消费/收益反馈：显示卡牌打出的消费、即时收益
+    /// - 贷款支付反馈：显示贷款扣款
+    /// - 目标定位：根据源（房间、卡牌、全局）确定反馈的锚点和偏移
+    ///
+    /// 反馈系统关键概念：
+    /// - TargetKey：反馈目标的唯一标识（例如 "room:0"、"hud:money"）
+    /// - TargetKind：目标类型（Room、Card、Global）
+    /// - LaneKey：反馈进度条的键，用于控制多个反馈的并发顺序
+    /// - TrackIndex/TrackCount：多序列并排显示时的位置
+    /// </summary>
     public static class BaoZuPoFeedbackAdapter
     {
+        /// <summary>
+        /// 发布结算序列反馈。
+        /// 将 SettlementSequenceQueued 转换为 FeedbackSequenceRequest，交由反馈系统 step-by-step 显示。
+        /// 返回 FeedbackPlaybackHandle 用于等待动画完成。
+        /// </summary>
         public static FeedbackPlaybackHandle PublishSettlementSequence(GameEvents.SettlementSequenceQueued payload, string laneKey = null)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || payload.Steps == null || payload.Steps.Length == 0)
@@ -52,6 +73,10 @@ namespace BaoZuPo.Integration.Martian.Feedback
             return FeedbackServiceLocator.Current.PublishSequence(request);
         }
 
+        /// <summary>
+        /// 发布结算总金额跳跃反馈。
+        /// 显示结算批次的总金额变化（从锚点或屏幕中心出现）。
+        /// </summary>
         public static FeedbackPlaybackHandle PublishSettlementMoneyJump(string batchId, int totalDelta, RectTransform anchor)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || totalDelta == 0)
@@ -74,6 +99,10 @@ namespace BaoZuPo.Integration.Martian.Feedback
             });
         }
 
+        /// <summary>
+        /// 发布卡牌打出消费反馈。
+        /// 显示卡牌的打出成本（从卡牌或目标房间位置出现）。
+        /// </summary>
         public static void PublishPlayCost(CardInstance card, RoomSlot targetRoom, int cost)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || card == null || cost <= 0)
@@ -97,6 +126,10 @@ namespace BaoZuPo.Integration.Martian.Feedback
             });
         }
 
+        /// <summary>
+        /// 发布卡牌即时金币变化反馈。
+        /// 显示卡牌打出后立即产生的收益或消费（从卡牌或目标房间位置出现）。
+        /// </summary>
         public static void PublishInstantMoneyDelta(CardInstance card, RoomSlot targetRoom, int moneyDelta)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || card == null || moneyDelta == 0)
@@ -120,6 +153,10 @@ namespace BaoZuPo.Integration.Martian.Feedback
             });
         }
 
+        /// <summary>
+        /// 发布贷款支付反馈。
+        /// 显示贷款扣款（从屏幕中心或金钱 HUD 出现）。
+        /// </summary>
         public static void PublishLoanPayment(int amount)
         {
             if (!BaoZuPoMartianFeedbackIntegration.MoneyFeedbackEnabled || amount <= 0)

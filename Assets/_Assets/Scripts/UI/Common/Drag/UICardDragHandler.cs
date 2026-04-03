@@ -6,6 +6,12 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI.Common.Drag
 {
+    /// <summary>
+    /// 卡牌拖拽处理器，负责卡牌拖拽输入的捕获和处理。
+    /// 实现 Unity 拖拽系统的完整接口（初始化、开始、拖动中、结束）。
+    /// 在手牌上下文时启用，提供悬停效果（提升、缩放）和拖拽中的视觉反馈。
+    /// 委派给 UICardDragController 处理拖拽逻辑。
+    /// </summary>
     [RequireComponent(typeof(UICardView))]
     [RequireComponent(typeof(CanvasGroup))]
     [RequireComponent(typeof(LayoutElement))]

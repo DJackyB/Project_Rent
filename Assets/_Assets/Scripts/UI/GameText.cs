@@ -3,6 +3,11 @@ using BaoZuPo.GameFlow;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 玩家可见文案常量和格式化方法的统一入口。
+    /// 所有 UI 显示的文本都由此类提供，便于后续本地化和维护。
+    /// 包含回合、金钱、卡牌类型、阶段名称、结算等各类文案。
+    /// </summary>
     public static class GameText
     {
         public static string Turn(int turn) => $"Turn {turn}";

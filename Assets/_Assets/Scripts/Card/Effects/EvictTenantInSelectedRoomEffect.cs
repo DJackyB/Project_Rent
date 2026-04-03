@@ -8,6 +8,7 @@ namespace BaoZuPo.Card.Effects
     /// </summary>
     public class EvictTenantInSelectedRoomEffect : ICardEffect
     {
+        // 执行：检查选中房间是否有租客，若有则驱逐首个未销毁的租客（触发 DestroyEffect，标记为已销毁）。
         public void Execute(CardInstance source, GameContext context)
         {
             var room = context.EffectContext.SelectedRoom;

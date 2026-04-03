@@ -10,15 +10,32 @@ using BaoZuPo.Core;
 
 namespace BaoZuPo.Editor
 {
+    /// <summary>
+    /// 卡牌数据导表工具。
+    /// 从 Excel 文件读取卡牌定义，生成游戏资产（CardData.asset 和 CardLibrary.asset）。
+    ///
+    /// 使用流程：
+    /// 1. 在 Excel 中编辑卡牌数据 (Assets/_Assets/Data/Excel/CardData.xlsx)
+    /// 2. 在 Editor 中运行菜单项：Tools → BaoZuPo → Import Card Data
+    /// 3. 工具读取 Excel，验证数据，生成资产到 Assets/Resources/Cards/ 和 Assets/Resources/CardLibraries/
+    /// 4. 验证失败时中止，输出错误信息
+    /// 5. 验证成功后，资产立即可用（ResourceManager.Load<CardData>(...) 可访问）
+    ///
+    /// 验证项目：
+    /// - Excel 格式：表头行、英文列名、数据类型声明
+    /// - 卡牌库配置：firstTurnDrawLibrary、normalTurnDrawLibrary、rewardLibrary 必须存在且非空
+    /// - 卡牌效果：每张卡的 preEffect、instantEffect、settleEffect、destroyEffect 必须能被 CardEffectFactory 解析
+    /// - 卡牌目标：每张卡的 targetKind 与 cardType 必须匹配（例如 Tenant/Equipment 需要 Room 目标）
+    /// </summary>
     public static class CardDataImporter
     {
         private const string ExcelRelativePath = "Assets/_Assets/Data/Excel/CardData.xlsx";
         private const string OutputFolder = "Assets/Resources/Cards";
         private const string LibraryOutputFolder = "Assets/Resources/CardLibraries";
         private const string GameConfigAssetPath = "Assets/_Assets/Data/Config/GameConfig.asset";
-        private const int HeaderRowIndex = 1;
-        private const int DataStartRowIndex = 3;
-        private const int SheetIndex = 0;
+        private const int HeaderRowIndex = 1;      // 英文列名行
+        private const int DataStartRowIndex = 3;   // 数据开始行（跳过中文名、英文名、类型行）
+        private const int SheetIndex = 0;          // 工作表索引
 
         private const string Col_CardId = "cardId";
         private const string Col_CardName = "cardName";
@@ -64,6 +81,11 @@ namespace BaoZuPo.Editor
             { "Card_Contract", CardType.Contract },
         };
 
+        /// <summary>
+        /// 导入卡牌数据的主入口（菜单项）。
+        /// 流程：打开 Excel → 解析 → 验证 → 生成资产 → 刷新 AssetDatabase
+        /// 任何验证失败都会中止并输出错误信息。
+        /// </summary>
         [MenuItem("Tools/BaoZuPo/Import Card Data")]
         public static void Import()
         {
@@ -241,15 +263,6 @@ namespace BaoZuPo.Editor
             SyncGameConfig(librariesById);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-        }
-
-        [MenuItem("Tools/BaoZuPo/Rebuild 50 Card Content")]
-        public static void RebuildCardContent()
-        {
-            FillCardDataScript.FillCards();
-            Import();
-            SyncCardLibraries();
-            Debug.Log("[CardDataImporter] Rebuilt Excel, imported cards, and synced card libraries.");
         }
 
         private static string GetStringValue(IRow row, Dictionary<string, int> columnMap, string columnName)

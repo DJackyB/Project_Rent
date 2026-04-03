@@ -6,20 +6,57 @@ using UnityEngine.UI;
 
 namespace Martian.Feedback.Runtime
 {
+    /// <summary>
+    /// 浮动文本反馈后端实现。使用 UI 文本和动画显示玩家反馈。
+    ///
+    /// 架构：
+    /// - Host：宿主 Transform（通常是 Canvas 或 UI 根）
+    /// - Canvas：根据 options.SortingOrder 创建或利用现有 Canvas
+    /// - MartianFeedbackLayer：所有浮动文本的父节点 (RectTransform)
+    /// - FeedbackPlaybackTrack（多个）：每个车道一个，按顺序播放反馈
+    ///
+    /// 队列管理：
+    /// - 同一 LaneKey 的反馈在 FeedbackPlaybackTrack 中排队
+    /// - 不同 LaneKey 的反馈在不同 Track 中并发播放
+    /// - 使用对象池管理 Track 以减少分配开销
+    ///
+    /// 生命周期：
+    /// 1. Attach(host)：在宿主 Transform 下创建 Canvas、Layer、Track 等
+    /// 2. Publish(request)：反馈入队到对应 Track
+    /// 3. Track 播放反馈文本动画
+    /// 4. Track 完成后归还到对象池
+    /// 5. Clear()：销毁所有对象，重置状态
+    /// </summary>
     public sealed class FloatingTextFeedbackBackend : IFeedbackPlaybackBackend
     {
+        /// <summary>反馈系统挂载的宿主 Transform。</summary>
         private Transform _host;
+
+        /// <summary>根 Canvas，所有浮动文本都在其下。</summary>
         private Canvas _canvas;
+
+        /// <summary>根 Canvas 的 RectTransform。用于位置计算。</summary>
         private RectTransform _canvasRect;
+
+        /// <summary>反馈层根节点。所有 Track 和文本都在其下。</summary>
         private RectTransform _layerRoot;
+
+        /// <summary>当前运行时配置（排序顺序等）。</summary>
         private FeedbackRuntimeOptions _options = new();
 
+        /// <summary>活跃中的播放轨道。Key = LaneKey，Value = 对应的 Track。</summary>
         private readonly Dictionary<string, FeedbackPlaybackTrack> _activeTracks = new();
+
+        /// <summary>Track 所有者映射。用于追踪 Track 属于哪个 Lane。</summary>
         private readonly Dictionary<FeedbackPlaybackTrack, string> _trackOwners = new();
+
+        /// <summary>Track 对象池。已完成的 Track 放回此池以重复利用。</summary>
         private readonly Stack<FeedbackPlaybackTrack> _trackPool = new();
 
+        /// <summary>所有播放任务完成时触发。</summary>
         public event Action AllPlaybackCompleted;
 
+        /// <summary>后端是否可用（Host 和 Layer 都已初始化）。</summary>
         public bool IsAvailable => _host != null && _layerRoot != null;
 
         public void Attach(Transform host)

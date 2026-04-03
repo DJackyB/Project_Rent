@@ -8,6 +8,21 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.Integration.Martian.Tooltip
 {
+    /// <summary>
+    /// 卡牌预览呈现器。
+    /// 实现 ITooltipPresenter 接口，负责生成和管理卡牌预览的视觉显示。
+    ///
+    /// 工作流程：
+    /// 1. 用户悬停卡牌，TooltipTrigger 发送 TooltipRequest（含原始卡牌 GameObject）
+    /// 2. Show() 被调用：克隆原始卡牌，禁用交互，调整大小
+    /// 3. 预览显示在提示气泡中
+    /// 4. 用户移开鼠标，Hide() 销毁预览
+    ///
+    /// 关键：
+    /// - 克隆的是完整的卡牌 UI 对象（包括所有 UICardView 组件）
+    /// - 禁用克隆上的所有交互和动画组件（Button、Layout、Drag 等）
+    /// - 大小写死为 previewSize（防止遮挡提示内容）
+    /// </summary>
     public sealed class BaoZuPoCardTooltipPresenter : MonoBehaviour, ITooltipPresenter
     {
         [SerializeField] private Vector2 previewSize = new Vector2(260f, 360f);
@@ -17,6 +32,9 @@ namespace BaoZuPo.Integration.Martian.Tooltip
 
         public RectTransform Root => _root;
 
+        /// <summary>
+        /// 显示提示：克隆卡牌 UI，禁用交互，调整大小后显示。
+        /// </summary>
         public void Show(TooltipRequest request)
         {
             Hide();
@@ -32,18 +50,27 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 return;
             }
 
+            // 克隆原始卡牌 UI 对象
             _previewInstance = Instantiate(sourceObject, transform, false);
             _previewInstance.name = $"{sourceObject.name}_TooltipPreview";
             _root = _previewInstance.transform as RectTransform;
 
+            // 配置克隆的卡牌视图（重新设置卡牌数据）
             ConfigureClonedCardView(request.Content.Payload as CardInstance);
+
+            // 禁用所有交互（按钮、拖拽、触碰等）
             DisableInteraction(_previewInstance);
+
+            // 调整大小并刷新布局
             ApplyPreviewSizing();
             _previewInstance.SetActive(true);
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(_root);
         }
 
+        /// <summary>
+        /// 隐藏提示：销毁预览对象。
+        /// </summary>
         public void Hide()
         {
             if (_previewInstance != null)
@@ -55,6 +82,9 @@ namespace BaoZuPo.Integration.Martian.Tooltip
             _root = null;
         }
 
+        /// <summary>
+        /// 配置克隆的卡牌视图：重新绑定卡牌数据。
+        /// </summary>
         private void ConfigureClonedCardView(CardInstance card)
         {
             if (_previewInstance == null || card == null)
@@ -68,42 +98,53 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 return;
             }
 
+            // 用原始卡牌数据重新初始化克隆的卡牌视图
             cardView.Setup(card, CardViewContext.TooltipPreview, null);
             cardView.SetSelected(false);
         }
 
+        /// <summary>
+        /// 禁用预览对象上的所有交互组件，使其仅显示，不响应输入。
+        /// </summary>
         private static void DisableInteraction(GameObject previewObject)
         {
+            // 禁用 Raycast 检测（防止点击透穿）
             foreach (var graphic in previewObject.GetComponentsInChildren<Graphic>(true))
             {
                 graphic.raycastTarget = false;
             }
 
+            // 禁用按钮交互
             foreach (var button in previewObject.GetComponentsInChildren<Button>(true))
             {
                 button.interactable = false;
             }
 
+            // 禁用布局控制
             foreach (var layoutElement in previewObject.GetComponentsInChildren<LayoutElement>(true))
             {
                 layoutElement.enabled = false;
             }
 
+            // 禁用装备卡视图（如果有）
             foreach (var equipmentView in previewObject.GetComponentsInChildren<UIEquipmentCardView>(true))
             {
                 equipmentView.enabled = false;
             }
 
+            // 禁用提示触发器（防止套嵌提示）
             foreach (var trigger in previewObject.GetComponentsInChildren<TooltipTrigger>(true))
             {
                 trigger.enabled = false;
             }
 
+            // 禁用拖拽
             foreach (var dragHandler in previewObject.GetComponentsInChildren<UICardDragHandler>(true))
             {
                 dragHandler.enabled = false;
             }
 
+            // 配置 CanvasGroup 阻止交互
             var canvasGroup = previewObject.GetComponent<CanvasGroup>();
             if (canvasGroup != null)
             {
@@ -118,6 +159,9 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 previewObject);
         }
 
+        /// <summary>
+        /// 调整预览大小和锚点。固定为 previewSize，左上角对齐。
+        /// </summary>
         private void ApplyPreviewSizing()
         {
             if (_root == null)
@@ -138,8 +182,15 @@ namespace BaoZuPo.Integration.Martian.Tooltip
         }
     }
 
+    /// <summary>
+    /// 卡牌预览呈现器工厂。实现 ITooltipPresenterFactory，用于注册到提示系统。
+    /// 当提示系统需要呈现卡牌预览时，通过本工厂创建呈现器实例。
+    /// </summary>
     internal sealed class BaoZuPoCardTooltipPresenterFactory : ITooltipPresenterFactory
     {
+        /// <summary>
+        /// 检查是否能处理此内容（必须是卡牌预览且 Payload 为 CardInstance）。
+        /// </summary>
         public bool CanPresent(TooltipContent content)
         {
             return content != null
@@ -147,6 +198,9 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 && content.Payload is CardInstance;
         }
 
+        /// <summary>
+        /// 创建呈现器实例（在提示气泡内创建新 GameObject）。
+        /// </summary>
         public ITooltipPresenter Create(Transform parent)
         {
             if (parent == null)
@@ -160,11 +214,18 @@ namespace BaoZuPo.Integration.Martian.Tooltip
         }
     }
 
+    /// <summary>
+    /// 卡牌预览呈现器注册管理。
+    /// 游戏初始化时调用 Install() 以注册工厂到提示系统。
+    /// </summary>
     public static class BaoZuPoCardTooltipPresenterRegistration
     {
         private static readonly ITooltipPresenterFactory Factory = new BaoZuPoCardTooltipPresenterFactory();
         private static bool _installed;
 
+        /// <summary>
+        /// 注册工厂到提示系统（仅执行一次）。
+        /// </summary>
         public static void Install()
         {
             if (_installed)

@@ -9,6 +9,12 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI.Common.Drag
 {
+    /// <summary>
+    /// 放置区域（DropZone），标记可接收卡牌放置的有效目标。
+    /// 验证卡牌是否可被放置在该区域（类型匹配、空间可用）。
+    /// 管理高亮显示的动画反馈，向拖拽控制器通知放置意图。
+    /// 支持房间和放置区域两种目标类型。
+    /// </summary>
     public class UICardDropZone : MonoBehaviour, IDropHandler
     {
         private static readonly List<UICardDropZone> RegisteredZones = new();

@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace BaoZuPo.UI.Common.Hover
 {
+    /// <summary>
+    /// 预览窗口定位工具，计算并夹紧悬停预览的位置使其保持在画布范围内。
+    /// 考虑屏幕空间和画布坐标转换，防止预览超出屏幕边界。
+    /// </summary>
     public static class HoverPreviewPositioner
     {
         public static Vector2 CalculateClampedPosition(RectTransform canvasRect, RectTransform previewRect, Vector2 mousePosition, Vector2 offset)

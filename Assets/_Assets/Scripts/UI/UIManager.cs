@@ -13,6 +13,11 @@ using UnityEngine;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// UI 管理器，协调所有 UI 面板的生命周期和交互。
+    /// 订阅游戏事件（阶段变化、卡牌打出、回合开始、游戏结束等）并驱动 UI 刷新。
+    /// 管理结算演示序列、卡牌奖励选择、反馈启动等核心 UI 流程。
+    /// </summary>
     public class UIManager : Singleton<UIManager>
     {
         [Header("Panel References")]

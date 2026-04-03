@@ -7,6 +7,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 卡牌悬停预览展示器，实例化卡牌对象并配置为预览模式。
+    /// 克隆源卡牌对象，禁用所有交互（按钮、布局、拖拽、提示）。
+    /// 应用预览专用的大小和显示方式。
+    /// </summary>
     public class CardHoverPreviewPresenter : MonoBehaviour, IHoverPreviewPresenter
     {
         [SerializeField] private Vector2 previewSize = new Vector2(260f, 360f);

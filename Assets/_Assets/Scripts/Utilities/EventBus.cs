@@ -13,15 +13,41 @@ namespace Martian.EventBus
     ///     - 触发事件：EventBus.Publish(new YourEvent { ... })
     /// </summary>
     /// 
+    /// <summary>
+    /// 泛型事件总线（发布-订阅模式）。
+    /// 用于在项目中解耦系统通信，允许多个系统对同一事件类型进行订阅和发布。
+    ///
+    /// 使用示例：
+    ///   // 订阅：在 OnEnable 中
+    ///   EventBus.Subscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
+    ///
+    ///   // 发布：在需要通知其他系统时
+    ///   EventBus.Publish(new GameEvents.MoneyChanged { OldValue = 100, NewValue = 150, Delta = 50 });
+    ///
+    ///   // 取消订阅：在 OnDisable 中
+    ///   EventBus.Unsubscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
+    ///
+    /// 线程安全：
+    ///   - 本实现使用静态 Dictionary，仅支持主线程访问
+    ///   - 如需多线程支持，需加锁保护 _eventTable
+    ///
+    /// Domain Reload 处理：
+    ///   - Editor Play Mode 时 Domain Reload 会清空静态变量
+    ///   - 本实现通过 RuntimeInitializeOnLoadMethod 自动清空旧订阅
+    ///   - 确保每次 Play Mode 启动时不会有残留回调
+    /// </summary>
     public static class EventBus
     {
         /// <summary>
-        /// 内部事件表，key 是事件类型，value 是对应的多播委托（可以有多个监听者）
+        /// 内部事件表。
+        /// Key：事件类型（例如 typeof(GameEvents.MoneyChanged)）
+        /// Value：多播委托（可以有多个监听者，通过 Delegate.Combine 链接）
         /// </summary>
         private static readonly Dictionary<Type, Delegate> _eventTable = new();
 
         /// <summary>
-        /// 订阅某个类型的事件（支持多个监听者）
+        /// 订阅事件类型 T。
+        /// 支持多个监听者，通过 Delegate.Combine 将回调链接到多播委托。
         /// </summary>
         public static void Subscribe<T>(Action<T> callback)
         {
@@ -40,7 +66,8 @@ namespace Martian.EventBus
         }
 
         /// <summary>
-        /// 取消订阅某个事件（如果是最后一个监听者，则从表中移除该事件）
+        /// 取消订阅事件类型 T。
+        /// 如果移除后已无监听者，则从表中清除该事件类型。
         /// </summary>
         public static void Unsubscribe<T>(Action<T> callback)
         {
@@ -64,7 +91,8 @@ namespace Martian.EventBus
         }
 
         /// <summary>
-        /// 广播事件：触发该类型所有订阅者的回调函数
+        /// 发布事件：触发该类型所有订阅者的回调函数。
+        /// 回调将按照订阅顺序依次调用。
         /// </summary>
         public static void Publish<T>(T eventData)
         {
@@ -77,7 +105,8 @@ namespace Martian.EventBus
         }
 
         /// <summary>
-        /// 清除所有事件监听（比如切换场景时调用）
+        /// 清除所有事件监听。
+        /// 通常在场景切换时调用，防止旧场景的订阅污染新场景。
         /// </summary>
         public static void ClearAll()
         {
@@ -85,7 +114,8 @@ namespace Martian.EventBus
         }
 
         /// <summary>
-        /// 进入 Play Mode 时自动清空残留订阅，防止 Domain Reload 后旧回调引发异常。
+        /// Runtime Initialization：进入 Play Mode 时自动清空残留订阅。
+        /// 防止 Domain Reload 后旧回调引发异常。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnDomainReload()

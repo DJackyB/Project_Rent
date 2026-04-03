@@ -10,6 +10,12 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 卡牌拖拽控制器，处理手牌的拖拽输入、位置更新和放置验证。
+    /// 管理拖拽期间的视觉反馈（动画、高亮）和占位符显示。
+    /// 验证放置目标有效性，支持返回手牌或完成打出卡牌的流程。
+    /// 使用 DOTween 处理动画、EventSystem 进行射线检测。
+    /// </summary>
     public class UICardDragController : MonoBehaviour
     {
         private static UICardDragController _instance;

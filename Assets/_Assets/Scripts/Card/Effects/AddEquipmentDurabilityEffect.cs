@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
+    /// <summary>
+    /// 为所有棋盘上的装备增加耐久。
+    /// </summary>
     public class AddEquipmentDurabilityEffect : ICardEffect
     {
         private readonly int _amount;
@@ -13,6 +16,7 @@ namespace BaoZuPo.Card.Effects
             _amount = amount;
         }
 
+        // 执行：遍历所有房间的所有装备，对未销毁且具有耐久属性（durability > 0）的装备增加耐久值。
         public void Execute(CardInstance card, GameContext context)
         {
             int count = 0;

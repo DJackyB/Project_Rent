@@ -102,8 +102,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Button
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -207,7 +207,7 @@ RectTransform:
   m_Children:
   - {fileID: 6527081452855773543}
   - {fileID: 6826299251150989734}
-  - {fileID: 8600000000000000001}
+  - {fileID: 8600000000000000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -297,6 +297,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9100000000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2545582449691323332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58b57ef8f3909da40be6c5d912f9c27f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Common.Drag.UICardDropZone
 --- !u!114 &5736537169869352644
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -313,7 +325,7 @@ MonoBehaviour:
   cardListContainer: {fileID: 6826299251150989734}
   roomButton: {fileID: 2766363625529348452}
   dropAnchor: {fileID: 1224083174819479397}
-  dropZone: {fileID: 9100000000000000005}
+  dropZone: {fileID: 0}
   highlightGraphic: {fileID: 8600000000000000004}
   slotPrefab: {fileID: 7000000000000000000, guid: f62c93d5f36149a2958d2676e4e9793d, type: 3}
 --- !u!1 &8600000000000000001
@@ -371,7 +383,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: ''
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0}
@@ -391,20 +403,3 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &9100000000000000005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2545582449691323332}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58b57ef8f3909da40be6c5d912f9c27f, type: 3}
-  m_Name: ''
-  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Common.Drag.UICardDropZone
-  zoneKind: 1
-  dropAnchor: {fileID: 1224083174819479397}
-  highlightGraphic: {fileID: 8600000000000000004}
-  highlightColor: {r: 0.48, g: 0.84, b: 0.62, a: 0.26}
-  highlightFadeSeconds: 0.12

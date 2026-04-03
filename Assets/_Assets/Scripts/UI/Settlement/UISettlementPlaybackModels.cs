@@ -4,6 +4,12 @@ using BaoZuPo.Core;
 
 namespace BaoZuPo.UI.Settlement
 {
+    /// <summary>
+    /// 结算演示数据模型与构建器。
+    /// 定义了演示的阶段类型（顺序/并行/阻隔/聚合）、条目和批次的数据结构。
+    /// 支持流式构建方式，便于业务层组织复杂的演示流程。
+    /// </summary>
+
     [Serializable]
     public enum UISettlementPlaybackStageKind
     {

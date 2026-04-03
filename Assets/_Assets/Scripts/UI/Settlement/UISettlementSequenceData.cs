@@ -6,8 +6,9 @@ using UnityEngine;
 namespace BaoZuPo.UI.Settlement
 {
     /// <summary>
-    /// 包租婆结算弹字数据。
-    /// 这是业务层的轻量传输对象，最终会被转换成通用的顺序弹字请求。
+    /// 结算弹字数据，业务层的轻量传输对象。
+    /// 由业务逻辑层构造，可转换为通用的顺序弹字请求供播放控制器使用。
+    /// 重用 UISequenceStep 定义单步内容。
     /// </summary>
     [Serializable]
     public class UISettlementSequenceData

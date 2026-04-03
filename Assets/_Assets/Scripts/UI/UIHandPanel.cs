@@ -5,6 +5,11 @@ using UnityEngine;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 手牌面板，负责显示和管理玩家手中的卡牌列表。
+    /// 从 DeckManager 获取当前手牌，动态生成卡牌视图并显示。
+    /// 响应手牌变化时刷新整个容器中的卡牌实例。
+    /// </summary>
     public class UIHandPanel : MonoBehaviour
     {
         [Header("Scene References")]

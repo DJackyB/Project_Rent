@@ -5,6 +5,11 @@ using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
+    /// <summary>
+    /// 阶段指示器面板，显示当前游戏阶段并提供结束行动阶段的按钮。
+    /// 在行动阶段时激活"结束回合"按钮，在其他阶段显示"等待"按钮。
+    /// 支持运行时动态创建按钮及其文本标签。
+    /// </summary>
     public class UIPhasePanel : MonoBehaviour
     {
         [Header("Optional Scene References")]

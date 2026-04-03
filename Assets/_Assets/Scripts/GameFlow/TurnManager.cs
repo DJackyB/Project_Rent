@@ -13,6 +13,36 @@ using BaoZuPo.UI.Settlement;
 
 namespace BaoZuPo.GameFlow
 {
+    /// <summary>
+    /// 回合管理器 - 游戏三阶段流程的核心驱动
+    ///
+    /// 职责：
+    /// 1. 管理游戏回合状态机（Prepare -> Action -> Settle）
+    /// 2. 驱动三个阶段的执行逻辑（通过调用 Action_* 节点）
+    /// 3. 处理卡牌出牌的有效性检查与执行
+    /// 4. 调度与事件总线的交互（发布阶段切换、卡牌效果、贷款、奖励等事件）
+    /// 5. 管理结算的播放流程与UI同步
+    ///
+    /// 流程概述：
+    /// - 准备阶段：卡牌前置效果触发 -> 抽牌 -> 清理过期卡牌
+    /// - 行动阶段：等待玩家出卡和行动 -> 出卡费用结算与效果执行
+    /// - 结算阶段：房间租金收入 -> 合同效果 -> 耐久减少与驱逐 -> 等待超时 -> 贷款支付 -> 奖励展示
+    ///
+    /// 状态机转移：
+    /// TurnStarted -> [Prepare] -> [Action] -> [Settle] -> TurnEnded -> (next turn)
+    ///
+    /// 事件序列：
+    /// - TurnStarted(TurnNumber)：回合开始
+    /// - PhaseChanged(Phase, PhaseName)：阶段切换
+    /// - CardPlayed(Card)：卡牌出牌完成
+    /// - CardDestroyed(Card, TriggeredByDurability)：卡牌销毁（耐久归零或等待超时）
+    /// - LoanPayment(Amount, RemainingMoney)：贷款支付
+    /// - GameOver(FinalMoney, TotalTurns)：游戏结束
+    /// - CardRewardOffered(Options, Boosted)：奖励选项展示
+    /// - CardRewardSelected(ChosenCard)：玩家选择奖励
+    /// - SettlementPlaybackCompleted(BatchId)：结算动画全部播完
+    /// - TurnEnded(TurnNumber)：回合结束
+    /// </summary>
     public class TurnManager : Singleton<TurnManager>
     {
         private const string DefaultSettlementLaneKey = "settlement-global";
@@ -22,21 +52,31 @@ namespace BaoZuPo.GameFlow
         [SerializeField] private bool _isGameOver;
         [SerializeField] private int _loanPaymentCount;
 
+        /// <summary>当前活跃的结算批次 ID（用于UI同步）</summary>
         private string _activeSettlementBatchId;
+        /// <summary>当前还有多少个结算播放任务未完成</summary>
         private int _pendingSettlementPlaybackCount;
+        /// <summary>标记 TurnEnded 事件是否已发布（防止重复）</summary>
         private bool _settlementTurnEndedPublished;
+        /// <summary>标记是否等待玩家选择奖励卡</summary>
         private bool _isRewardSelectionPending;
+        /// <summary>标记事件订阅是否已建立</summary>
         private bool _eventsSubscribed;
 
-        // 缓存当前回合的 boosted 状态，供结算动画完成后使用
+        /// <summary>缓存当前回合的 boosted 奖励状态，供结算动画完成后使用（贷款周期到达时触发高稀有度池）</summary>
         private bool _pendingRewardBoosted;
 
         public int CurrentTurn => _currentTurn;
         public bool IsGameOver => _isGameOver;
+        /// <summary>当前游戏阶段（Prepare、Action、Settle）</summary>
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
+        /// <summary>行动阶段是否已结束（由玩家或 UI 设置）</summary>
         public bool ActionPhaseEnded { get; set; }
+        /// <summary>是否有结算播放任务待执行</summary>
         public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
+        /// <summary>是否等待玩家从奖励池选择</summary>
         public bool IsRewardSelectionPending => _isRewardSelectionPending;
+        /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
         private void OnEnable()
@@ -56,6 +96,27 @@ namespace BaoZuPo.GameFlow
             _eventsSubscribed = false;
         }
 
+        /// <summary>
+        /// 执行准备阶段
+        ///
+        /// 流程步骤：
+        /// 1. 回合计数器递增
+        /// 2. 发布 TurnStarted 事件
+        /// 3. 阶段切换至 Prepare，发布 PhaseChanged 事件
+        /// 4. 执行所有场上卡牌的前置效果（PreEffect）
+        ///    - 包括租户、装备、合同的前置效果
+        ///    - 按放置顺序执行
+        /// 5. 从抽卡库中抽卡
+        ///    - 第一回合：按 firstTurnDrawCount 和 firstTurnDrawLibrary 配置
+        ///    - 后续回合：按 normalTurnDrawCount 和 normalTurnDrawLibrary 配置
+        /// 6. 清理场上已销毁的卡牌
+        ///
+        /// 外部系统交互：
+        /// - DeckManager：DrawFromLibrary（抽卡）
+        /// - BoardManager：GetAllFieldCards、CleanupDestroyedCards
+        /// - GameManager：gameConfig、GameContext
+        /// - EventBus：TurnStarted、PhaseChanged
+        /// </summary>
         public void ExecutePreparePhase()
         {
             if (_isGameOver)
@@ -86,6 +147,14 @@ namespace BaoZuPo.GameFlow
             BoardManager.Instance.CleanupDestroyedCards();
         }
 
+        /// <summary>
+        /// 启动行动阶段
+        ///
+        /// 职责：
+        /// 1. 重置 ActionPhaseEnded 标记（允许玩家再次出牌）
+        /// 2. 阶段切换至 Action，发布 PhaseChanged 事件
+        /// 3. 此后玩家可调用 PlayCard 方法出牌直到 EndActionPhase 被调用
+        /// </summary>
         public void StartActionPhase()
         {
             if (_isGameOver)
@@ -97,11 +166,32 @@ namespace BaoZuPo.GameFlow
             PublishPhaseChanged(GamePhase.Action);
         }
 
+        /// <summary>
+        /// 获取卡牌所需的目标类型（PlayArea 或 Room）
+        /// </summary>
         public CardPlayTargetKind GetRequiredTargetKind(CardInstance card)
         {
             return CardTargeting.GetRequiredTargetKind(card != null ? card.Data : null);
         }
 
+        /// <summary>
+        /// 验证卡牌出牌是否有效
+        ///
+        /// 检查项（按优先级）：
+        /// 1. 游戏是否已结束
+        /// 2. 卡牌是否有效（非null、未销毁）
+        /// 3. 当前是否在行动阶段且未结束
+        /// 4. 玩家金钱是否足以支付卡牌费用
+        /// 5. 如果需要房间目标：
+        ///    - 是否提供了目标房间
+        ///    - 目标房间是否有空位（租户、装备）
+        ///
+        /// 返回值：
+        /// - IsValid: 是否通过验证
+        /// - RequiredTargetKind: 目标类型（用于 UI 提示）
+        /// - BlockReason: 失败原因（用于日志/反馈）
+        /// - TargetRoom: 有效的目标房间（通过时返回）
+        /// </summary>
         public CardPlayValidationResult ValidatePlay(CardInstance card, RoomSlot targetRoom = null)
         {
             CardPlayTargetKind requiredTargetKind = GetRequiredTargetKind(card);
@@ -150,6 +240,25 @@ namespace BaoZuPo.GameFlow
             return CardPlayValidationResult.Success(requiredTargetKind, targetRoom);
         }
 
+        /// <summary>
+        /// 执行卡牌出牌逻辑
+        ///
+        /// 流程步骤：
+        /// 1. 验证卡牌是否可以出牌（ValidatePlay）
+        /// 2. 设置效果执行上下文的目标房间
+        /// 3. 根据卡牌类型放置：
+        ///    - 合同卡：添加至 BoardManager.Contracts
+        ///    - 房间卡（租户、装备）：放入目标房间
+        ///    - 即发卡：无需放置
+        /// 4. 调用 ResolveCardAfterPlay 完成结算：
+        ///    - 费用扣除
+        ///    - 即发效果执行
+        ///    - 从手牌移除
+        ///    - 发布 CardPlayed 事件
+        ///    - 发送数据反馈
+        ///
+        /// 返回值：true 出牌成功，false 验证失败或放置失败
+        /// </summary>
         public bool PlayCard(CardInstance card, RoomSlot targetRoom = null)
         {
             var validation = ValidatePlay(card, targetRoom);
@@ -184,6 +293,14 @@ namespace BaoZuPo.GameFlow
             return GetRequiredTargetKind(card) == CardPlayTargetKind.Room;
         }
 
+        /// <summary>
+        /// 结束行动阶段
+        ///
+        /// 职责：
+        /// 1. 设置 ActionPhaseEnded 标记为 true
+        /// 2. 阻止后续 PlayCard 调用（通过 ValidatePlay 检查）
+        /// 3. NodeCanvas 的 Action_ActionPhase 节点会轮询此标记，并在为 true 时完成任务
+        /// </summary>
         public void EndActionPhase()
         {
             if (_isGameOver)
@@ -194,6 +311,55 @@ namespace BaoZuPo.GameFlow
             ActionPhaseEnded = true;
         }
 
+        /// <summary>
+        /// 执行结算阶段 - 游戏经济循环的核心
+        ///
+        /// 流程步骤（严格顺序）：
+        /// 1. 阶段切换至 Settle，发布 PhaseChanged 事件
+        /// 2. 初始化结算批次（UUID）和播放跟踪
+        /// 3. 【房间结算】- ProcessRoomSettlements：
+        ///    - 遍历所有房间，如果有租户才处理该房间
+        ///    - 租户处理顺序：遍历 tenants 列表
+        ///    - 执行每个租户的 SettleEffect（产生租金、额外收益）
+        ///    - 装备处理顺序：遍历 equipments 列表
+        ///    - 执行每个装备的 SettleEffect
+        ///    - 耐久减少：场上所有卡牌 CurrentDurability--
+        ///    - 耐久判定：CurrentDurability <= 0 时标记为销毁
+        /// 4. 【合同结算】- ProcessContractSettlements：
+        ///    - 遍历所有合同
+        ///    - 执行合同的 SettleEffect
+        ///    - 合同耐久减少与销毁逻辑同房间卡牌
+        /// 5. 【等待超时】- ProcessWaitExpiry：
+        ///    - 遍历所有场上卡牌，检查 waitTurns 属性
+        ///    - CurrentWait--，当 <= 0 时移除卡牌
+        /// 6. 【卡牌销毁与清理】- DestroyAndCleanupCards：
+        ///    - 执行销毁卡牌的 DestroyEffect
+        ///    - 发布 CardDestroyed 事件
+        ///    - 清理手牌中的等待和弃牌
+        /// 7. 【贷款支付】- ProcessLoanPayment：
+        ///    - 检查贷款周期（loanInterval）
+        ///    - 如果当前回合 % loanInterval == 0，计算贷款（按指数增长）
+        ///    - 尝试扣除金钱，失败则 GameOver
+        /// 8. 【奖励状态缓存】：
+        ///    - 判断是否触发 boosted 奖励池（同贷款周期）
+        /// 9. 【提交结算批次】- FinalizeBatch：
+        ///    - 统计最终金钱变化
+        ///    - 创建 UI 播放队列或直接进入奖励/完成
+        ///
+        /// 关键特性：
+        /// - 房间遍历顺序：BoardManager.GetAllRooms() 返回的顺序
+        /// - 租户/装备遍历顺序：room.GetTenants() / room.GetEquipments() 返回的顺序
+        /// - 耐久减少只在有租户的房间进行
+        /// - 等待卡牌与销毁卡牌是分开处理的（两种清除机制）
+        /// - 结算动画与 UI 通过 batchId 同步完成状态
+        ///
+        /// 外部系统交互：
+        /// - BoardManager：GetAllRooms、GetAllContracts、GetAllFieldCards、CleanupDestroyedCards
+        /// - MoneyManager：CurrentMoney、AddMoney、ReduceMoney
+        /// - DeckManager：ResolveHandWaitAndDiscardExpired
+        /// - UIManager：SubmitSettlementBatch
+        /// - EventBus：PhaseChanged、LoanPayment、GameOver
+        /// </summary>
         public void ExecuteSettlePhase()
         {
             if (_isGameOver)
@@ -230,6 +396,32 @@ namespace BaoZuPo.GameFlow
             FinalizeBatch(settlementBatch, batchId);
         }
 
+        /// <summary>
+        /// 处理房间结算 - 租金收入与耐久减少的核心流程
+        ///
+        /// [伪代码流程]：
+        /// foreach room in GetAllRooms():
+        ///     if room.TenantCount <= 0: continue  // 无租户则跳过该房间
+        ///
+        ///     // 为每个租户和装备执行 SettleEffect，记录金钱变化
+        ///     AppendRoomSettlementStage(room)
+        ///
+        ///     // 耐久减少与驱逐判定（仅在该房间有租户时执行）
+        ///     foreach card in room.GetAllCards():
+        ///         if card.durability <= 0: continue  // 配置为 0 表示无耐久
+        ///         card.CurrentDurability--
+        ///         if card.CurrentDurability <= 0: mark for destroy
+        ///
+        /// 关键细节：
+        /// - 只在 TenantCount > 0 的房间进行耐久减少（优化：无住户的房间卡牌无意义）
+        /// - 租户与装备都会进行耐久减少
+        /// - 耐久归零判定：card.CurrentDurability <= 0（包括严格等于 0 的预防）
+        /// - 销毁列表后续由 DestroyAndCleanupCards 统一处理
+        ///
+        /// 外部系统：
+        /// - BoardManager：GetAllRooms、room.GetAllCards、room.TenantCount
+        /// - AppendRoomSettlementStage：详见对应方法
+        /// </summary>
         private void ProcessRoomSettlements(
             UISettlementPlaybackBatch batch,
             string batchId,
@@ -263,6 +455,37 @@ namespace BaoZuPo.GameFlow
             }
         }
 
+        /// <summary>
+        /// 处理合同结算
+        ///
+        /// [伪代码流程]：
+        /// foreach contract in GetAllContracts():
+        ///     if contract.IsDestroyed: continue
+        ///
+        ///     // 执行合同的结算效果（如额外收益、扣款等）
+        ///     contractContext = CreateSettlementExecutionContext(sharedContext, null)
+        ///     contract.SettleEffect?.Execute(contract, contractContext)
+        ///
+        ///     // 记录金钱变化，为 UI 生成结算数据
+        ///     payload = CreateSettlementPayload(...)
+        ///     batch.Stages.Add(UISettlementPlaybackStage.CreateSerial(...))
+        ///
+        ///     // 耐久减少与驱逐
+        ///     if contract.durability > 0:
+        ///         contract.CurrentDurability--
+        ///         if contract.CurrentDurability <= 0: mark for destroy
+        ///
+        /// 关键细节：
+        /// - 合同的 SettleEffect 可能修改金钱（单向地体现在结算 UI 中）
+        /// - 合同结算是串联的（CreateSerial），不像房间租户和装备的并联
+        /// - 合同没有目标房间，contractContext.SelectedRoom 为 null
+        /// - 合同耐久减少逻辑与房间卡牌相同
+        ///
+        /// 外部系统：
+        /// - BoardManager：GetAllContracts
+        /// - CreateSettlementExecutionContext：创建执行上下文
+        /// - CreateSettlementPayload：生成 UI 播放数据
+        /// </summary>
         private void ProcessContractSettlements(
             UISettlementPlaybackBatch batch,
             string batchId,
@@ -315,6 +538,24 @@ namespace BaoZuPo.GameFlow
             }
         }
 
+        /// <summary>
+        /// 处理等待卡牌超时
+        ///
+        /// 等待卡牌（waitTurns > 0）在场上停留指定回合数后自动移除
+        /// 与耐久减少不同，等待超时不触发 DestroyEffect
+        ///
+        /// [伪代码流程]：
+        /// foreach card in GetAllFieldCards():
+        ///     if card.waitTurns <= 0: continue  // 无等待属性
+        ///     card.CurrentWait--
+        ///     if card.CurrentWait <= 0: mark for remove
+        ///
+        /// 关键细节：
+        /// - GetAllFieldCards() 返回所有在场的卡牌（房间卡 + 合同）
+        /// - CurrentWait 初始值等于 waitTurns（卡牌创建时）
+        /// - 移除卡牌在 DestroyAndCleanupCards 中处理（发布 CardDestroyed，TriggeredByDurability=false）
+        /// - 等待卡牌移除不调用 DestroyEffect
+        /// </summary>
         private static void ProcessWaitExpiry(List<CardInstance> toRemove)
         {
             var fieldCards = BoardManager.Instance.GetAllFieldCards();
@@ -333,6 +574,39 @@ namespace BaoZuPo.GameFlow
             }
         }
 
+        /// <summary>
+        /// 销毁卡牌并进行全局清理
+        ///
+        /// [伪代码流程]：
+        /// // 耐久减少导致的销毁（执行 DestroyEffect）
+        /// foreach card in toDestroy:
+        ///     if card.IsDestroyed: continue
+        ///     card.DestroyEffect?.Execute(card, sharedContext)
+        ///     card.MarkDestroyed()
+        ///     EventBus.Publish(CardDestroyed, TriggeredByDurability=true)
+        ///
+        /// // 等待超时导致的移除（不执行 DestroyEffect）
+        /// foreach card in toRemove:
+        ///     if card.IsDestroyed: continue
+        ///     card.MarkDestroyed()
+        ///     EventBus.Publish(CardDestroyed, TriggeredByDurability=false)
+        ///
+        /// // 全局清理
+        /// BoardManager.CleanupDestroyedCards()  // 从房间/合同列表移除已销毁的卡牌
+        /// DeckManager.ResolveHandWaitAndDiscardExpired()  // 处理手牌中的等待卡和弃牌
+        ///
+        /// 关键细节：
+        /// - toDestroy：耐久归零的卡牌，执行 DestroyEffect（可能产生额外效果或触发）
+        /// - toRemove：等待超时的卡牌，不执行 DestroyEffect
+        /// - TriggeredByDurability 标记用于区分销毁原因（可供其他系统判断）
+        /// - CleanupDestroyedCards 从容器移除，并可能触发房间数据更新
+        /// - ResolveHandWaitAndDiscardExpired 处理手牌中的特殊卡牌
+        ///
+        /// 外部系统：
+        /// - BoardManager：CleanupDestroyedCards
+        /// - DeckManager：ResolveHandWaitAndDiscardExpired
+        /// - EventBus：CardDestroyed
+        /// </summary>
         private static void DestroyAndCleanupCards(
             List<CardInstance> toDestroy,
             List<CardInstance> toRemove,
@@ -365,6 +639,42 @@ namespace BaoZuPo.GameFlow
             Deck.DeckManager.Instance.ResolveHandWaitAndDiscardExpired();
         }
 
+        /// <summary>
+        /// 处理贷款支付 - 游戏失败判定的关键节点
+        ///
+        /// [伪代码流程]：
+        /// if loanInterval <= 0 or CurrentTurn % loanInterval != 0:
+        ///     return  // 不是贷款周期，跳过
+        ///
+        /// requiredPayment = CalculateCurrentLoanPayment(baseAmount, growthFactor)
+        ///     // 公式：baseAmount * Pow(growthFactor, loanPaymentCount)
+        ///     // loanPaymentCount 从 0 开始，每次成功支付递增
+        ///     // 指数增长确保贷款不断升高难度
+        ///
+        /// paid = MoneyManager.ReduceMoney(requiredPayment)
+        /// EventBus.Publish(LoanPayment)
+        ///
+        /// if not paid:
+        ///     GameOver = true
+        ///     EventBus.Publish(GameOver)
+        ///     // 游戏结束，UI 显示失败界面
+        /// else:
+        ///     loanPaymentCount++
+        ///     PublishLoanPayment(feedback)  // 数据反馈
+        ///     // 继续游戏，下一个贷款周期时金额更高
+        ///
+        /// 关键细节：
+        /// - loanInterval 是贷款周期（每隔多少回合触发一次）
+        /// - 贷款周期同时决定 boosted 奖励的触发时机
+        /// - 若贷款失败，立即结束游戏，不再进入奖励阶段
+        /// - loanPaymentCount 用于指数增长计算，成功支付时递增
+        /// - 游戏失败是贷款扣款失败的唯一原因
+        ///
+        /// 外部系统：
+        /// - MoneyManager：ReduceMoney、CurrentMoney
+        /// - EventBus：LoanPayment、GameOver
+        /// - BaoZuPoFeedbackAdapter：PublishLoanPayment
+        /// </summary>
         private void ProcessLoanPayment()
         {
             var config = GameManager.Instance.gameConfig;
@@ -427,6 +737,47 @@ namespace BaoZuPo.GameFlow
             });
         }
 
+        /// <summary>
+        /// 出牌后的结算 - 费用、效果、事件的统一入口
+        ///
+        /// [伪代码流程]：
+        /// 1. 尝试扣除费用
+        ///    paid = MoneyManager.ReduceMoney(card.cost)
+        ///    if not paid:
+        ///        如果卡牌已放入房间，撤回
+        ///        return false
+        ///
+        /// 2. 记录扣费前金钱数
+        ///
+        /// 3. 执行即发效果
+        ///    card.InstantEffect?.Execute(card, context)
+        ///    计算金钱变化（用于反馈）
+        ///
+        /// 4. 执行额外操作
+        ///    afterInstant?.Invoke(card)  // 如添加合同、其他处理
+        ///
+        /// 5. 从手牌移除卡牌
+        ///    DeckManager.RemoveFromHand(card)
+        ///
+        /// 6. 发布事件与反馈
+        ///    EventBus.Publish(CardPlayed)
+        ///    BaoZuPoFeedbackAdapter.PublishPlayCost(...)
+        ///    PublishPlaySequence(...)
+        ///
+        /// 返回值：true 出牌成功，false 费用不足
+        ///
+        /// 关键细节：
+        /// - afterInstant 是添加合同或其他持久化操作的时机（在效果与移除手牌之间）
+        /// - 费用扣除失败时需撤回已放入房间的卡牌
+        /// - instantMoneyDelta 用于 UI 反馈动画（如金钱浮点数）
+        /// - targetRoom 优先使用参数，次优使用 card.PlacedRoom（已放置的房间）
+        ///
+        /// 外部系统：
+        /// - MoneyManager：ReduceMoney、CurrentMoney
+        /// - DeckManager：RemoveFromHand
+        /// - EventBus：CardPlayed
+        /// - BaoZuPoFeedbackAdapter：PublishPlayCost、PublishInstantMoneyDelta
+        /// </summary>
         private bool ResolveCardAfterPlay(
             CardInstance card,
             GameContext context,
@@ -762,6 +1113,22 @@ namespace BaoZuPo.GameFlow
             }
         }
 
+        /// <summary>
+        /// 计算当前贷款金额（指数增长）
+        ///
+        /// 公式：
+        /// requiredPayment = baseAmount * Pow(growthFactor, loanPaymentCount)
+        ///
+        /// 例子：
+        /// 第一次贷款：baseAmount * 1^0 = 100
+        /// 第二次贷款：baseAmount * 1.2^1 = 120
+        /// 第三次贷款：baseAmount * 1.2^2 = 144
+        ///
+        /// 参数验证：
+        /// - baseAmount < 0 时按 0 处理
+        /// - growthFactor < 1 时按 1 处理（平坦曲线）
+        /// - loanPaymentCount 从 0 开始（每次成功支付递增）
+        /// </summary>
         private int CalculateCurrentLoanPayment(int baseAmount, float growthFactor)
         {
             int safeBase = Mathf.Max(0, baseAmount);
@@ -770,6 +1137,32 @@ namespace BaoZuPo.GameFlow
             return Mathf.RoundToInt(raw);
         }
 
+        /// <summary>
+        /// 展示三选一奖励卡
+        ///
+        /// 流程：
+        /// 1. 从 rewardLibrary 获取奖励池卡牌
+        /// 2. 根据 boosted 参数选择卡池：
+        ///    - boosted=true：使用稀有度 >= Rare 的卡牌（高稀有度池）
+        ///    - boosted=false：使用完整奖励库（全稀有度）
+        ///    - 如果 boosted 卡池为空，降级到完整库
+        /// 3. 从卡池中随机选择 3 张不重复的卡牌
+        ///    - BuildUniqueRewardOptions 确保选出的卡片互不相同
+        /// 4. 发布 CardRewardOffered 事件，UI 监听并展示三个选项
+        /// 5. 设置 _isRewardSelectionPending = true，等待玩家选择
+        /// 6. 玩家选择后，UI 发布 CardRewardSelected 事件，由 OnCardRewardSelected 处理
+        ///
+        /// 错误处理：
+        /// - rewardLibrary 为空：记录警告，返回（无奖励）
+        /// - 奖励库卡牌不足 3 张：按实际数量展示（如只有 1 张则展示 1 个选项）
+        /// - UIManager 不存在：抛异常（必需）
+        ///
+        /// 关键细节：
+        /// - boosted 状态由 ExecuteSettlePhase 根据贷款周期缓存
+        /// - CardRewardSelected 事件会设置 _isRewardSelectionPending = false，完成循环
+        /// - 如果 AwardOneCardFromThreeOptions 没有设置 _isRewardSelectionPending，
+        ///   则 TryStartRewardOrComplete 会直接进入 CompleteSettlementPhase
+        /// </summary>
         private void AwardOneCardFromThreeOptions(bool boosted)
         {
             EnsureEventSubscriptions();
