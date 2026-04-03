@@ -1,0 +1,147 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: GameText_en
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: bafab716397b6194996bfdc7ad7f2cf7, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 614121472
+    m_Localized: Play Area
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841728
+    m_Localized: Contracts
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841729
+    m_Localized: Lease
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841730
+    m_Localized: Durability
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036032
+    m_Localized: Empty Equipment Slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036033
+    m_Localized: Empty Tenant Slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036034
+    m_Localized: Game Over
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036035
+    m_Localized: End Turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036036
+    m_Localized: Waiting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036037
+    m_Localized: Settle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036038
+    m_Localized: Base
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036039
+    m_Localized: Bonus
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036040
+    m_Localized: Multiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036041
+    m_Localized: Final
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036042
+    m_Localized: Choose a Reward
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036043
+    m_Localized: Rare Reward!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036044
+    m_Localized: Skip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036045
+    m_Localized: Turn {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036046
+    m_Localized: Money {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036047
+    m_Localized: Spent {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036048
+    m_Localized: Cost {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036049
+    m_Localized: Cost -{0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036050
+    m_Localized: Loan -{0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036051
+    m_Localized: Wait {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036052
+    m_Localized: Room {0}  Tenant {1}/{2}  Equip {3}/{4}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036053
+    m_Localized: 'You survived {0} turns\nFinal Money: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036054
+    m_Localized: Room {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036055
+    m_Localized: Tenant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036056
+    m_Localized: Equipment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036057
+    m_Localized: Event
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036058
+    m_Localized: Contract
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

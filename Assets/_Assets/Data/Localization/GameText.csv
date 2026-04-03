@@ -1,0 +1,32 @@
+﻿Key,en,zh-Hans
+GameText.PlayArea,Play Area,经营区域
+GameText.Contracts,Contracts,合同
+GameText.Lease,Lease,租约
+GameText.Durability,Durability,耐久
+GameText.EmptyEquipmentSlot,Empty Equipment Slot,空设备槽
+GameText.EmptyTenantSlot,Empty Tenant Slot,空租客槽
+GameText.GameOverTitle,Game Over,游戏结束
+GameText.EndTurnButton,End Turn,结束回合
+GameText.WaitingButton,Waiting,等待中
+GameText.SettlementFallbackTitle,Settle,结算
+GameText.SettlementBase,Base,基础值
+GameText.SettlementBonus,Bonus,加成
+GameText.SettlementMultiplier,Multiplier,倍率
+GameText.SettlementFinal,Final,最终值
+GameText.RewardTitle,Choose a Reward,选择一项奖励
+GameText.RewardBoostedTitle,Rare Reward!,稀有奖励！
+GameText.RewardSkip,Skip,跳过
+GameText.Turn,Turn {0},第 {0} 回合
+GameText.Money,Money {0},资金 {0}
+GameText.Spent,Spent {0},已支出 {0}
+GameText.Cost,Cost {0},费用 {0}
+GameText.FeedbackCost,Cost -{0},费用 -{0}
+GameText.FeedbackLoan,Loan -{0},贷款 -{0}
+GameText.Wait,Wait {0},等待 {0}
+GameText.RoomSummary,Room {0}  Tenant {1}/{2}  Equip {3}/{4},房间 {0}  租客 {1}/{2}  设备 {3}/{4}
+GameText.GameOverInfo,You survived {0} turns\nFinal Money: {1},你存活了 {0} 个回合\n最终资金：{1}
+GameText.SettlementRoomTitle,Room {0},房间 {0}
+GameText.TypeLabel.Tenant,Tenant,租客
+GameText.TypeLabel.Equipment,Equipment,设备
+GameText.TypeLabel.Event,Event,事件
+GameText.TypeLabel.Contract,Contract,合同

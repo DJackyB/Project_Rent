@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: GameText Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: GameText
+  m_TableCollectionNameGuidString: bafab716397b6194996bfdc7ad7f2cf7
+  m_Entries:
+  - m_Id: 614121472
+    m_Key: GameText.PlayArea
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841728
+    m_Key: GameText.Contracts
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841729
+    m_Key: GameText.Lease
+    m_Metadata:
+      m_Items: []
+  - m_Id: 672841730
+    m_Key: GameText.Durability
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036032
+    m_Key: GameText.EmptyEquipmentSlot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036033
+    m_Key: GameText.EmptyTenantSlot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036034
+    m_Key: GameText.GameOverTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036035
+    m_Key: GameText.EndTurnButton
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036036
+    m_Key: GameText.WaitingButton
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036037
+    m_Key: GameText.SettlementFallbackTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036038
+    m_Key: GameText.SettlementBase
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036039
+    m_Key: GameText.SettlementBonus
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036040
+    m_Key: GameText.SettlementMultiplier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036041
+    m_Key: GameText.SettlementFinal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036042
+    m_Key: GameText.RewardTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036043
+    m_Key: GameText.RewardBoostedTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036044
+    m_Key: GameText.RewardSkip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036045
+    m_Key: GameText.Turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036046
+    m_Key: GameText.Money
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036047
+    m_Key: GameText.Spent
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036048
+    m_Key: GameText.Cost
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036049
+    m_Key: GameText.FeedbackCost
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036050
+    m_Key: GameText.FeedbackLoan
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036051
+    m_Key: GameText.Wait
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036052
+    m_Key: GameText.RoomSummary
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036053
+    m_Key: GameText.GameOverInfo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036054
+    m_Key: GameText.SettlementRoomTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036055
+    m_Key: GameText.TypeLabel.Tenant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036056
+    m_Key: GameText.TypeLabel.Equipment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036057
+    m_Key: GameText.TypeLabel.Event
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036058
+    m_Key: GameText.TypeLabel.Contract
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 3917538012484600089
+  references:
+    version: 2
+    RefIds:
+    - rid: 3917538012484600089
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1775213990344

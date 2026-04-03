@@ -2,7 +2,9 @@
   "name": "BaoZuPo.Editor",
   "references": [
     "BaoZuPo",
-    "Martian.Audio"
+    "Martian.Audio",
+    "Unity.Localization",
+    "Unity.Localization.Editor"
   ],
   "precompiledReferences": [
     "NPOI.dll",
