@@ -62,9 +62,9 @@ namespace Martian.Tooltip.Presets
             _panel.transform.SetParent(transform, false);
             _root = _panel.GetComponent<RectTransform>();
 
-            _root.anchorMin = new Vector2(0f, 1f);
-            _root.anchorMax = new Vector2(0f, 1f);
-            _root.pivot = new Vector2(0f, 1f);
+            _root.anchorMin = new Vector2(0f, 0f);
+            _root.anchorMax = new Vector2(0f, 0f);
+            _root.pivot = new Vector2(0f, 0f);
             _root.sizeDelta = new Vector2(340f, 220f);
 
             var canvasGroup = _panel.GetComponent<CanvasGroup>();

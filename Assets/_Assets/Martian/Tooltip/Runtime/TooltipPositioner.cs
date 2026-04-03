@@ -41,7 +41,11 @@ namespace Martian.Tooltip.Runtime
         private static Vector2 ClampLocalPosition(RectTransform canvasRect, RectTransform tooltipRect, Vector2 localPosition)
         {
             Vector2 canvasSize = canvasRect.rect.size;
-            Vector2 tooltipSize = tooltipRect.rect.size;
+            // 乘以 localScale 以获取实际视觉尺寸（支持 localScale 缩放的 tooltip）
+            Vector3 scale = tooltipRect.localScale;
+            Vector2 tooltipSize = new Vector2(
+                tooltipRect.rect.size.x * Mathf.Abs(scale.x),
+                tooltipRect.rect.size.y * Mathf.Abs(scale.y));
             Vector2 pivot = tooltipRect.pivot;
 
             float minX = -canvasSize.x * 0.5f + tooltipSize.x * pivot.x;
@@ -53,5 +57,6 @@ namespace Martian.Tooltip.Runtime
             localPosition.y = Mathf.Clamp(localPosition.y, minY, maxY);
             return localPosition;
         }
+
     }
 }

@@ -21,7 +21,7 @@ namespace Martian.Tooltip
             Anchor = anchor;
             Content = content;
             PlacementMode = placementMode;
-            Offset = offset ?? new Vector2(24f, -24f);
+            Offset = offset ?? Vector2.zero;
         }
     }
 }

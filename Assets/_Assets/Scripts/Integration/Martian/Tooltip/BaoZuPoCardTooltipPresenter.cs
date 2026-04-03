@@ -27,10 +27,11 @@ namespace BaoZuPo.Integration.Martian.Tooltip
     {
         [SerializeField] private Vector2 previewSize = new Vector2(260f, 360f);
 
+        private RectTransform _containerRoot;
         private RectTransform _root;
         private GameObject _previewInstance;
 
-        public RectTransform Root => _root;
+        public RectTransform Root => _containerRoot;
 
         /// <summary>
         /// 显示提示：克隆卡牌 UI，禁用交互，调整大小后显示。
@@ -51,6 +52,7 @@ namespace BaoZuPo.Integration.Martian.Tooltip
             }
 
             // 克隆原始卡牌 UI 对象
+            _containerRoot = transform as RectTransform;
             _previewInstance = Instantiate(sourceObject, transform, false);
             _previewInstance.name = $"{sourceObject.name}_TooltipPreview";
             _root = _previewInstance.transform as RectTransform;
@@ -66,6 +68,10 @@ namespace BaoZuPo.Integration.Martian.Tooltip
             _previewInstance.SetActive(true);
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(_root);
+            if (_containerRoot != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_containerRoot);
+            }
         }
 
         /// <summary>
@@ -79,6 +85,7 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 _previewInstance = null;
             }
 
+            _containerRoot = null;
             _root = null;
         }
 
@@ -160,7 +167,8 @@ namespace BaoZuPo.Integration.Martian.Tooltip
         }
 
         /// <summary>
-        /// 调整预览大小和锚点。固定为 previewSize，左上角对齐。
+        /// 调整预览大小和锚点。保持原始 sizeDelta 不变，通过 localScale 等比缩放，
+        /// 避免子元素（字体、位置、间距）因 RectTransform 拉伸而失真。
         /// </summary>
         private void ApplyPreviewSizing()
         {
@@ -169,10 +177,34 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 return;
             }
 
-            _root.anchorMin = new Vector2(0f, 1f);
-            _root.anchorMax = new Vector2(0f, 1f);
-            _root.pivot = new Vector2(0f, 1f);
-            _root.sizeDelta = previewSize;
+            if (_containerRoot == null)
+            {
+                _containerRoot = transform as RectTransform;
+            }
+
+            if (_containerRoot != null)
+            {
+                _containerRoot.anchorMin = new Vector2(0f, 0f);
+                _containerRoot.anchorMax = new Vector2(0f, 0f);
+                _containerRoot.pivot = new Vector2(0f, 0f);
+                _containerRoot.sizeDelta = Vector2.zero;
+                _containerRoot.anchoredPosition = Vector2.zero;
+            }
+
+            _root.anchorMin = new Vector2(0f, 0f);
+            _root.anchorMax = new Vector2(0f, 0f);
+            _root.pivot = new Vector2(0f, 0f);
+            _root.anchoredPosition = Vector2.zero;
+
+            // 保持原始 sizeDelta，用 localScale 等比缩放
+            Vector2 originalSize = _root.sizeDelta;
+            if (originalSize.x > 0f && originalSize.y > 0f)
+            {
+                float scaleX = previewSize.x / originalSize.x;
+                float scaleY = previewSize.y / originalSize.y;
+                float uniformScale = Mathf.Min(scaleX, scaleY);
+                _root.localScale = new Vector3(uniformScale, uniformScale, 1f);
+            }
 
             var layoutElement = _root.GetComponent<LayoutElement>();
             if (layoutElement != null)

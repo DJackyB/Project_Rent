@@ -50,6 +50,7 @@ namespace Martian.Tooltip.Runtime
         /// <summary>最后记录的指针位置（用于跟随指针模式）。</summary>
         private Vector2 _lastPointerPosition;
 
+
         /// <summary>提示服务总是可用（一旦实例创建）。</summary>
         public bool IsAvailable => true;
 
@@ -293,7 +294,7 @@ namespace Martian.Tooltip.Runtime
                 ? _currentCanvas.worldCamera
                 : null;
 
-            _currentPresenter.Root.anchoredPosition = _currentRequest.PlacementMode switch
+            Vector2 targetPosition = _currentRequest.PlacementMode switch
             {
                 TooltipPlacementMode.AnchorRect => TooltipPositioner.CalculateAnchorPosition(
                     _currentCanvasRect,
@@ -308,6 +309,9 @@ namespace Martian.Tooltip.Runtime
                     _currentRequest.Offset,
                     eventCamera)
             };
+
+            Vector3 localPosition = _currentPresenter.Root.localPosition;
+            _currentPresenter.Root.localPosition = new Vector3(targetPosition.x, targetPosition.y, localPosition.z);
         }
 
         private static Vector2 GetPointerPosition(Vector2 fallback)
