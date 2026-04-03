@@ -91,9 +91,10 @@ GameObject:
   - component: {fileID: 3104329546277298473}
   - component: {fileID: 9100000000000000001}
   - component: {fileID: 9100000000000000002}
-  - component: {fileID: 9100000000000000003}
   - component: {fileID: 9100000000000000004}
   - component: {fileID: 9100000000000000005}
+  - component: {fileID: 8879572779207660269}
+  - component: {fileID: 3952427455707589590}
   m_Layer: 5
   m_Name: Card
   m_TagString: Untagged
@@ -124,8 +125,8 @@ RectTransform:
   - {fileID: 9204572917878383521}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 118, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -266,18 +267,6 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: 0
   m_LayoutPriority: 1
---- !u!114 &9100000000000000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2246620783366798838}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58b57ef8f3909da40be6c5d912f9c27f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Common.Hover.HoverPreviewTrigger
 --- !u!114 &9100000000000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,6 +297,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.UIEquipmentCardView
   compactSize: {x: 170, y: 238}
+--- !u!114 &8879572779207660269
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2246620783366798838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2109a82474f08b478f07942006696d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BaoZuPo::BaoZuPo.UI.UICardHoverScale
+  hoverScale: 1.12
+  duration: 0.15
+--- !u!114 &3952427455707589590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2246620783366798838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58b57ef8f3909da40be6c5d912f9c27f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Martian.Tooltip.Abstractions::Martian.Tooltip.TooltipTrigger
 --- !u!1 &3724060271694353421
 GameObject:
   m_ObjectHideFlags: 0
@@ -376,7 +391,7 @@ MonoBehaviour:
   m_text: "\u8010\u4E45:1"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -513,7 +528,7 @@ MonoBehaviour:
   m_text: "\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D\u5361\u540D"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -801,7 +816,7 @@ MonoBehaviour:
   m_text: 150
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -938,7 +953,7 @@ MonoBehaviour:
   m_text: "\u7B49\u5F85:1"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1075,7 +1090,7 @@ MonoBehaviour:
   m_text: "\u5361\u540D"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1514,7 +1529,7 @@ MonoBehaviour:
   m_text: "\u79DF\u5BA2\u5361"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3573861296351356039, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
