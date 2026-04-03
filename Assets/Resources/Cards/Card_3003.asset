@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_3003
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3003
-  cardName: "Renewal"
-  description: "Persuade all to stay."
+  cardName: "\u7EED\u7B7E"
+  description: "\u8BF4\u670D\u6240\u6709\u623F\u5BA2\u7559\u4E0B\u3002"
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}
   cost: 80
   baseRent: 0
   targetKind: 0
-  preEffect: ""
-  instantEffect: "AddTenantDurability;3"
-  settleEffect: ""
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: AddTenantDurability;3
+  settleEffect: 
+  destroyEffect: 
   durability: 0
   waitTurns: 0

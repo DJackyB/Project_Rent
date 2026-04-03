@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_4004
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 4004
-  cardName: "Closing Statement"
-  description: "A short contract that pushes a final money-and-cards burst."
+  cardName: "\u6700\u7EC8\u5BF9\u8D26"
+  description: "\u77ED\u671F\u5408\u7EA6\u63A8\u52A8\u6700\u540E\u7684\u73B0\u91D1\u548C\u724C\u5F20\u7A81\u53D1\u3002"
   cardType: 3
   rarity: 2
   cardArt: {fileID: 0}
   cost: 130
   baseRent: 0
   targetKind: 0
-  preEffect: ""
-  instantEffect: ""
-  settleEffect: "AddMoney;35|DrawCard;1"
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: 
+  settleEffect: AddMoney;35|DrawCard;1
+  destroyEffect: 
   durability: 3
   waitTurns: 0

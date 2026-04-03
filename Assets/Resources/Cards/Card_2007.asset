@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_2007
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 2007
-  cardName: "Clearance Sign"
-  description: "Keeps a busy room converting motion into cash."
+  cardName: "\u6E05\u4ED3\u62DB\u724C"
+  description: "\u8BA9\u7E41\u5FD9\u623F\u95F4\u6301\u7EED\u8F6C\u5316\u4E3A\u73B0\u91D1\u3002"
   cardType: 1
   rarity: 1
   cardArt: {fileID: 0}
   cost: 65
   baseRent: 0
   targetKind: 1
-  preEffect: ""
-  instantEffect: ""
-  settleEffect: "AddMoney;10"
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: 
+  settleEffect: AddMoney;10
+  destroyEffect: 
   durability: 4
   waitTurns: 0

@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_3011
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3011
-  cardName: "Discount Flyer"
-  description: "Turns a quiet market into immediate card flow."
+  cardName: "\u6298\u6263\u4F20\u5355"
+  description: "\u628A\u51B7\u6DE1\u5E02\u573A\u53D8\u6210\u7ACB\u5373\u62BD\u724C\u3002"
   cardType: 2
   rarity: 0
   cardArt: {fileID: 0}
   cost: 0
   baseRent: 0
   targetKind: 0
-  preEffect: ""
-  instantEffect: "DrawCard;1|AddMoneyByEmptyRooms;10"
-  settleEffect: ""
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: DrawCard;1|AddMoneyByEmptyRooms;10
+  settleEffect: 
+  destroyEffect: 
   durability: 0
   waitTurns: 0

@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_4001
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 4001
-  cardName: "Long Lease"
-  description: "Locks in a low-risk income lane for several turns."
+  cardName: "\u957F\u671F\u79DF\u7EA6"
+  description: "\u5728\u591A\u4E2A\u56DE\u5408\u5185\u9501\u5B9A\u4F4E\u98CE\u9669\u6536\u5165\u3002"
   cardType: 3
   rarity: 1
   cardArt: {fileID: 0}
   cost: 120
   baseRent: 0
   targetKind: 0
-  preEffect: ""
-  instantEffect: ""
-  settleEffect: "AddMoney;20|AddTenantDurability;1"
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: 
+  settleEffect: AddMoney;20|AddTenantDurability;1
+  destroyEffect: 
   durability: 4
   waitTurns: 0

@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_3001
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3001
-  cardName: "Rent Bonus"
-  description: "Extra rent income."
+  cardName: "\u79DF\u91D1\u5956\u52B1"
+  description: "\u989D\u5916\u7684\u79DF\u91D1\u6536\u5165\u3002"
   cardType: 2
   rarity: 0
   cardArt: {fileID: 0}
   cost: 0
   baseRent: 0
   targetKind: 0
-  preEffect: ""
-  instantEffect: "AddMoney;200"
-  settleEffect: ""
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: AddMoney;200
+  settleEffect: 
+  destroyEffect: 
   durability: 0
   waitTurns: 0

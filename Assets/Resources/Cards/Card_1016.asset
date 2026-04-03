@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: Card_1016
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1016
-  cardName: "Subletter"
-  description: "Low rent that converts open units into side income."
+  cardName: "\u8F6C\u79DF\u6237"
+  description: "\u4F4E\u79DF\u91D1\u628A\u95F2\u7F6E\u5355\u4F4D\u53D8\u6210\u989D\u5916\u6536\u5165\u3002"
   cardType: 0
   rarity: 0
   cardArt: {fileID: 0}
   cost: 45
   baseRent: 20
   targetKind: 1
-  preEffect: ""
-  instantEffect: ""
-  settleEffect: "AddMoneyByEmptyRooms;10"
-  destroyEffect: ""
+  preEffect: 
+  instantEffect: 
+  settleEffect: AddMoneyByEmptyRooms;10
+  destroyEffect: 
   durability: 4
   waitTurns: 0
