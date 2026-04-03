@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d54fc74e28ce8fb408b00e7c01685485, type: 3}
+  m_Name: AudioCatalog
+  m_EditorClassIdentifier: Martian.Audio::Martian.Audio.AudioCatalog
+  _cues:
+  - id: bgm.main
+    bus: 1
+    clips:
+    - {fileID: 8300000, guid: e34e77329e2f78346b38dd1734bf329e, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 1
+  - id: bgm.result
+    bus: 1
+    clips:
+    - {fileID: 8300000, guid: 12a24913f65a64a4a88120447422d3c7, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 1
+  - id: sfx.card.play
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 44fca055bef122e4a99d3b205726342e, type: 3}
+    baseVolume: 1
+    pitchMin: 0.95
+    pitchMax: 1.05
+    cooldownSeconds: 0
+    loop: 0
+  - id: sfx.coin.gain
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 89b4b236698680d4fb70594c3d14632a, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0.05
+    loop: 0
+  - id: sfx.coin.lose
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: b519139f2728f0a45a3563b3ffc21eb4, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0.05
+    loop: 0
+  - id: sfx.turn.start
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 51b1b0abc9cd48340a0c166d6f4b80ec, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 0
+  - id: sfx.reward.show
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 84cc73addf4fa6940b4464f76b0277b1, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 0
+  - id: sfx.reward.pick
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 48a62de008e3f4243ab3824819e88cf6, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 0
+  - id: ui.button
+    bus: 3
+    clips:
+    - {fileID: 8300000, guid: 8b7f12c421dcee34c92276243d1dc66e, type: 3}
+    baseVolume: 1
+    pitchMin: 1
+    pitchMax: 1
+    cooldownSeconds: 0
+    loop: 0

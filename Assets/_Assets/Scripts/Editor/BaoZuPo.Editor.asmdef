@@ -1,7 +1,8 @@
 {
   "name": "BaoZuPo.Editor",
   "references": [
-    "BaoZuPo"
+    "BaoZuPo",
+    "Martian.Audio"
   ],
   "precompiledReferences": [
     "NPOI.dll",
