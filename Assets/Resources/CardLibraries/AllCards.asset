@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3e1f0ce4ebe4b12840cffa8a1ff896d, type: 3}
   m_Name: AllCards
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardLibrary
-  libraryId: "AllCards"
-  displayName: "All Cards"
+  libraryId: AllCards
+  displayName: All Cards
   cards:
   - {fileID: 11400000, guid: ef2a612e6519d4240a405096dfee36a1, type: 2}
   - {fileID: 11400000, guid: a942e22036adaae47858f36a2e4333a4, type: 2}
