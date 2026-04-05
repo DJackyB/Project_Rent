@@ -33,7 +33,23 @@
       "Bash(where jq:*)",
       "Bash(powershell -Command \"Write-Output 'ok'\")",
       "Bash(where gh:*)",
-      "Skill(code-review)"
+      "Skill(code-review)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -r com.unity.localization /d/Unity/Project/Project_Rent/Assets --include=*.cs)",
+      "Read(//c/Users/jacky/AppData/Roaming/Claude/**)",
+      "Read(//c/Users/jacky/**)",
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__UnityMCP__manage_components",
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__manage_scene",
+      "Bash(curl -s http://127.0.0.1:8080/mcp)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('mcpServers', d.get\\('projects', {}\\)\\), indent=2\\)\\)\")",
+      "Bash(python:*)",
+      "Bash(grep -A5 '\"D:\\\\\\\\\\\\\\\\Unity' \"C:/Users/jacky/.claude.json\")",
+      "Bash(node:*)",
+      "Bash(powershell:*)",
+      "mcp__UnityMCP__manage_asset",
+      "mcp__UnityMCP__manage_prefabs"
     ]
   },
   "hooks": {
