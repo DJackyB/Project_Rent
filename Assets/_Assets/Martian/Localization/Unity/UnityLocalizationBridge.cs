@@ -9,6 +9,37 @@ using UnityEngine.Localization.Tables;
 
 namespace Martian.Localization.Unity
 {
+    internal static class UnityLocalizationRuntimeInstaller
+    {
+        private const string DefaultLanguageCode = "zh-Hans";
+        private const string PlayerPrefsKey = "Martian.Localization.SelectedLocale";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnSubsystemRegistration()
+        {
+            LocalizationServices.Reset();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void InitializeBeforeSceneLoad()
+        {
+            var bootstrap = new UnityLocalizationBootstrap(DefaultLanguageCode, PlayerPrefsKey);
+            LocalizationServices.SetBootstrap(bootstrap);
+
+            try
+            {
+                bootstrap.Initialize();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    "[Martian.Localization] Failed to initialize Unity Localization bridge. " +
+                    "The project will continue with fallback text until the localization setup is fixed.\n" +
+                    exception);
+            }
+        }
+    }
+
     public sealed class UnityLocalizationBootstrap : ILocalizationBootstrap
     {
         private readonly string _defaultLanguageCode;
@@ -38,7 +69,11 @@ namespace Martian.Localization.Unity
 
             LocalizationSettings.InitializationOperation.WaitForCompletion();
 
-            var languageService = new UnityLanguageService(_defaultLanguageCode, _playerPrefsKey);
+            string configuredDefaultLanguageCode = LocalizationSettings.ProjectLocale != null
+                ? LocalizationSettings.ProjectLocale.Identifier.Code
+                : _defaultLanguageCode;
+
+            var languageService = new UnityLanguageService(configuredDefaultLanguageCode, _playerPrefsKey);
             var textService = new UnityLocalizedTextService();
 
             languageService.Initialize();
@@ -242,16 +277,12 @@ namespace Martian.Localization.Unity
         {
             if (!LocalizationSettings.HasSettings)
             {
-                throw new InvalidOperationException(
-                    "[UnityLocalizedTextService] LocalizationSettings is unavailable. " +
-                    "Localization must be configured before resolving text.");
+                return NullLocalizedTextService.Instance.Resolve(textRef, arguments);
             }
 
             if (string.IsNullOrWhiteSpace(textRef.Table) || string.IsNullOrWhiteSpace(textRef.Entry))
             {
-                throw new InvalidOperationException(
-                    "[UnityLocalizedTextService] Table and entry must both be configured. " +
-                    "Blank localization references are not allowed.");
+                return NullLocalizedTextService.Instance.Resolve(textRef, arguments);
             }
 
             try
@@ -259,14 +290,12 @@ namespace Martian.Localization.Unity
                 StringTable table = LocalizationSettings.StringDatabase.GetTable(textRef.Table);
                 if (table == null)
                 {
-                    throw new InvalidOperationException(
-                        $"[UnityLocalizedTextService] String table '{textRef.Table}' was not found.");
+                    return NullLocalizedTextService.Instance.Resolve(textRef, arguments);
                 }
 
                 if (table.GetEntry(textRef.Entry) == null)
                 {
-                    throw new InvalidOperationException(
-                        $"[UnityLocalizedTextService] Entry '{textRef.Entry}' was not found in table '{textRef.Table}'.");
+                    return NullLocalizedTextService.Instance.Resolve(textRef, arguments);
                 }
 
                 var localizedString = new LocalizedString(textRef.Table, textRef.Entry)
@@ -276,11 +305,9 @@ namespace Martian.Localization.Unity
 
                 return localizedString.GetLocalizedString();
             }
-            catch (Exception exception)
+            catch
             {
-                throw new InvalidOperationException(
-                    $"[UnityLocalizedTextService] Failed to resolve '{textRef.Table}:{textRef.Entry}'.",
-                    exception);
+                return NullLocalizedTextService.Instance.Resolve(textRef, arguments);
             }
         }
     }

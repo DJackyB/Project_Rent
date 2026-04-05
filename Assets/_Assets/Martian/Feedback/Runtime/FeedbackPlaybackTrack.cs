@@ -1,5 +1,6 @@
 using DG.Tweening;
 using Martian.Feedback;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,12 +20,19 @@ namespace Martian.Feedback.Runtime
         private CanvasGroup _panelGroup;
         private Image _panelImage;
         private TextMeshProUGUI _label;
+        private Func<TMP_FontAsset> _fontResolver;
 
         public event System.Action PlaybackCompleted;
 
         public bool IsBusy => _activeSequence != null || _currentRequest != null || _queue.Count > 0;
 
         public int PendingCount => _queue.Count + (_currentRequest != null ? 1 : 0);
+
+        public void SetFontResolver(Func<TMP_FontAsset> fontResolver)
+        {
+            _fontResolver = fontResolver;
+            ApplyResolvedFont();
+        }
 
         public void Configure(Canvas canvas, RectTransform canvasRect, FeedbackRuntimeOptions options)
         {
@@ -192,6 +200,7 @@ namespace Martian.Feedback.Runtime
             _panelRoot.gameObject.SetActive(true);
             _panelGroup.alpha = 0f;
             _label.text = step.Text;
+            ApplyResolvedFont();
             _label.color = isFinalStep ? Color.Lerp(step.Color, Color.white, 0.16f) : step.Color;
             _label.fontStyle = isFinalStep ? FontStyles.Bold : FontStyles.Normal;
             _label.fontSize = isFinalStep ? 26f : 24f;
@@ -275,10 +284,7 @@ namespace Martian.Feedback.Runtime
                 labelRect.offsetMax = _options.PanelPadding * -1f;
 
                 _label = labelObject.GetComponent<TextMeshProUGUI>();
-                if (TMP_Settings.defaultFontAsset != null)
-                {
-                    _label.font = TMP_Settings.defaultFontAsset;
-                }
+                ApplyResolvedFont();
 
                 _label.color = _options.TextColor;
                 _label.fontSize = 24f;
@@ -300,6 +306,45 @@ namespace Martian.Feedback.Runtime
             {
                 _panelGroup.alpha = 0f;
             }
+        }
+
+        private void ApplyResolvedFont()
+        {
+            if (_label == null)
+            {
+                return;
+            }
+
+            TMP_FontAsset fontAsset = null;
+            if (_fontResolver != null)
+            {
+                try
+                {
+                    fontAsset = _fontResolver.Invoke();
+                }
+                catch
+                {
+                    fontAsset = null;
+                }
+            }
+
+            fontAsset ??= TMP_Settings.defaultFontAsset;
+            if (fontAsset == null)
+            {
+                return;
+            }
+
+            if (_label.font != fontAsset)
+            {
+                _label.font = fontAsset;
+            }
+
+            if (fontAsset.material != null && _label.fontSharedMaterial != fontAsset.material)
+            {
+                _label.fontSharedMaterial = fontAsset.material;
+            }
+
+            _label.UpdateMeshPadding();
         }
 
         private void ApplySizing(string text)

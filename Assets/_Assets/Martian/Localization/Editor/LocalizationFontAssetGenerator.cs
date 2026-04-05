@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Martian.Localization;
@@ -15,52 +17,30 @@ namespace Martian.Localization.Editor
 {
     public static class LocalizationFontAssetGenerator
     {
-        private const string SetupMenuRoot = "Tools/Martian/Localization/Setup Project Localization";
+        private const string SetupMenuRoot = "Tools/Martian/Localization/Advanced/Setup Project Localization";
         private const string FontsFolder = "Assets/_Assets/Martian/Localization/Resources/Fonts/SourceHanSansSC";
         private const string RegularFontPath = FontsFolder + "/SourceHanSansSC-Regular.otf";
         private const string BoldFontPath = FontsFolder + "/SourceHanSansSC-Bold.otf";
         private const string RegularFontAssetPath = FontsFolder + "/SourceHanSansSC-Regular SDF.asset";
         private const string BoldFontAssetPath = FontsFolder + "/SourceHanSansSC-Bold SDF.asset";
         private const string LocalizationFontProfilePath = "Assets/_Assets/Martian/Localization/Resources/Localization/LocalizationFontProfile.asset";
-        private const string LocalizationProjectFolder = "Assets/_Assets/Martian/Localization/Project";
-        private const string LocalizationSettingsFolder = LocalizationProjectFolder + "/Settings";
-        private const string LocalizationLocalesFolder = LocalizationProjectFolder + "/Locales";
-        private const string LocalizationTablesFolder = LocalizationProjectFolder + "/Tables";
-        private const string LocalizationSettingsAssetPath = LocalizationSettingsFolder + "/Localization Settings.asset";
-        private const string DefaultLanguageCode = "zh-Hans";
-        private const string DefaultFallbackLanguageCode = "en";
         private const int SamplingPointSize = 90;
         private const int AtlasPadding = 9;
         private const int AtlasSize = 1024;
-        private static readonly string[] DefaultStringTableNames = { "UI", "Common", "Card" };
-
-        private static void GenerateBundledFonts()
-        {
-            if (TMP_Settings.instance == null)
-            {
-                Debug.LogError("[Martian.Localization] TMP Settings not found. Import TMP Essential Resources first.");
-                return;
-            }
-
-            try
-            {
-                GenerateFontAsset(RegularFontPath, "SourceHanSansSC-Regular SDF.asset");
-                GenerateFontAsset(BoldFontPath, "SourceHanSansSC-Bold SDF.asset");
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-
-                Debug.Log("[Martian.Localization] Bundled TMP font assets generated successfully.");
-            }
-            catch (System.SystemException exception)
-            {
-                Debug.LogError($"[Martian.Localization] Failed to generate TMP font assets. {exception.Message}");
-                throw;
-            }
-        }
 
         [MenuItem(SetupMenuRoot)]
         public static void SetupBundledChineseFonts()
+        {
+            SetupProjectLocalization(LocalizationProjectSetupConfig.LoadFirstOrCreateTransient());
+        }
+
+        [MenuItem(SetupMenuRoot, true)]
+        public static bool ValidateSetupBundledChineseFonts()
+        {
+            return HasBundledSourceFonts();
+        }
+
+        public static void SetupProjectLocalization(LocalizationProjectSetupConfig config)
         {
             if (!HasBundledSourceFonts())
             {
@@ -80,11 +60,12 @@ namespace Martian.Localization.Editor
                 return;
             }
 
+            SetupOptions options = SetupOptions.FromConfig(config);
+
             GenerateBundledFonts();
 
             TMP_FontAsset baseFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RegularFontAssetPath);
             TMP_FontAsset boldFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(BoldFontAssetPath);
-
             if (baseFont == null)
             {
                 Debug.LogError("[Martian.Localization] Base TMP font asset was not generated successfully.");
@@ -92,30 +73,35 @@ namespace Martian.Localization.Editor
             }
 
             LocalizationFontProfile profile = EnsureLocalizationFontProfile();
-            BridgeLocalizationProfile(profile, baseFont, boldFont);
-            SetupLocalizationProjectAssets();
+            BridgeLocalizationProfile(profile, options.DefaultLanguageCode, baseFont, boldFont);
+            SetupLocalizationProjectAssets(options);
 
-            int updatedPrefabCount = ReplaceFontsInAllPrefabs(baseFont);
-            int updatedSceneCount = ReplaceFontsInAllScenes(baseFont);
+            int updatedPrefabCount = options.ReplaceFontsInPrefabs ? ReplaceFontsInAllPrefabs(baseFont, options.AssetScanRoots) : 0;
+            int updatedSceneCount = options.ReplaceFontsInScenes ? ReplaceFontsInAllScenes(baseFont, options.AssetScanRoots) : 0;
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             Debug.Log(
-                $"[Martian.Localization] Project localization setup complete. Bridged '{DefaultLanguageCode}' to '{baseFont.name}', " +
-                $"ensured settings/locales/tables, updated {updatedPrefabCount} prefab(s) and {updatedSceneCount} scene(s).");
-        }
-
-        [MenuItem(SetupMenuRoot, true)]
-        public static bool ValidateSetupBundledChineseFonts()
-        {
-            return HasBundledSourceFonts();
+                $"[Martian.Localization] Project localization setup complete. " +
+                $"Default locale '{options.DefaultLanguageCode}', fallback '{options.FallbackLanguageCode}', " +
+                $"tables [{string.Join(", ", options.StringTableNames)}], " +
+                $"updated {updatedPrefabCount} prefab(s) and {updatedSceneCount} scene(s).");
         }
 
         private static bool HasBundledSourceFonts()
         {
             return AssetDatabase.LoadAssetAtPath<Font>(RegularFontPath) != null
                 && AssetDatabase.LoadAssetAtPath<Font>(BoldFontPath) != null;
+        }
+
+        private static void GenerateBundledFonts()
+        {
+            GenerateFontAsset(RegularFontPath, "SourceHanSansSC-Regular SDF.asset");
+            GenerateFontAsset(BoldFontPath, "SourceHanSansSC-Bold SDF.asset");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
         }
 
         private static void GenerateFontAsset(string sourceFontPath, string outputFileName)
@@ -144,7 +130,7 @@ namespace Martian.Localization.Editor
 
             if (fontAsset == null)
             {
-                throw new System.InvalidOperationException($"TMP font asset creation returned null for '{sourceFontPath}'.");
+                throw new InvalidOperationException($"TMP font asset creation returned null for '{sourceFontPath}'.");
             }
 
             fontAsset.name = Path.GetFileNameWithoutExtension(outputFileName);
@@ -178,18 +164,24 @@ namespace Martian.Localization.Editor
                 return profile;
             }
 
+            EnsureFolder(Path.GetDirectoryName(LocalizationFontProfilePath)?.Replace("\\", "/"));
+
             profile = ScriptableObject.CreateInstance<LocalizationFontProfile>();
             AssetDatabase.CreateAsset(profile, LocalizationFontProfilePath);
             EditorUtility.SetDirty(profile);
             return profile;
         }
 
-        private static void BridgeLocalizationProfile(LocalizationFontProfile profile, TMP_FontAsset baseFont, TMP_FontAsset boldFont)
+        private static void BridgeLocalizationProfile(
+            LocalizationFontProfile profile,
+            string languageCode,
+            TMP_FontAsset baseFont,
+            TMP_FontAsset boldFont)
         {
             SerializedObject serializedProfile = new SerializedObject(profile);
             SerializedProperty mappings = serializedProfile.FindProperty("mappings");
 
-            int targetIndex = FindMappingIndex(mappings, DefaultLanguageCode);
+            int targetIndex = FindMappingIndex(mappings, languageCode);
             if (targetIndex < 0)
             {
                 targetIndex = mappings.arraySize;
@@ -197,7 +189,7 @@ namespace Martian.Localization.Editor
             }
 
             SerializedProperty mapping = mappings.GetArrayElementAtIndex(targetIndex);
-            mapping.FindPropertyRelative("languageCode").stringValue = DefaultLanguageCode;
+            mapping.FindPropertyRelative("languageCode").stringValue = languageCode;
             mapping.FindPropertyRelative("fontAsset").objectReferenceValue = baseFont;
 
             SerializedProperty fallbackFonts = mapping.FindPropertyRelative("fallbackFontAssets");
@@ -212,34 +204,34 @@ namespace Martian.Localization.Editor
             EditorUtility.SetDirty(profile);
         }
 
-        private static void SetupLocalizationProjectAssets()
+        private static void SetupLocalizationProjectAssets(SetupOptions options)
         {
-            EnsureFolder(LocalizationProjectFolder);
-            EnsureFolder(LocalizationSettingsFolder);
-            EnsureFolder(LocalizationLocalesFolder);
-            EnsureFolder(LocalizationTablesFolder);
+            EnsureFolder(options.LocalizationProjectFolder);
+            EnsureFolder(options.LocalizationSettingsFolder);
+            EnsureFolder(options.LocalizationLocalesFolder);
+            EnsureFolder(options.LocalizationTablesFolder);
 
-            LocalizationSettings settings = EnsureLocalizationSettings();
-            Locale chineseLocale = EnsureLocale(DefaultLanguageCode);
-            Locale englishLocale = EnsureLocale(DefaultFallbackLanguageCode);
+            LocalizationSettings settings = EnsureLocalizationSettings(options);
+            Locale defaultLocale = EnsureLocale(options.DefaultLanguageCode, options.LocalizationLocalesFolder);
+            Locale fallbackLocale = EnsureLocale(options.FallbackLanguageCode, options.LocalizationLocalesFolder);
 
-            if (chineseLocale == null || englishLocale == null)
+            if (defaultLocale == null || fallbackLocale == null)
             {
-                throw new System.InvalidOperationException("[Martian.Localization] Failed to create required locale assets.");
+                throw new InvalidOperationException("[Martian.Localization] Failed to create required locale assets.");
             }
 
-            EnsureStringTableCollections(chineseLocale, englishLocale);
-            ConfigureLocalizationSettings(settings, chineseLocale);
+            EnsureStringTableCollections(options, defaultLocale, fallbackLocale);
+            ConfigureLocalizationSettings(settings, defaultLocale, options.InitializeSynchronously);
         }
 
-        private static LocalizationSettings EnsureLocalizationSettings()
+        private static LocalizationSettings EnsureLocalizationSettings(SetupOptions options)
         {
-            LocalizationSettings settings = AssetDatabase.LoadAssetAtPath<LocalizationSettings>(LocalizationSettingsAssetPath);
+            LocalizationSettings settings = AssetDatabase.LoadAssetAtPath<LocalizationSettings>(options.LocalizationSettingsAssetPath);
             if (settings == null)
             {
                 settings = ScriptableObject.CreateInstance<LocalizationSettings>();
-                settings.name = "Default Localization Settings";
-                AssetDatabase.CreateAsset(settings, LocalizationSettingsAssetPath);
+                settings.name = "Localization Settings";
+                AssetDatabase.CreateAsset(settings, options.LocalizationSettingsAssetPath);
             }
 
             if (LocalizationEditorSettings.ActiveLocalizationSettings != settings)
@@ -251,7 +243,7 @@ namespace Martian.Localization.Editor
             return settings;
         }
 
-        private static Locale EnsureLocale(string languageCode)
+        private static Locale EnsureLocale(string languageCode, string localesFolder)
         {
             Locale locale = LocalizationEditorSettings.GetLocale(languageCode);
             if (locale != null)
@@ -259,7 +251,7 @@ namespace Martian.Localization.Editor
                 return locale;
             }
 
-            string localeAssetPath = $"{LocalizationLocalesFolder}/{languageCode}.asset";
+            string localeAssetPath = $"{localesFolder}/{languageCode}.asset";
             locale = AssetDatabase.LoadAssetAtPath<Locale>(localeAssetPath);
             if (locale == null)
             {
@@ -277,21 +269,25 @@ namespace Martian.Localization.Editor
             return locale;
         }
 
-        private static void EnsureStringTableCollections(params Locale[] locales)
+        private static void EnsureStringTableCollections(SetupOptions options, params Locale[] locales)
         {
-            Locale[] validLocales = locales.Where(locale => locale != null).ToArray();
+            Locale[] validLocales = locales
+                .Where(locale => locale != null)
+                .GroupBy(locale => locale.Identifier.Code, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToArray();
             if (validLocales.Length == 0)
             {
-                throw new System.InvalidOperationException("[Martian.Localization] No locales are available for table creation.");
+                throw new InvalidOperationException("[Martian.Localization] No locales are available for table creation.");
             }
 
-            for (int i = 0; i < DefaultStringTableNames.Length; i++)
+            for (int i = 0; i < options.StringTableNames.Length; i++)
             {
-                string tableName = DefaultStringTableNames[i];
+                string tableName = options.StringTableNames[i];
                 StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(tableName);
                 if (collection == null)
                 {
-                    collection = LocalizationEditorSettings.CreateStringTableCollection(tableName, LocalizationTablesFolder, validLocales);
+                    collection = LocalizationEditorSettings.CreateStringTableCollection(tableName, options.LocalizationTablesFolder, validLocales);
                 }
 
                 bool collectionChanged = false;
@@ -309,7 +305,7 @@ namespace Martian.Localization.Editor
 
                 foreach (StringTable table in collection.StringTables)
                 {
-                    LocalizationEditorSettings.SetPreloadTableFlag(table, true);
+                    LocalizationEditorSettings.SetPreloadTableFlag(table, options.PreloadTables);
                     EditorUtility.SetDirty(table);
                 }
 
@@ -325,13 +321,8 @@ namespace Martian.Localization.Editor
             }
         }
 
-        private static void ConfigureLocalizationSettings(LocalizationSettings settings, Locale defaultLocale)
+        private static void ConfigureLocalizationSettings(LocalizationSettings settings, Locale defaultLocale, bool initializeSynchronously)
         {
-            if (defaultLocale == null)
-            {
-                return;
-            }
-
             SerializedObject serializedSettings = new SerializedObject(settings);
             SerializedProperty startupSelectors = serializedSettings.FindProperty("m_StartupSelectors");
             if (startupSelectors != null)
@@ -352,13 +343,13 @@ namespace Martian.Localization.Editor
             LocalizationSettings.Instance = settings;
             LocalizationSettings.ProjectLocale = defaultLocale;
             LocalizationSettings.SelectedLocale = defaultLocale;
-            LocalizationSettings.InitializeSynchronously = true;
+            LocalizationSettings.InitializeSynchronously = initializeSynchronously;
             EditorUtility.SetDirty(settings);
         }
 
         private static void EnsureFolder(string assetPath)
         {
-            if (AssetDatabase.IsValidFolder(assetPath))
+            if (string.IsNullOrWhiteSpace(assetPath) || AssetDatabase.IsValidFolder(assetPath))
             {
                 return;
             }
@@ -367,7 +358,7 @@ namespace Martian.Localization.Editor
             string folderName = Path.GetFileName(assetPath);
             if (string.IsNullOrWhiteSpace(parentFolder) || string.IsNullOrWhiteSpace(folderName))
             {
-                throw new System.InvalidOperationException($"[Martian.Localization] Invalid folder path '{assetPath}'.");
+                throw new InvalidOperationException($"[Martian.Localization] Invalid folder path '{assetPath}'.");
             }
 
             EnsureFolder(parentFolder);
@@ -388,10 +379,10 @@ namespace Martian.Localization.Editor
             return -1;
         }
 
-        private static int ReplaceFontsInAllPrefabs(TMP_FontAsset baseFont)
+        private static int ReplaceFontsInAllPrefabs(TMP_FontAsset baseFont, IReadOnlyList<string> scanRoots)
         {
             int updatedPrefabCount = 0;
-            string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" });
+            string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", scanRoots.ToArray());
 
             for (int i = 0; i < prefabGuids.Length; i++)
             {
@@ -409,7 +400,7 @@ namespace Martian.Localization.Editor
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
                     updatedPrefabCount++;
                 }
-                catch (System.Exception exception)
+                catch (Exception exception)
                 {
                     Debug.LogWarning($"[Martian.Localization] Skipped prefab '{prefabPath}' while replacing TMP fonts. {exception.Message}");
                 }
@@ -425,11 +416,11 @@ namespace Martian.Localization.Editor
             return updatedPrefabCount;
         }
 
-        private static int ReplaceFontsInAllScenes(TMP_FontAsset baseFont)
+        private static int ReplaceFontsInAllScenes(TMP_FontAsset baseFont, IReadOnlyList<string> scanRoots)
         {
             int updatedSceneCount = 0;
             SceneSetup[] originalSetup = EditorSceneManager.GetSceneManagerSetup();
-            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
+            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", scanRoots.ToArray());
 
             try
             {
@@ -438,7 +429,7 @@ namespace Martian.Localization.Editor
                     string scenePath = AssetDatabase.GUIDToAssetPath(sceneGuids[i]);
                     try
                     {
-                        UnityEngine.SceneManagement.Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+                        var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
                         bool changed = false;
                         GameObject[] roots = scene.GetRootGameObjects();
@@ -455,7 +446,7 @@ namespace Martian.Localization.Editor
                         EditorSceneManager.SaveScene(scene);
                         updatedSceneCount++;
                     }
-                    catch (System.Exception exception)
+                    catch (Exception exception)
                     {
                         Debug.LogWarning($"[Martian.Localization] Skipped scene '{scenePath}' while replacing TMP fonts. {exception.Message}");
                     }
@@ -503,6 +494,90 @@ namespace Martian.Localization.Editor
             }
 
             return changed;
+        }
+
+        private sealed class SetupOptions
+        {
+            public string DefaultLanguageCode;
+            public string FallbackLanguageCode;
+            public string[] StringTableNames;
+            public string[] AssetScanRoots;
+            public string LocalizationProjectFolder;
+            public string LocalizationSettingsFolder;
+            public string LocalizationLocalesFolder;
+            public string LocalizationTablesFolder;
+            public string LocalizationSettingsAssetPath;
+            public bool ReplaceFontsInPrefabs;
+            public bool ReplaceFontsInScenes;
+            public bool InitializeSynchronously;
+            public bool PreloadTables;
+
+            public static SetupOptions FromConfig(LocalizationProjectSetupConfig config)
+            {
+                LocalizationProjectSetupConfig safeConfig = config != null ? config : LocalizationProjectSetupConfig.CreateTransientDefault();
+                safeConfig.EnsureDefaults();
+
+                string projectFolder = NormalizeFolder(safeConfig.ProjectFolder, "Assets/_Assets/Martian/Localization/Project");
+
+                return new SetupOptions
+                {
+                    DefaultLanguageCode = SanitizeLanguageCode(safeConfig.DefaultLanguageCode, "zh-Hans"),
+                    FallbackLanguageCode = SanitizeLanguageCode(safeConfig.FallbackLanguageCode, "en"),
+                    StringTableNames = SanitizeTableNames(safeConfig.StringTableNames),
+                    AssetScanRoots = SanitizeScanRoots(safeConfig.AssetScanRoots),
+                    LocalizationProjectFolder = projectFolder,
+                    LocalizationSettingsFolder = projectFolder + "/Settings",
+                    LocalizationLocalesFolder = projectFolder + "/Locales",
+                    LocalizationTablesFolder = projectFolder + "/Tables",
+                    LocalizationSettingsAssetPath = projectFolder + "/Settings/Localization Settings.asset",
+                    ReplaceFontsInPrefabs = safeConfig.ReplaceFontsInPrefabs,
+                    ReplaceFontsInScenes = safeConfig.ReplaceFontsInScenes,
+                    InitializeSynchronously = safeConfig.InitializeSynchronously,
+                    PreloadTables = safeConfig.PreloadTables
+                };
+            }
+
+            private static string NormalizeFolder(string value, string fallback)
+            {
+                string normalized = string.IsNullOrWhiteSpace(value) ? fallback : value.Replace("\\", "/").TrimEnd('/');
+                return normalized.StartsWith("Assets", StringComparison.OrdinalIgnoreCase) ? normalized : fallback;
+            }
+
+            private static string SanitizeLanguageCode(string value, string fallback)
+            {
+                return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+            }
+
+            private static string[] SanitizeTableNames(IReadOnlyList<string> values)
+            {
+                if (values == null || values.Count == 0)
+                {
+                    return new[] { "UI", "Common", "Card" };
+                }
+
+                return values
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+
+            private static string[] SanitizeScanRoots(IReadOnlyList<string> values)
+            {
+                if (values == null || values.Count == 0)
+                {
+                    return new[] { "Assets" };
+                }
+
+                string[] sanitized = values
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Replace("\\", "/").TrimEnd('/'))
+                    .Where(value => value.StartsWith("Assets", StringComparison.OrdinalIgnoreCase))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                return sanitized.Length > 0 ? sanitized : new[] { "Assets" };
+            }
         }
     }
 }

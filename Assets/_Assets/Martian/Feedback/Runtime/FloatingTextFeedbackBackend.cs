@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Martian.Feedback;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -27,7 +28,7 @@ namespace Martian.Feedback.Runtime
     /// 4. Track 完成后归还到对象池
     /// 5. Clear()：销毁所有对象，重置状态
     /// </summary>
-    public sealed class FloatingTextFeedbackBackend : IFeedbackPlaybackBackend
+    public sealed class FloatingTextFeedbackBackend : IFeedbackPlaybackBackend, IFeedbackFontResolver
     {
         /// <summary>反馈系统挂载的宿主 Transform。</summary>
         private Transform _host;
@@ -43,6 +44,7 @@ namespace Martian.Feedback.Runtime
 
         /// <summary>当前运行时配置（排序顺序等）。</summary>
         private FeedbackRuntimeOptions _options = new();
+        private Func<TMP_FontAsset> _fontResolver;
 
         /// <summary>活跃中的播放轨道。Key = LaneKey，Value = 对应的 Track。</summary>
         private readonly Dictionary<string, FeedbackPlaybackTrack> _activeTracks = new();
@@ -58,6 +60,21 @@ namespace Martian.Feedback.Runtime
 
         /// <summary>后端是否可用（Host 和 Layer 都已初始化）。</summary>
         public bool IsAvailable => _host != null && _layerRoot != null;
+
+        public void SetFontResolver(Func<TMP_FontAsset> fontResolver)
+        {
+            _fontResolver = fontResolver;
+
+            foreach (var track in _activeTracks.Values)
+            {
+                track?.SetFontResolver(_fontResolver);
+            }
+
+            foreach (var track in _trackPool)
+            {
+                track?.SetFontResolver(_fontResolver);
+            }
+        }
 
         public void Attach(Transform host)
         {
@@ -230,6 +247,7 @@ namespace Martian.Feedback.Runtime
             _trackOwners[track] = targetKey;
             track.transform.SetParent(_layerRoot, false);
             track.gameObject.SetActive(true);
+            track.SetFontResolver(_fontResolver);
             track.Configure(_canvas, _canvasRect, _options);
             return track;
         }
@@ -241,6 +259,7 @@ namespace Martian.Feedback.Runtime
 
             var track = trackObject.GetComponent<FeedbackPlaybackTrack>();
             track.PlaybackCompleted += () => OnTrackPlaybackCompleted(track);
+            track.SetFontResolver(_fontResolver);
             track.Configure(_canvas, _canvasRect, _options);
             return track;
         }

@@ -1,4 +1,6 @@
 using Martian.Feedback;
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
@@ -31,6 +33,7 @@ namespace Martian.Feedback.Runtime
 
         /// <summary>协调器实例，实际执行反馈发布。</summary>
         private FeedbackPlaybackCoordinator _coordinator;
+        private Func<TMP_FontAsset> _fontResolver;
 
         /// <summary>全局活跃的 FeedbackBootstrap 实例。</summary>
         public static FeedbackBootstrap Active { get; private set; }
@@ -85,6 +88,15 @@ namespace Martian.Feedback.Runtime
             RebindService();
         }
 
+        public void SetFontResolver(Func<TMP_FontAsset> fontResolver)
+        {
+            _fontResolver = fontResolver;
+            if (_coordinator != null)
+            {
+                _coordinator.SetFontResolver(_fontResolver);
+            }
+        }
+
         /// <summary>
         /// 重新绑定服务链。
         /// 流程：
@@ -117,6 +129,7 @@ namespace Martian.Feedback.Runtime
 
             _coordinator.Configure(options);
             _coordinator.SetBackend(_backendOverride);
+            _coordinator.SetFontResolver(_fontResolver);
             FeedbackServiceLocator.SetService(_coordinator);
         }
 

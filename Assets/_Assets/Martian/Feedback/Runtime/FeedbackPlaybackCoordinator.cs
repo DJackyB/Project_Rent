@@ -1,10 +1,16 @@
 using System;
 using Martian.Feedback;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
 namespace Martian.Feedback.Runtime
 {
+    internal interface IFeedbackFontResolver
+    {
+        void SetFontResolver(Func<TMP_FontAsset> fontResolver);
+    }
+
     /// <summary>
     /// 反馈播放协调器。实现 IFeedbackService 接口，作为反馈发布的主要入口。
     ///
@@ -28,6 +34,7 @@ namespace Martian.Feedback.Runtime
 
         /// <summary>当前运行时配置选项。</summary>
         private FeedbackRuntimeOptions _options = new();
+        private Func<TMP_FontAsset> _fontResolver;
 
         /// <summary>所有活跃反馈播放完成时触发。监听后端事件并转发。</summary>
         public event Action AllPlaybackCompleted;
@@ -61,6 +68,12 @@ namespace Martian.Feedback.Runtime
             _backend?.Clear();
             _backend = backend ?? new FloatingTextFeedbackBackend();
             BindBackend();
+        }
+
+        public void SetFontResolver(Func<TMP_FontAsset> fontResolver)
+        {
+            _fontResolver = fontResolver;
+            ApplyFontResolver();
         }
 
         /// <summary>
@@ -128,6 +141,7 @@ namespace Martian.Feedback.Runtime
 
             _backend.Attach(transform);
             _backend.Configure(_options);
+            ApplyFontResolver();
             _backend.AllPlaybackCompleted -= HandleBackendCompletion;
             _backend.AllPlaybackCompleted += HandleBackendCompletion;
         }
@@ -151,6 +165,14 @@ namespace Martian.Feedback.Runtime
         private void HandleBackendCompletion()
         {
             AllPlaybackCompleted?.Invoke();
+        }
+
+        private void ApplyFontResolver()
+        {
+            if (_backend is IFeedbackFontResolver fontAwareBackend)
+            {
+                fontAwareBackend.SetFontResolver(_fontResolver);
+            }
         }
 
         /// <summary>

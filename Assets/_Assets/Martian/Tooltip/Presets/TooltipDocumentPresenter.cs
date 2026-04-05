@@ -58,14 +58,18 @@ namespace Martian.Tooltip.Presets
 
         private void BuildView(TooltipDocument document)
         {
-            _panel = new GameObject("TooltipDocumentPanel", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VerticalLayoutGroup));
+            _panel = new GameObject("TooltipDocumentPanel", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             _panel.transform.SetParent(transform, false);
             _root = _panel.GetComponent<RectTransform>();
 
             _root.anchorMin = new Vector2(0f, 0f);
             _root.anchorMax = new Vector2(0f, 0f);
             _root.pivot = new Vector2(0f, 0f);
-            _root.sizeDelta = new Vector2(340f, 220f);
+            _root.sizeDelta = new Vector2(340f, 0f);
+
+            var sizeFitter = _panel.GetComponent<ContentSizeFitter>();
+            sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var canvasGroup = _panel.GetComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = false;

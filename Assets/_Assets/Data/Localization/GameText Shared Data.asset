@@ -139,6 +139,18 @@ MonoBehaviour:
     m_Key: GameText.TypeLabel.Contract
     m_Metadata:
       m_Items: []
+  - m_Id: 677036059
+    m_Key: GameText.PhaseName.Prepare
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036060
+    m_Key: GameText.PhaseName.Action
+    m_Metadata:
+      m_Items: []
+  - m_Id: 677036061
+    m_Key: GameText.PhaseName.Settle
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
