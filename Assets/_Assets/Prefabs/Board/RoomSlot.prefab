@@ -257,13 +257,13 @@ MonoBehaviour:
   m_text: Empty Slot
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
-  m_sharedMaterial: {fileID: -2453717826090520390, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
+  m_sharedMaterial: {fileID: -3082088655038010156, guid: 6d1260c0836a5fc4b9c25bfe4c1927c5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 1932735231
+    rgba: 1946157055
   m_fontColor: {r: 1, g: 1, b: 1, a: 0.45}
   m_enableVertexGradient: 0
   m_colorMode: 3

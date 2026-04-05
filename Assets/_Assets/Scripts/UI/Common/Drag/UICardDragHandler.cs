@@ -189,7 +189,7 @@ namespace BaoZuPo.UI.Common.Drag
             StopTweens();
             if (hovered)
             {
-                _idleAnchoredPosition = _rectTransform.anchoredPosition;
+                RefreshIdlePositionFromLayout();
             }
 
             Vector2 targetPosition = hovered
@@ -261,6 +261,18 @@ namespace BaoZuPo.UI.Common.Drag
             _hoverScaleTween?.Kill(false);
             _hoverMoveTween = null;
             _hoverScaleTween = null;
+        }
+
+        private void RefreshIdlePositionFromLayout()
+        {
+            var parentRect = _rectTransform.parent as RectTransform;
+            if (parentRect != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+            }
+
+            _idleAnchoredPosition = _rectTransform.anchoredPosition;
         }
     }
 }

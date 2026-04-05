@@ -33,7 +33,6 @@ namespace BaoZuPo.UI
             _cardPrefab = cardPrefab;
 
             EnsureRoots();
-            ApplySlotSizing();
         }
 
         public void Bind(CardInstance card)
@@ -57,10 +56,7 @@ namespace BaoZuPo.UI
             var rect = _currentCardObject.transform as RectTransform;
             if (rect != null)
             {
-                rect.anchorMin = Vector2.zero;
-                rect.anchorMax = Vector2.one;
-                rect.offsetMin = Vector2.zero;
-                rect.offsetMax = Vector2.zero;
+                ApplyCardSizing(rect);
             }
 
             var cardView = _currentCardObject.GetComponent<UICardView>();
@@ -87,54 +83,49 @@ namespace BaoZuPo.UI
         {
             if (contentRoot == null)
             {
-                contentRoot = transform.Find("ContentRoot") as RectTransform;
-            }
-
-            if (contentRoot == null)
-            {
-                var contentObject = new GameObject("ContentRoot", typeof(RectTransform));
-                contentObject.transform.SetParent(transform, false);
-                contentRoot = contentObject.GetComponent<RectTransform>();
-
-                contentRoot.anchorMin = Vector2.zero;
-                contentRoot.anchorMax = Vector2.one;
-                contentRoot.offsetMin = Vector2.zero;
-                contentRoot.offsetMax = Vector2.zero;
+                Debug.LogError("[UIRoomSlotView] contentRoot is not assigned. Wire it in the Prefab Inspector.", this);
+                return;
             }
 
             if (layoutElement == null)
             {
-                layoutElement = GetComponent<LayoutElement>();
+                Debug.LogError("[UIRoomSlotView] layoutElement is not assigned. Wire it in the Prefab Inspector.", this);
             }
 
             if (placeholderObject == null)
             {
-                placeholderObject = contentRoot.Find("EmptySlot")?.gameObject;
+                Debug.LogError("[UIRoomSlotView] placeholderObject is not assigned. Wire it in the Prefab Inspector.", this);
             }
 
-            if (placeholderLabel == null && placeholderObject != null)
+            if (placeholderLabel == null)
             {
-                placeholderLabel = placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
+                Debug.LogError("[UIRoomSlotView] placeholderLabel is not assigned. Wire it in the Prefab Inspector.", this);
             }
         }
 
-        private void ApplySlotSizing()
+        private void ApplyCardSizing(RectTransform rect)
         {
-            if (layoutElement == null)
+            if (rect == null)
             {
-                layoutElement = GetComponent<LayoutElement>();
+                return;
             }
 
-            if (layoutElement == null)
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one;
+
+            var fitter = rect.GetComponent<AspectRatioFitter>();
+            if (fitter == null)
             {
-                layoutElement = gameObject.AddComponent<LayoutElement>();
+                Debug.LogError("[UIRoomSlotView] Card prefab is missing AspectRatioFitter. Add it to Card.prefab.", rect.gameObject);
+                return;
             }
 
-            Vector2 size = slotContext == CardViewContext.RoomEquipment ? equipmentSlotSize : tenantSlotSize;
-            layoutElement.preferredWidth = size.x;
-            layoutElement.preferredHeight = size.y;
-            layoutElement.flexibleWidth = 0f;
-            layoutElement.flexibleHeight = 0f;
+            Vector2 designSize = slotContext == CardViewContext.RoomEquipment ? equipmentSlotSize : tenantSlotSize;
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = designSize.x / designSize.y;
         }
 
         private void ClearCurrentCard()
@@ -148,49 +139,18 @@ namespace BaoZuPo.UI
 
         private void ShowPlaceholder()
         {
-            if (placeholderObject != null)
+            if (placeholderObject == null)
             {
-                placeholderObject.SetActive(true);
-                if (placeholderLabel == null)
-                {
-                    placeholderLabel = placeholderObject.GetComponentInChildren<TextMeshProUGUI>(true);
-                }
-
-                if (placeholderLabel != null)
-                {
-                    placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
-                }
+                Debug.LogError("[UIRoomSlotView] placeholderObject is not assigned. Wire it in the Prefab Inspector.", this);
                 return;
             }
 
-            placeholderObject = new GameObject("EmptySlot", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            placeholderObject.transform.SetParent(contentRoot, false);
+            placeholderObject.SetActive(true);
 
-            var rect = placeholderObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            var image = placeholderObject.GetComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, 0.08f);
-            image.raycastTarget = false;
-
-            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            labelObject.transform.SetParent(placeholderObject.transform, false);
-
-            var labelRect = labelObject.GetComponent<RectTransform>();
-            labelRect.anchorMin = Vector2.zero;
-            labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = Vector2.zero;
-            labelRect.offsetMax = Vector2.zero;
-
-            placeholderLabel = labelObject.GetComponent<TextMeshProUGUI>();
-            placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
-            placeholderLabel.alignment = TextAlignmentOptions.Center;
-            placeholderLabel.fontSize = 20f;
-            placeholderLabel.color = new Color(1f, 1f, 1f, 0.45f);
-            placeholderLabel.raycastTarget = false;
+            if (placeholderLabel != null)
+            {
+                placeholderLabel.text = slotContext == CardViewContext.RoomEquipment ? GameText.EmptyEquipmentSlot : GameText.EmptyTenantSlot;
+            }
         }
 
         private void HidePlaceholder()

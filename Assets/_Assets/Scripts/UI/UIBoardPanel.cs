@@ -21,7 +21,6 @@ namespace BaoZuPo.UI
         public Transform roomContainer;
         public GameObject roomCardEntryPrefab;
         public UICardDropZone playAreaDropZone;
-        [SerializeField] private TextMeshProUGUI playAreaLabel;
         [SerializeField] private RectTransform contractPanelRoot;
         [SerializeField] private Transform contractContainer;
         [SerializeField] private TextMeshProUGUI contractTitleText;
@@ -95,36 +94,9 @@ namespace BaoZuPo.UI
                     var zoneImage = zoneObject.GetComponent<Image>();
                     zoneImage.color = new Color(0.18f, 0.26f, 0.33f, 0.36f);
                     zoneImage.type = Image.Type.Sliced;
-
-                    var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-                    labelObject.transform.SetParent(zoneTransform, false);
-
-                    var labelRect = labelObject.GetComponent<RectTransform>();
-                    labelRect.anchorMin = Vector2.zero;
-                    labelRect.anchorMax = Vector2.one;
-                    labelRect.offsetMin = Vector2.zero;
-                    labelRect.offsetMax = Vector2.zero;
-
-                    var label = labelObject.GetComponent<TextMeshProUGUI>();
-                    label.text = GameText.PlayArea;
-                    label.fontSize = 24f;
-                    label.alignment = TextAlignmentOptions.Center;
-                    label.color = Color.white;
-                    label.raycastTarget = false;
                 }
 
                 playAreaDropZone = zoneTransform.GetComponent<UICardDropZone>();
-            }
-
-            var zoneLabel = playAreaLabel != null
-                ? playAreaLabel
-                : playAreaDropZone != null
-                    ? playAreaDropZone.GetComponentInChildren<TextMeshProUGUI>(true)
-                    : null;
-            if (zoneLabel != null)
-            {
-                zoneLabel.text = GameText.PlayArea;
-                playAreaLabel = zoneLabel;
             }
 
             playAreaDropZone.ZoneKind = CardPlayTargetKind.PlayArea;

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
@@ -41,10 +42,10 @@ namespace BaoZuPo.UI
             _boardPanel = boardPanel;
 
             EnsureRuntimeReferences();
-            EnsureSlotContainerLayout();
             ConfigureDropZone();
             BuildSlots();
             RefreshTitle();
+            StartCoroutine(RefreshGridCellSize());
         }
 
         private void BuildSlots()
@@ -57,6 +58,7 @@ namespace BaoZuPo.UI
             for (int i = 0; i < tenantCapacity; i++)
             {
                 var tenantSlot = CreateSlot(container, $"TenantSlot_{i}", CardViewContext.RoomTenant);
+                if (tenantSlot == null) continue;
                 tenantSlot.Bind(_room != null ? _room.GetTenantAt(i) : null);
                 _slotViews.Add(tenantSlot);
             }
@@ -65,6 +67,7 @@ namespace BaoZuPo.UI
             for (int i = 0; i < equipmentCapacity; i++)
             {
                 var equipmentSlot = CreateSlot(container, $"EquipmentSlot_{i}", CardViewContext.RoomEquipment);
+                if (equipmentSlot == null) continue;
                 equipmentSlot.Bind(_room != null ? _room.GetEquipmentAt(i) : null);
                 _slotViews.Add(equipmentSlot);
             }
@@ -72,24 +75,19 @@ namespace BaoZuPo.UI
 
         private UIRoomSlotView CreateSlot(Transform parent, string slotName, CardViewContext context)
         {
-            GameObject slotObject;
-            UIRoomSlotView slotView;
-
-            if (slotPrefab != null)
+            if (slotPrefab == null)
             {
-                slotObject = Instantiate(slotPrefab, parent, false);
-                slotObject.name = slotName;
-                slotView = slotObject.GetComponent<UIRoomSlotView>();
-                if (slotView == null)
-                {
-                    slotView = slotObject.AddComponent<UIRoomSlotView>();
-                }
+                Debug.LogError("[UIRoomView] slotPrefab is not assigned. Wire RoomSlot.prefab in the Inspector.", gameObject);
+                return null;
             }
-            else
+
+            var slotObject = Instantiate(slotPrefab, parent, false);
+            slotObject.name = slotName;
+            var slotView = slotObject.GetComponent<UIRoomSlotView>();
+            if (slotView == null)
             {
-                slotObject = new GameObject(slotName, typeof(RectTransform));
-                slotObject.transform.SetParent(parent, false);
-                slotView = slotObject.AddComponent<UIRoomSlotView>();
+                Debug.LogError("[UIRoomView] slotPrefab is missing UIRoomSlotView component.", slotObject);
+                return null;
             }
 
             slotView.Setup(context, _cardPrefab);
@@ -115,134 +113,72 @@ namespace BaoZuPo.UI
         {
             if (dropZone != null)
             {
-                dropZone.ZoneKind = CardPlayTargetKind.Room;
                 dropZone.BindRoom(_room);
-                dropZone.AssignRuntimeReferences(DropAnchor, highlightGraphic);
                 dropZone.SetHighlighted(false, true);
             }
 
             if (roomButton != null)
             {
                 roomButton.onClick.RemoveAllListeners();
-                roomButton.transition = Selectable.Transition.None;
-                roomButton.interactable = false;
             }
         }
 
-        private void EnsureSlotContainerLayout()
+private IEnumerator RefreshGridCellSize()
         {
+            yield return null; // wait one frame for layout to settle
+
             var container = cardListContainer != null ? cardListContainer : transform;
+            var grid = container.GetComponent<GridLayoutGroup>();
+            if (grid == null || _slotViews.Count == 0) yield break;
 
-            var layout = container.GetComponent<HorizontalLayoutGroup>();
-            if (layout == null)
+            Canvas.ForceUpdateCanvases();
+            var containerRect = container as RectTransform;
+            float w = containerRect.rect.width;
+            float h = containerRect.rect.height;
+            if (w <= 0f || h <= 0f) yield break;
+
+            int count = _slotViews.Count;
+            int bestCols = 1;
+            float bestCellArea = 0f;
+
+            for (int cols = 1; cols <= count; cols++)
             {
-                layout = container.gameObject.AddComponent<HorizontalLayoutGroup>();
+                int rows = Mathf.CeilToInt((float)count / cols);
+                float cellW = (w - grid.padding.left - grid.padding.right - grid.spacing.x * (cols - 1)) / cols;
+                float cellH = (h - grid.padding.top - grid.padding.bottom - grid.spacing.y * (rows - 1)) / rows;
+                if (cellW <= 0f || cellH <= 0f) continue;
+                float area = cellW * cellH;
+                if (area > bestCellArea)
+                {
+                    bestCellArea = area;
+                    bestCols = cols;
+                }
             }
 
-            layout.spacing = 10f;
-            layout.childAlignment = TextAnchor.UpperLeft;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
+            int bestRows = Mathf.CeilToInt((float)count / bestCols);
+            float finalCellW = (w - grid.padding.left - grid.padding.right - grid.spacing.x * (bestCols - 1)) / bestCols;
+            float finalCellH = (h - grid.padding.top - grid.padding.bottom - grid.spacing.y * (bestRows - 1)) / bestRows;
 
-            var fitter = container.GetComponent<ContentSizeFitter>();
-            if (fitter == null)
-            {
-                fitter = container.gameObject.AddComponent<ContentSizeFitter>();
-            }
+            grid.cellSize = new Vector2(finalCellW, finalCellH);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = bestCols;
 
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
         }
 
         private void EnsureRuntimeReferences()
         {
-            if (cardListContainer == null)
-            {
-                var containerObject = new GameObject("CardList", typeof(RectTransform));
-                containerObject.transform.SetParent(transform, false);
-                cardListContainer = containerObject.transform;
-
-                var rect = cardListContainer as RectTransform;
-                rect.anchorMin = new Vector2(0f, 0f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.offsetMin = new Vector2(12f, 12f);
-                rect.offsetMax = new Vector2(-12f, -48f);
-            }
-
-            if (titleText == null)
-            {
-                var titleObject = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-                titleObject.transform.SetParent(transform, false);
-
-                var rect = titleObject.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0f, 1f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.pivot = new Vector2(0.5f, 1f);
-                rect.offsetMin = new Vector2(12f, -36f);
-                rect.offsetMax = new Vector2(-12f, -8f);
-
-                titleText = titleObject.GetComponent<TextMeshProUGUI>();
-                titleText.fontSize = 20f;
-                titleText.color = Color.white;
-                titleText.alignment = TextAlignmentOptions.Left;
-                titleText.raycastTarget = false;
-            }
-
             if (roomButton == null)
-            {
                 roomButton = GetComponent<Button>();
-            }
-
-            if (roomButton == null)
-            {
-                var image = GetComponent<Image>();
-                if (image == null)
-                {
-                    image = gameObject.AddComponent<Image>();
-                    image.color = new Color(0f, 0f, 0f, 0.18f);
-                }
-
-                roomButton = gameObject.AddComponent<Button>();
-            }
 
             if (dropAnchor == null)
-            {
                 dropAnchor = transform as RectTransform;
-            }
 
             if (dropZone == null)
-            {
-                dropZone = GetComponent<UICardDropZone>();
-                if (dropZone == null)
-                {
-                    dropZone = gameObject.AddComponent<UICardDropZone>();
-                }
-            }
+                Debug.LogError("[UIRoomView] Missing UICardDropZone on Room.prefab. Add the component and assign it in the Inspector.", gameObject);
 
             if (highlightGraphic == null)
-            {
-                var highlight = transform.Find("DropHighlight");
-                if (highlight == null)
-                {
-                    var highlightObject = new GameObject("DropHighlight", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                    highlightObject.transform.SetParent(transform, false);
-                    highlight = highlightObject.transform;
-
-                    var highlightRect = highlight as RectTransform;
-                    highlightRect.anchorMin = Vector2.zero;
-                    highlightRect.anchorMax = Vector2.one;
-                    highlightRect.offsetMin = Vector2.zero;
-                    highlightRect.offsetMax = Vector2.zero;
-
-                    var highlightImage = highlightObject.GetComponent<Image>();
-                    highlightImage.color = new Color(0.48f, 0.84f, 0.62f, 0f);
-                    highlightImage.raycastTarget = false;
-                }
-
-                highlightGraphic = highlight.GetComponent<Graphic>();
-            }
+                Debug.LogError("[UIRoomView] Missing highlightGraphic on Room.prefab. Assign the DropHighlight Image in the Inspector.", gameObject);
         }
 
         private static void ClearContainer(Transform container)
