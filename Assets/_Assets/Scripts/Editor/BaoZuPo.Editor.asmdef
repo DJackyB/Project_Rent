@@ -11,7 +11,12 @@
     "NPOI.OOXML.dll",
     "NPOI.OpenXml4Net.dll",
     "ICSharpCode.SharpZipLib.dll",
-    "BouncyCastle.Crypto.dll"
+    "BouncyCastle.Crypto.dll",
+    "Sirenix.OdinInspector.Attributes.dll",
+    "Sirenix.OdinInspector.Editor.dll",
+    "Sirenix.Utilities.dll",
+    "Sirenix.Utilities.Editor.dll",
+    "Sirenix.Serialization.dll"
   ],
   "includePlatforms": [
     "Editor"

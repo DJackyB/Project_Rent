@@ -70,7 +70,7 @@ namespace BaoZuPo.Editor
             ("ROI%",   62f),
         };
 
-        [MenuItem("BaoZuPo/Balance Simulator")]
+        [MenuItem("Tools/BaoZuPo/Simulation/Balance Simulator")]
         public static void Open()
         {
             var w = GetWindow<BalanceSimulatorWindow>("平衡模拟器");

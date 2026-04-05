@@ -11,23 +11,14 @@ using UnityEngine.Localization.Tables;
 namespace BaoZuPo.Editor.Localization
 {
     /// <summary>
-    /// GameText 本地化迁移工具。
-    ///
-    /// 功能：
-    /// 1. 解析 GameText.cs，自动提取所有文本条目（属性、格式化方法、switch 枚举）
-    /// 2. 在编辑器窗口预览提取结果
-    /// 3. 导出 TSV 文件供翻译填写
-    /// 4. 导入翻译后的 TSV，将中文值写入窗口预览
-    /// 5. 生成 Unity Localization StringTableCollection（en + zh-Hans）
-    ///
-    /// 使用流程：
-    ///   Tools → BaoZuPo → GameText 本地化迁移
-    ///   → 解析 → 导出 TSV → 填写 zh-Hans 列 → 导入 TSV → 生成 StringTable
+    /// Combined text tooling for project-owned gameplay copy.
+    /// Handles both the legacy GameText workflow and the card localization CSV flow.
     /// </summary>
     public sealed class GameTextLocalizationMigrator : EditorWindow
     {
         private const string GameTextPath = "Assets/_Assets/Scripts/UI/GameText.cs";
         private const string TsvOutputPath = "Assets/_Assets/Data/Localization/GameText.csv";
+        private const string CardCsvPath = "Assets/_Assets/Data/Localization/Card.csv";
         private const string LocalizationAssetDir = "Assets/_Assets/Data/Localization";
         private const string CollectionName = "GameText";
         private const string EnLocaleCode = "en";
@@ -37,10 +28,10 @@ namespace BaoZuPo.Editor.Localization
         private Vector2 _scroll;
         private string _statusMessage;
 
-        [MenuItem("Tools/BaoZuPo/GameText 本地化迁移")]
+        [MenuItem("Tools/BaoZuPo/Localization/Text Tools")]
         public static void Open()
         {
-            GetWindow<GameTextLocalizationMigrator>("GameText 本地化迁移").Show();
+            GetWindow<GameTextLocalizationMigrator>("Localization Text Tools").Show();
         }
 
         private void OnEnable()
@@ -50,51 +41,102 @@ namespace BaoZuPo.Editor.Localization
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("GameText 本地化迁移工具", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Localization Text Tools", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "流程：解析 → 导出 CSV → 在 Excel 填写 zh-Hans 列 → 导入 CSV → 生成 StringTable",
+                "Project-owned text tools. Use GameText for shared UI copy, and Card Text for card name/description bilingual sync.",
                 MessageType.Info);
-            EditorGUILayout.Space(4);
+            EditorGUILayout.Space(4f);
 
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("1. 重新解析")) ParseGameText();
-            if (GUILayout.Button("2. 导出 CSV")) ExportTsv();
-            if (GUILayout.Button("3. 导入 CSV")) ImportTsv();
-            if (GUILayout.Button("4. 生成 StringTable")) GenerateStringTable();
-            EditorGUILayout.EndHorizontal();
+            DrawGameTextSection();
+            EditorGUILayout.Space(8f);
+            DrawCardTextSection();
+            EditorGUILayout.Space(6f);
 
             if (!string.IsNullOrEmpty(_statusMessage))
             {
                 EditorGUILayout.HelpBox(_statusMessage, MessageType.None);
             }
 
-            EditorGUILayout.Space(4);
+            EditorGUILayout.Space(4f);
 
-            // Header
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            EditorGUILayout.LabelField("Key", EditorStyles.boldLabel, GUILayout.Width(270));
-            EditorGUILayout.LabelField("en", EditorStyles.boldLabel, GUILayout.Width(230));
-            EditorGUILayout.LabelField("zh-Hans", EditorStyles.boldLabel, GUILayout.Width(200));
+            EditorGUILayout.LabelField("Key", EditorStyles.boldLabel, GUILayout.Width(270f));
+            EditorGUILayout.LabelField("en", EditorStyles.boldLabel, GUILayout.Width(230f));
+            EditorGUILayout.LabelField("zh-Hans", EditorStyles.boldLabel, GUILayout.Width(200f));
             EditorGUILayout.EndHorizontal();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
-            foreach (var entry in _entries)
+            foreach (TextEntry entry in _entries)
             {
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.SelectableLabel(entry.Key, GUILayout.Width(270), GUILayout.Height(EditorGUIUtility.singleLineHeight));
-                EditorGUILayout.SelectableLabel(entry.EnValue, GUILayout.Width(230), GUILayout.Height(EditorGUIUtility.singleLineHeight));
-                var zhStyle = string.IsNullOrWhiteSpace(entry.ZhValue) ? EditorStyles.label : EditorStyles.label;
-                EditorGUILayout.LabelField(
-                    string.IsNullOrWhiteSpace(entry.ZhValue) ? "—" : entry.ZhValue,
-                    GUILayout.Width(200));
+                EditorGUILayout.SelectableLabel(entry.Key, GUILayout.Width(270f), GUILayout.Height(EditorGUIUtility.singleLineHeight));
+                EditorGUILayout.SelectableLabel(entry.EnValue, GUILayout.Width(230f), GUILayout.Height(EditorGUIUtility.singleLineHeight));
+                EditorGUILayout.LabelField(string.IsNullOrWhiteSpace(entry.ZhValue) ? "-" : entry.ZhValue, GUILayout.Width(200f));
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndScrollView();
 
-            EditorGUILayout.LabelField($"共 {_entries.Count} 条", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Entries: {_entries.Count}", EditorStyles.miniLabel);
         }
 
-        // ── 解析 ─────────────────────────────────────────────────────────────
+        private void DrawGameTextSection()
+        {
+            EditorGUILayout.LabelField("GameText", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Parses GameText.cs, exports/imports GameText.csv, then writes the GameText string table.",
+                MessageType.None);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("1. Parse GameText"))
+            {
+                ParseGameText();
+            }
+
+            if (GUILayout.Button("2. Export GameText CSV"))
+            {
+                ExportTsv();
+            }
+
+            if (GUILayout.Button("3. Import GameText CSV"))
+            {
+                ImportTsv();
+            }
+
+            if (GUILayout.Button("4. Generate GameText Table"))
+            {
+                GenerateStringTable();
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawCardTextSection()
+        {
+            EditorGUILayout.LabelField("Card Text", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Syncs CardData into the Card localization table, exports Card.csv for translation, and imports translated English back into the table.",
+                MessageType.None);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("1. Sync Card Tables"))
+            {
+                CardLocalizationSyncUtility.SyncCardTablesFromCardData();
+                SetStatus("Card tables synced from CardData and Card.csv updated.");
+            }
+
+            if (GUILayout.Button("2. Export Card CSV"))
+            {
+                CardLocalizationSyncUtility.SyncCardTablesFromCardData();
+                EditorUtility.RevealInFinder(CardCsvPath);
+                SetStatus("Card.csv exported to Assets/_Assets/Data/Localization.");
+            }
+
+            if (GUILayout.Button("3. Import Card CSV"))
+            {
+                CardLocalizationSyncUtility.ImportCardCsv();
+                SetStatus("Card.csv imported into the Card English table.");
+            }
+            EditorGUILayout.EndHorizontal();
+        }
 
         private void ParseGameText()
         {
@@ -102,60 +144,46 @@ namespace BaoZuPo.Editor.Localization
 
             if (!File.Exists(GameTextPath))
             {
-                SetStatus($"找不到 {GameTextPath}");
+                SetStatus($"Could not find {GameTextPath}");
                 return;
             }
 
-            var src = File.ReadAllText(GameTextPath, Encoding.UTF8);
-
+            string src = File.ReadAllText(GameTextPath, Encoding.UTF8);
             ParseSimpleProperties(src);
             ParseSingleLineMethods(src);
             ParseSwitchMethod(src, "PhaseName");
             ParseSwitchMethod(src, "TypeLabel");
 
-            SetStatus($"解析完成：{_entries.Count} 条");
+            SetStatus($"Parsed {_entries.Count} GameText entries.");
             Repaint();
         }
 
-        /// <summary>
-        /// 提取单行属性：public static string Xxx => "value";
-        /// </summary>
         private void ParseSimpleProperties(string src)
         {
-            var re = new Regex(@"public static string (\w+) => ""([^""]+)"";");
-            foreach (Match m in re.Matches(src))
+            Regex regex = new Regex(@"public static string (\w+) => Resolve\(""[^""]+"", ""([^""]+)""");
+            foreach (Match match in regex.Matches(src))
             {
                 _entries.Add(new TextEntry
                 {
-                    Key = $"GameText.{m.Groups[1].Value}",
-                    EnValue = m.Groups[2].Value
+                    Key = $"GameText.{match.Groups[1].Value}",
+                    EnValue = match.Groups[2].Value
                 });
             }
         }
 
-        /// <summary>
-        /// 提取单行格式化方法（支持任意参数数量）：
-        ///   public static string Xxx(T a, T b, ...) => $"... {a} ... {b} ...";
-        /// 参数按声明顺序替换为 {0}, {1}, ...
-        /// 支持声明与 lambda 体跨行。
-        /// </summary>
         private void ParseSingleLineMethods(string src)
         {
-            // 匹配方法签名 + => $"..." 的单行 lambda（允许换行）
-            var re = new Regex(
-                @"public static string (\w+)\(([^)]+)\)\s*=>\s*\$""([^""]+)"";",
+            Regex regex = new Regex(
+                @"public static string (\w+)\(([^)]*)\)\s*=>\s*Resolve\(""[^""]+"",\s*\$""([^""]+)""",
                 RegexOptions.Singleline);
 
-            foreach (Match m in re.Matches(src))
+            foreach (Match match in regex.Matches(src))
             {
-                var methodName = m.Groups[1].Value;
-                var paramDecls = m.Groups[2].Value;
-                var template = m.Groups[3].Value;
+                string methodName = match.Groups[1].Value;
+                string paramDecls = match.Groups[2].Value;
+                string template = match.Groups[3].Value;
 
-                // 提取参数名（按顺序）
-                var paramNames = ExtractParamNames(paramDecls);
-
-                // 将 {paramName} 替换为 {0}, {1}, ...
+                List<string> paramNames = ExtractParamNames(paramDecls);
                 for (int i = 0; i < paramNames.Count; i++)
                 {
                     template = template.Replace($"{{{paramNames[i]}}}", $"{{{i}}}");
@@ -169,146 +197,114 @@ namespace BaoZuPo.Editor.Localization
             }
         }
 
-        /// <summary>
-        /// 提取 switch 方法的 case：
-        ///   case Xxx.Yyy => "value",  或  case "Yyy" => "value",
-        /// 生成 key: GameText.MethodName.CaseName
-        /// </summary>
         private void ParseSwitchMethod(string src, string methodName)
         {
-            // 找到方法体的 switch 块
-            var methodStart = src.IndexOf($"public static string {methodName}(");
-            if (methodStart < 0) return;
+            int methodStart = src.IndexOf($"public static string {methodName}(", System.StringComparison.Ordinal);
+            if (methodStart < 0)
+            {
+                return;
+            }
 
-            var switchStart = src.IndexOf("switch", methodStart);
-            if (switchStart < 0) return;
+            int switchStart = src.IndexOf("switch", methodStart, System.StringComparison.Ordinal);
+            if (switchStart < 0)
+            {
+                return;
+            }
 
-            var braceOpen = src.IndexOf('{', switchStart);
-            if (braceOpen < 0) return;
+            int braceOpen = src.IndexOf('{', switchStart);
+            if (braceOpen < 0)
+            {
+                return;
+            }
 
-            // 找到匹配的闭括号
             int depth = 0;
             int braceClose = -1;
             for (int i = braceOpen; i < src.Length; i++)
             {
-                if (src[i] == '{') depth++;
+                if (src[i] == '{')
+                {
+                    depth++;
+                }
                 else if (src[i] == '}')
                 {
                     depth--;
-                    if (depth == 0) { braceClose = i; break; }
+                    if (depth == 0)
+                    {
+                        braceClose = i;
+                        break;
+                    }
                 }
             }
 
-            if (braceClose < 0) return;
-
-            var block = src.Substring(braceOpen + 1, braceClose - braceOpen - 1);
-
-            // 匹配 case Xxx.CaseName => "value", 或 case "CaseName" => "value",
-            var caseRe = new Regex(@"(?:[\w]+\.)?(\w+)\s*=>\s*""([^""]+)""");
-            foreach (Match m in caseRe.Matches(block))
+            if (braceClose < 0)
             {
-                var caseName = m.Groups[1].Value;
-                var caseValue = m.Groups[2].Value;
+                return;
+            }
+
+            string block = src.Substring(braceOpen + 1, braceClose - braceOpen - 1);
+            Regex caseRegex = new Regex(@"Resolve\(""[^""]+\." + methodName + @"\.(\w+)"",\s*""([^""]+)""");
+            foreach (Match match in caseRegex.Matches(block))
+            {
                 _entries.Add(new TextEntry
                 {
-                    Key = $"GameText.{methodName}.{caseName}",
-                    EnValue = caseValue
+                    Key = $"GameText.{methodName}.{match.Groups[1].Value}",
+                    EnValue = match.Groups[2].Value
                 });
             }
         }
 
         private static List<string> ExtractParamNames(string paramDecls)
         {
-            var names = new List<string>();
-            // 参数格式: "Type name, Type name, ..."
-            foreach (var param in paramDecls.Split(','))
+            List<string> names = new List<string>();
+            foreach (string param in paramDecls.Split(','))
             {
-                var parts = param.Trim().Split(' ');
+                string trimmed = param.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                {
+                    continue;
+                }
+
+                string[] parts = trimmed.Split(' ');
                 if (parts.Length >= 2)
                 {
                     names.Add(parts[parts.Length - 1].Trim());
                 }
             }
+
             return names;
         }
-
-        // ── 导出 TSV ──────────────────────────────────────────────────────────
 
         private void ExportTsv()
         {
             EnsureLocalizationDir();
 
-            static string Escape(string v)
-            {
-                if (string.IsNullOrEmpty(v)) return string.Empty;
-                if (v.IndexOf(',') >= 0 || v.IndexOf('"') >= 0 || v.IndexOf('\n') >= 0)
-                    return "\"" + v.Replace("\"", "\"\"") + "\"";
-                return v;
-            }
-
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine("Key,en,zh-Hans");
-            foreach (var entry in _entries)
+            foreach (TextEntry entry in _entries)
             {
                 sb.AppendLine(Escape(entry.Key) + "," + Escape(entry.EnValue) + "," + Escape(entry.ZhValue ?? string.Empty));
             }
 
             File.WriteAllText(TsvOutputPath, sb.ToString(), new UTF8Encoding(true));
             AssetDatabase.Refresh();
-            SetStatus($"CSV 已导出：{TsvOutputPath}（{_entries.Count} 条）");
             EditorUtility.RevealInFinder(TsvOutputPath);
+            SetStatus($"Exported GameText CSV to {TsvOutputPath}.");
         }
-
-        // ── 导入 TSV ──────────────────────────────────────────────────────────
 
         private void ImportTsv()
         {
             if (!File.Exists(TsvOutputPath))
             {
-                SetStatus($"找不到 TSV：{TsvOutputPath}，请先导出");
+                SetStatus($"Could not find {TsvOutputPath}. Export it first.");
                 return;
             }
 
-            var lines = File.ReadAllLines(TsvOutputPath, Encoding.UTF8);
-            var zhMap = new Dictionary<string, string>();
-
-            static string[] Split(string ln)
-            {
-                var fields = new List<string>();
-                int j = 0;
-                while (j <= ln.Length)
-                {
-                    if (j == ln.Length) { fields.Add(string.Empty); break; }
-                    if (ln[j] == '"')
-                    {
-                        var sb2 = new StringBuilder();
-                        j++;
-                        while (j < ln.Length)
-                        {
-                            if (ln[j] == '"')
-                            {
-                                if (j + 1 < ln.Length && ln[j + 1] == '"') { sb2.Append('"'); j += 2; }
-                                else { j++; break; }
-                            }
-                            else sb2.Append(ln[j++]);
-                        }
-                        fields.Add(sb2.ToString());
-                        if (j < ln.Length && ln[j] == ',') j++;
-                    }
-                    else
-                    {
-                        int start = j;
-                        while (j < ln.Length && ln[j] != ',') j++;
-                        fields.Add(ln.Substring(start, j - start));
-                        if (j < ln.Length) j++;
-                    }
-                }
-                return fields.ToArray();
-            }
+            string[] lines = File.ReadAllLines(TsvOutputPath, Encoding.UTF8);
+            Dictionary<string, string> zhMap = new Dictionary<string, string>();
 
             for (int i = 1; i < lines.Length; i++)
             {
-                var cols = Split(lines[i]);
+                string[] cols = SplitCsvLine(lines[i]);
                 if (cols.Length >= 3 && !string.IsNullOrWhiteSpace(cols[2]))
                 {
                     zhMap[cols[0]] = cols[2];
@@ -316,31 +312,27 @@ namespace BaoZuPo.Editor.Localization
             }
 
             int filled = 0;
-            foreach (var entry in _entries)
+            foreach (TextEntry entry in _entries)
             {
-                if (zhMap.TryGetValue(entry.Key, out var zh))
+                if (zhMap.TryGetValue(entry.Key, out string zh))
                 {
                     entry.ZhValue = zh;
                     filled++;
                 }
             }
 
-            SetStatus($"已导入 {filled} 条中文翻译");
+            SetStatus($"Imported {filled} zh-Hans GameText entries from CSV.");
             Repaint();
         }
-
-        // ── 生成 StringTable ──────────────────────────────────────────────────
 
         private void GenerateStringTable()
         {
             EnsureLocalizationDir();
 
-            // 确保 Locale 资产存在
-            var enLocale = GetOrCreateLocale(EnLocaleCode);
-            var zhLocale = GetOrCreateLocale(ZhLocaleCode);
+            Locale enLocale = GetOrCreateLocale(EnLocaleCode);
+            Locale zhLocale = GetOrCreateLocale(ZhLocaleCode);
 
-            // 获取或创建 StringTableCollection
-            var collection = LocalizationEditorSettings.GetStringTableCollection(CollectionName);
+            StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(CollectionName);
             if (collection == null)
             {
                 collection = LocalizationEditorSettings.CreateStringTableCollection(
@@ -349,21 +341,20 @@ namespace BaoZuPo.Editor.Localization
                     new List<Locale> { enLocale, zhLocale });
             }
 
-            var enTable = collection.GetTable(new LocaleIdentifier(EnLocaleCode)) as StringTable;
-            var zhTable = collection.GetTable(new LocaleIdentifier(ZhLocaleCode)) as StringTable;
-
+            StringTable enTable = collection.GetTable(new LocaleIdentifier(EnLocaleCode)) as StringTable;
+            StringTable zhTable = collection.GetTable(new LocaleIdentifier(ZhLocaleCode)) as StringTable;
             if (enTable == null || zhTable == null)
             {
-                SetStatus("无法获取 StringTable，请检查 Locale 是否已添加到 Localization Settings");
+                SetStatus("Could not resolve the GameText string tables.");
                 return;
             }
 
-            foreach (var entry in _entries)
+            foreach (TextEntry entry in _entries)
             {
-                enTable.AddEntry(entry.Key, entry.EnValue);
+                UpsertEntry(enTable, entry.Key, entry.EnValue);
                 if (!string.IsNullOrWhiteSpace(entry.ZhValue))
                 {
-                    zhTable.AddEntry(entry.Key, entry.ZhValue);
+                    UpsertEntry(zhTable, entry.Key, entry.ZhValue);
                 }
             }
 
@@ -373,14 +364,22 @@ namespace BaoZuPo.Editor.Localization
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            SetStatus($"StringTable 已生成（{_entries.Count} 条）→ {LocalizationAssetDir}");
+            SetStatus($"Generated GameText string tables in {LocalizationAssetDir}.");
         }
 
-        // ── 辅助 ──────────────────────────────────────────────────────────────
+        private static void UpsertEntry(StringTable table, string key, string value)
+        {
+            StringTableEntry entry = table.GetEntry(key) ?? table.AddEntry(key, string.Empty);
+            string nextValue = value ?? string.Empty;
+            if (entry.Value != nextValue)
+            {
+                entry.Value = nextValue;
+            }
+        }
 
         private static Locale GetOrCreateLocale(string localeCode)
         {
-            foreach (var locale in LocalizationEditorSettings.GetLocales())
+            foreach (Locale locale in LocalizationEditorSettings.GetLocales())
             {
                 if (locale.Identifier.Code == localeCode)
                 {
@@ -388,8 +387,8 @@ namespace BaoZuPo.Editor.Localization
                 }
             }
 
-            var newLocale = Locale.CreateLocale(new LocaleIdentifier(localeCode));
-            var path = $"{LocalizationAssetDir}/Locale-{localeCode}.asset";
+            Locale newLocale = Locale.CreateLocale(new LocaleIdentifier(localeCode));
+            string path = $"{LocalizationAssetDir}/Locale-{localeCode}.asset";
             AssetDatabase.CreateAsset(newLocale, path);
             LocalizationEditorSettings.AddLocale(newLocale);
             return newLocale;
@@ -397,19 +396,98 @@ namespace BaoZuPo.Editor.Localization
 
         private static void EnsureLocalizationDir()
         {
-            if (!Directory.Exists(LocalizationAssetDir))
+            if (Directory.Exists(LocalizationAssetDir))
             {
-                Directory.CreateDirectory(LocalizationAssetDir);
+                return;
             }
+
+            Directory.CreateDirectory(LocalizationAssetDir);
         }
 
-        private void SetStatus(string msg)
+        private static string Escape(string value)
         {
-            _statusMessage = msg;
-            Debug.Log($"[GameTextLocalizationMigrator] {msg}");
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            if (value.IndexOf(',') >= 0 || value.IndexOf('"') >= 0 || value.IndexOf('\n') >= 0)
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
         }
 
-        // ── 数据结构 ──────────────────────────────────────────────────────────
+        private static string[] SplitCsvLine(string line)
+        {
+            List<string> fields = new List<string>();
+            int index = 0;
+
+            while (index <= line.Length)
+            {
+                if (index == line.Length)
+                {
+                    fields.Add(string.Empty);
+                    break;
+                }
+
+                if (line[index] == '"')
+                {
+                    StringBuilder sb = new StringBuilder();
+                    index++;
+                    while (index < line.Length)
+                    {
+                        if (line[index] == '"')
+                        {
+                            if (index + 1 < line.Length && line[index + 1] == '"')
+                            {
+                                sb.Append('"');
+                                index += 2;
+                            }
+                            else
+                            {
+                                index++;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            sb.Append(line[index]);
+                            index++;
+                        }
+                    }
+
+                    fields.Add(sb.ToString());
+                    if (index < line.Length && line[index] == ',')
+                    {
+                        index++;
+                    }
+                }
+                else
+                {
+                    int start = index;
+                    while (index < line.Length && line[index] != ',')
+                    {
+                        index++;
+                    }
+
+                    fields.Add(line.Substring(start, index - start));
+                    if (index < line.Length)
+                    {
+                        index++;
+                    }
+                }
+            }
+
+            return fields.ToArray();
+        }
+
+        private void SetStatus(string message)
+        {
+            _statusMessage = message;
+            Debug.Log($"[LocalizationTextTools] {message}");
+        }
 
         private sealed class TextEntry
         {

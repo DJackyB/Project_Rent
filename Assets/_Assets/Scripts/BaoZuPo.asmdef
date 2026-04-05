@@ -4,6 +4,8 @@
     "Martian.Audio",
     "Martian.Feedback",
     "Martian.Feedback.Runtime",
+    "Martian.Localization.Abstractions",
+    "Martian.Localization.Runtime",
     "Martian.Tooltip.Abstractions",
     "Martian.Tooltip.Presets",
     "Martian.Tooltip.Runtime",
