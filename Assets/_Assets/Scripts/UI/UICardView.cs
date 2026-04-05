@@ -3,6 +3,7 @@ using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Common.Drag;
+using Martian.Localization;
 using Martian.Tooltip;
 using TMPro;
 using UnityEngine;
@@ -52,6 +53,7 @@ namespace BaoZuPo.UI
         private bool _loggedMissingTooltipTrigger;
         private bool _loggedMissingDragHandler;
         private bool _initialVisualStateCached;
+        private ILanguageService _subscribedLanguageService;
         private Sprite _initialBackgroundSprite;
         private Image.Type _initialBackgroundType;
         private Color _initialBackgroundColor;
@@ -75,6 +77,7 @@ namespace BaoZuPo.UI
 
         private void OnEnable()
         {
+            SubscribeToLanguageChanges();
             CacheReferences();
             ValidateVisualConfiguration();
             RefreshPresentation();
@@ -85,6 +88,7 @@ namespace BaoZuPo.UI
 
         private void OnDisable()
         {
+            UnsubscribeFromLanguageChanges();
             DisableTooltipTrigger();
             _dragHandler?.Unbind();
         }
@@ -127,7 +131,7 @@ namespace BaoZuPo.UI
                 new TooltipContent(
                     BaoZuPoTooltipContentIds.CardPreview,
                     Card,
-                    Card.Data != null ? Card.Data.cardName : null));
+                    CardText.Name(Card.Data)));
             return true;
         }
 
@@ -331,7 +335,7 @@ namespace BaoZuPo.UI
 
             if (nameText != null)
             {
-                nameText.text = Card.Data.cardName ?? string.Empty;
+                nameText.text = CardText.Name(Card.Data);
                 nameText.gameObject.SetActive(true);
             }
 
@@ -360,9 +364,38 @@ namespace BaoZuPo.UI
                 descText.gameObject.SetActive(showDescription);
                 if (showDescription)
                 {
-                    descText.text = Card.Data.description ?? string.Empty;
+                    descText.text = CardText.Description(Card.Data);
                 }
             }
+        }
+
+        private void SubscribeToLanguageChanges()
+        {
+            ILanguageService languageService = LocalizationServices.Language;
+            if (ReferenceEquals(_subscribedLanguageService, languageService) || languageService == null)
+            {
+                return;
+            }
+
+            UnsubscribeFromLanguageChanges();
+            _subscribedLanguageService = languageService;
+            _subscribedLanguageService.LanguageChanged += HandleLanguageChanged;
+        }
+
+        private void UnsubscribeFromLanguageChanges()
+        {
+            if (_subscribedLanguageService == null)
+            {
+                return;
+            }
+
+            _subscribedLanguageService.LanguageChanged -= HandleLanguageChanged;
+            _subscribedLanguageService = null;
+        }
+
+        private void HandleLanguageChanged(string _)
+        {
+            RefreshPresentation();
         }
 
         private void UpdateContextualText()

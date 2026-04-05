@@ -1,53 +1,66 @@
 using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
+using Martian.Localization;
 
 namespace BaoZuPo.UI
 {
     /// <summary>
-    /// 玩家可见文案常量和格式化方法的统一入口。
-    /// 所有 UI 显示的文本都由此类提供，便于后续本地化和维护。
-    /// 包含回合、金钱、卡牌类型、阶段名称、结算等各类文案。
+    /// Player-facing copy helper that now resolves through Martian localization first
+    /// and falls back to the existing English strings when a table entry is missing.
     /// </summary>
     public static class GameText
     {
-        public static string Turn(int turn) => $"Turn {turn}";
-        public static string Money(int money) => $"Money {money}";
-        public static string Spent(int spent) => $"Spent {spent}";
-        public static string PlayArea => "Play Area";
-        public static string Contracts => "Contracts";
-        public static string Cost(int cost) => $"Cost {cost}";
-        public static string FeedbackCost(int cost) => $"Cost -{cost}";
-        public static string FeedbackLoan(int amount) => $"Loan -{amount}";
-        public static string Wait(int turns) => $"Wait {turns}";
-        public static string Lease => "Lease";
-        public static string Durability => "Durability";
-        public static string EmptyEquipmentSlot => "Empty Equipment Slot";
-        public static string EmptyTenantSlot => "Empty Tenant Slot";
-        public static string GameOverTitle => "Game Over";
-        public static string EndTurnButton => "End Turn";
-        public static string WaitingButton => "Waiting";
-        public static string SettlementFallbackTitle => "Settle";
-        public static string SettlementBase => "Base";
-        public static string SettlementBonus => "Bonus";
-        public static string SettlementMultiplier => "Multiplier";
-        public static string SettlementFinal => "Final";
-        public static string RewardTitle => "Choose a Reward";
-        public static string RewardBoostedTitle => "Rare Reward!";
-        public static string RewardSkip => "Skip";
+        private const string Table = "GameText";
+
+        public static string Turn(int turn) => Resolve("GameText.Turn", $"Turn {turn}", turn);
+        public static string Money(int money) => Resolve("GameText.Money", $"Money {money}", money);
+        public static string Spent(int spent) => Resolve("GameText.Spent", $"Spent {spent}", spent);
+        public static string PlayArea => Resolve("GameText.PlayArea", "Play Area");
+        public static string Contracts => Resolve("GameText.Contracts", "Contracts");
+        public static string Cost(int cost) => Resolve("GameText.Cost", $"Cost {cost}", cost);
+        public static string FeedbackCost(int cost) => Resolve("GameText.FeedbackCost", $"Cost -{cost}", cost);
+        public static string FeedbackLoan(int amount) => Resolve("GameText.FeedbackLoan", $"Loan -{amount}", amount);
+        public static string Wait(int turns) => Resolve("GameText.Wait", $"Wait {turns}", turns);
+        public static string Lease => Resolve("GameText.Lease", "Lease");
+        public static string Durability => Resolve("GameText.Durability", "Durability");
+        public static string EmptyEquipmentSlot => Resolve("GameText.EmptyEquipmentSlot", "Empty Equipment Slot");
+        public static string EmptyTenantSlot => Resolve("GameText.EmptyTenantSlot", "Empty Tenant Slot");
+        public static string GameOverTitle => Resolve("GameText.GameOverTitle", "Game Over");
+        public static string EndTurnButton => Resolve("GameText.EndTurnButton", "End Turn");
+        public static string WaitingButton => Resolve("GameText.WaitingButton", "Waiting");
+        public static string SettlementFallbackTitle => Resolve("GameText.SettlementFallbackTitle", "Settle");
+        public static string SettlementBase => Resolve("GameText.SettlementBase", "Base");
+        public static string SettlementBonus => Resolve("GameText.SettlementBonus", "Bonus");
+        public static string SettlementMultiplier => Resolve("GameText.SettlementMultiplier", "Multiplier");
+        public static string SettlementFinal => Resolve("GameText.SettlementFinal", "Final");
+        public static string RewardTitle => Resolve("GameText.RewardTitle", "Choose a Reward");
+        public static string RewardBoostedTitle => Resolve("GameText.RewardBoostedTitle", "Rare Reward!");
+        public static string RewardSkip => Resolve("GameText.RewardSkip", "Skip");
 
         public static string RoomSummary(int roomNumber, int tenantCount, int tenantCapacity, int equipmentCount, int equipmentCapacity)
-            => $"Room {roomNumber}  Tenant {tenantCount}/{tenantCapacity}  Equip {equipmentCount}/{equipmentCapacity}";
+            => Resolve(
+                "GameText.RoomSummary",
+                $"Room {roomNumber}  Tenant {tenantCount}/{tenantCapacity}  Equip {equipmentCount}/{equipmentCapacity}",
+                roomNumber,
+                tenantCount,
+                tenantCapacity,
+                equipmentCount,
+                equipmentCapacity);
 
         public static string GameOverInfo(int totalTurns, int finalMoney)
-            => $"You survived {totalTurns} turns\nFinal Money: {finalMoney}";
+            => Resolve(
+                "GameText.GameOverInfo",
+                $"You survived {totalTurns} turns\nFinal Money: {finalMoney}",
+                totalTurns,
+                finalMoney);
 
         public static string PhaseName(string phaseName)
         {
             return phaseName switch
             {
-                "Prepare" => "Prepare",
-                "Action" => "Action",
-                "Settle" => "Settle",
+                "Prepare" => Resolve("GameText.PhaseName.Prepare", "Prepare"),
+                "Action" => Resolve("GameText.PhaseName.Action", "Action"),
+                "Settle" => Resolve("GameText.PhaseName.Settle", "Settle"),
                 _ => phaseName
             };
         }
@@ -56,9 +69,9 @@ namespace BaoZuPo.UI
         {
             return phase switch
             {
-                GamePhase.Prepare => "Prepare",
-                GamePhase.Action => "Action",
-                GamePhase.Settle => "Settle",
+                GamePhase.Prepare => Resolve("GameText.PhaseName.Prepare", "Prepare"),
+                GamePhase.Action => Resolve("GameText.PhaseName.Action", "Action"),
+                GamePhase.Settle => Resolve("GameText.PhaseName.Settle", "Settle"),
                 _ => phase.ToString()
             };
         }
@@ -67,14 +80,20 @@ namespace BaoZuPo.UI
         {
             return cardType switch
             {
-                CardType.Tenant => "Tenant",
-                CardType.Equipment => "Equipment",
-                CardType.Event => "Event",
-                CardType.Contract => "Contract",
+                CardType.Tenant => Resolve("GameText.TypeLabel.Tenant", "Tenant"),
+                CardType.Equipment => Resolve("GameText.TypeLabel.Equipment", "Equipment"),
+                CardType.Event => Resolve("GameText.TypeLabel.Event", "Event"),
+                CardType.Contract => Resolve("GameText.TypeLabel.Contract", "Contract"),
                 _ => cardType.ToString()
             };
         }
 
-        public static string SettlementRoomTitle(int roomNumber) => $"Room {roomNumber}";
+        public static string SettlementRoomTitle(int roomNumber)
+            => Resolve("GameText.SettlementRoomTitle", $"Room {roomNumber}", roomNumber);
+
+        private static string Resolve(string entry, string fallback, params object[] arguments)
+        {
+            return LocalizationServices.Resolve(new LocalizationTextRef(Table, entry, fallback), arguments);
+        }
     }
 }

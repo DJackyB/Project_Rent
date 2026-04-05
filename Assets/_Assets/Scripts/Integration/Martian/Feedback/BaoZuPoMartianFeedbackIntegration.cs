@@ -1,6 +1,7 @@
 using BaoZuPo.Core;
 using Martian.Feedback;
 using Martian.Feedback.Runtime;
+using Martian.Localization;
 
 namespace BaoZuPo.Integration.Martian.Feedback
 {
@@ -32,6 +33,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 return;
             }
 
+            bootstrap.SetFontResolver(ResolveFeedbackFont);
             bootstrap.Configure(CreateRuntimeOptions(config));
         }
 
@@ -51,6 +53,18 @@ namespace BaoZuPo.Integration.Martian.Feedback
             options.EnableMoneyFeedback = config.enableMoneyFeedback;
             options.EnableLogs = config.enableFeedbackLogs;
             return options;
+        }
+
+        private static TMPro.TMP_FontAsset ResolveFeedbackFont()
+        {
+            try
+            {
+                return LocalizationFontUtility.GetPreferredFontAsset();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

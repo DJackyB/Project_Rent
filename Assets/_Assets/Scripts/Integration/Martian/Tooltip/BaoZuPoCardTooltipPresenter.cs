@@ -51,9 +51,15 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 return;
             }
 
-            // 克隆原始卡牌 UI 对象
+            var previewSource = ResolvePreviewSource(sourceObject);
+            if (previewSource == null)
+            {
+                return;
+            }
+
+            // 克隆标准卡牌 UI 对象，避免继承房间槽位上的运行时拉伸状态
             _containerRoot = transform as RectTransform;
-            _previewInstance = Instantiate(sourceObject, transform, false);
+            _previewInstance = Instantiate(previewSource, transform, false);
             _previewInstance.name = $"{sourceObject.name}_TooltipPreview";
             _root = _previewInstance.transform as RectTransform;
 
@@ -187,7 +193,6 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 _containerRoot.anchorMin = new Vector2(0f, 0f);
                 _containerRoot.anchorMax = new Vector2(0f, 0f);
                 _containerRoot.pivot = new Vector2(0f, 0f);
-                _containerRoot.sizeDelta = Vector2.zero;
                 _containerRoot.anchoredPosition = Vector2.zero;
             }
 
@@ -204,6 +209,16 @@ namespace BaoZuPo.Integration.Martian.Tooltip
                 float scaleY = previewSize.y / originalSize.y;
                 float uniformScale = Mathf.Min(scaleX, scaleY);
                 _root.localScale = new Vector3(uniformScale, uniformScale, 1f);
+
+                // 让 containerRoot 持有实际视觉尺寸，供 TooltipPositioner 计算屏幕边界夹值
+                if (_containerRoot != null)
+                {
+                    _containerRoot.sizeDelta = new Vector2(originalSize.x * uniformScale, originalSize.y * uniformScale);
+                }
+            }
+            else if (_containerRoot != null)
+            {
+                _containerRoot.sizeDelta = Vector2.zero;
             }
 
             var layoutElement = _root.GetComponent<LayoutElement>();
@@ -211,6 +226,18 @@ namespace BaoZuPo.Integration.Martian.Tooltip
             {
                 layoutElement.enabled = false;
             }
+        }
+
+        private static GameObject ResolvePreviewSource(GameObject sourceObject)
+        {
+            if (UIManager.Instance != null
+                && UIManager.Instance.handPanel != null
+                && UIManager.Instance.handPanel.cardPrefab != null)
+            {
+                return UIManager.Instance.handPanel.cardPrefab;
+            }
+
+            return sourceObject;
         }
     }
 

@@ -199,7 +199,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
 
             if (payload != null && payload.Card != null && payload.Card.Data != null && step.Kind == GameEvents.SettlementStepKind.Delta)
             {
-                return payload.Card.Data.cardName;
+                return CardText.Name(payload.Card);
             }
 
             return step.Kind switch

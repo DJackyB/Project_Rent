@@ -1045,10 +1045,10 @@ namespace BaoZuPo.GameFlow
         {
             return sourceKind switch
             {
-                GameEvents.SettlementSourceKind.Room when card != null => card.Data.cardName,
+                GameEvents.SettlementSourceKind.Room when card != null => CardText.Name(card),
                 GameEvents.SettlementSourceKind.Room when room != null => GameText.SettlementRoomTitle(room.RoomIndex + 1),
-                GameEvents.SettlementSourceKind.Contract when card != null => card.Data.cardName,
-                GameEvents.SettlementSourceKind.Event when card != null => card.Data.cardName,
+                GameEvents.SettlementSourceKind.Contract when card != null => CardText.Name(card),
+                GameEvents.SettlementSourceKind.Event when card != null => CardText.Name(card),
                 _ => GameText.SettlementFallbackTitle
             };
         }

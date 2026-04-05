@@ -1,6 +1,7 @@
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using BaoZuPo.UI.Common.Drag;
 
 namespace BaoZuPo.UI
 {
@@ -15,20 +16,40 @@ namespace BaoZuPo.UI
 
         private Vector3 _originalScale;
         private Tween _tween;
+        private UICardDragHandler _dragHandler;
 
         private void Awake()
         {
             _originalScale = transform.localScale;
+            _dragHandler = GetComponent<UICardDragHandler>();
+        }
+
+        private void OnEnable()
+        {
+            if (_dragHandler == null)
+            {
+                _dragHandler = GetComponent<UICardDragHandler>();
+            }
         }
 
         public void OnPointerEnter(PointerEventData eventData)
         {
+            if (_dragHandler != null && _dragHandler.isActiveAndEnabled)
+            {
+                return;
+            }
+
             _tween?.Kill();
             _tween = transform.DOScale(_originalScale * hoverScale, duration).SetEase(Ease.OutQuad);
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            if (_dragHandler != null && _dragHandler.isActiveAndEnabled)
+            {
+                return;
+            }
+
             _tween?.Kill();
             _tween = transform.DOScale(_originalScale, duration).SetEase(Ease.OutQuad);
         }
