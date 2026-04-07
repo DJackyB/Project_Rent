@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using BaoZuPo.Board;
@@ -46,6 +47,9 @@ namespace BaoZuPo.GameFlow
     public class TurnManager : Singleton<TurnManager>
     {
         private const string DefaultSettlementLaneKey = "settlement-global";
+        private const float PreparePhaseLeadInSeconds = 0.12f;
+        private const float PreparePhaseOutroSeconds = 0.08f;
+        private const float RewardPickOutroSeconds = 0.1f;
 
         [Header("Debug")]
         [SerializeField] private int _currentTurn;
@@ -60,6 +64,7 @@ namespace BaoZuPo.GameFlow
         private bool _settlementTurnEndedPublished;
         /// <summary>标记是否等待玩家选择奖励卡</summary>
         private bool _isRewardSelectionPending;
+        private bool _isPreparePresentationPending;
         /// <summary>标记事件订阅是否已建立</summary>
         private bool _eventsSubscribed;
 
@@ -76,6 +81,7 @@ namespace BaoZuPo.GameFlow
         public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
         /// <summary>是否等待玩家从奖励池选择</summary>
         public bool IsRewardSelectionPending => _isRewardSelectionPending;
+        public bool IsPreparePresentationPending => _isPreparePresentationPending;
         /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
@@ -141,13 +147,67 @@ namespace BaoZuPo.GameFlow
                 card.PreEffect?.Execute(card, GameManager.Instance.GameContext);
             }
 
+            BoardManager.Instance.CleanupDestroyedCards();
+
             var config = GameManager.Instance.gameConfig;
             int drawCount = _currentTurn == 1 ? config.firstTurnDrawCount : config.normalTurnDrawCount;
             var drawLibrary = _currentTurn == 1 ? config.firstTurnDrawLibrary : config.normalTurnDrawLibrary;
-            Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
-
-            BoardManager.Instance.CleanupDestroyedCards();
+            BeginPrepareDrawPresentation(drawLibrary, drawCount);
         }
+
+        private void BeginPrepareDrawPresentation(CardLibrary drawLibrary, int drawCount)
+        {
+            _isPreparePresentationPending = false;
+
+            if (drawCount <= 0)
+            {
+                return;
+            }
+
+            if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
+            {
+                Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
+                UIManager.Instance?.RefreshAll();
+                return;
+            }
+
+            _isPreparePresentationPending = true;
+            StartCoroutine(PlayPrepareDrawSequence(
+                drawLibrary,
+                drawCount,
+                _currentTurn == 1 ? UIHandIncomingAnimationKind.FirstTurnDraw : UIHandIncomingAnimationKind.TurnDraw));
+        }
+
+        private IEnumerator PlayPrepareDrawSequence(CardLibrary drawLibrary, int drawCount, UIHandIncomingAnimationKind animationKind)
+        {
+            if (UIManager.Instance == null || UIManager.Instance.handPanel == null)
+            {
+                Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
+                _isPreparePresentationPending = false;
+                yield break;
+            }
+
+            yield return new WaitForSeconds(PreparePhaseLeadInSeconds);
+
+            for (int i = 0; i < drawCount; i++)
+            {
+                var drawn = Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, 1);
+                if (drawn == null || drawn.Count == 0)
+                {
+                    break;
+                }
+
+                yield return UIManager.Instance.handPanel.PlayIncomingCard(drawn[0], animationKind);
+            }
+
+            if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
+            {
+                yield return new WaitForSeconds(PreparePhaseOutroSeconds);
+            }
+
+            _isPreparePresentationPending = false;
+        }
+
 
         /// <summary>
         /// 启动行动阶段
@@ -924,13 +984,13 @@ namespace BaoZuPo.GameFlow
             for (int i = 0; i < roomPayloads.Count; i++)
             {
                 var payload = roomPayloads[i];
-                payload.TrackIndex = i;
-                payload.TrackCount = roomPayloads.Count;
+                payload.TrackIndex = 0;
+                payload.TrackCount = 1;
                 payload.LaneKey = BuildLaneKey(batchId, payload.SourceIndex);
                 entries[i] = UISettlementPlaybackEntry.Create(payload, payload.LaneKey);
             }
 
-            batch.Stages.Add(UISettlementPlaybackStage.CreateParallel(
+            batch.Stages.Add(UISettlementPlaybackStage.CreateSerial(
                 ResolveSettlementTitle(GameEvents.SettlementSourceKind.Room, room, null),
                 entries));
         }
@@ -1027,14 +1087,42 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
-            if (e.ChosenCard != null)
+            if (e.ChosenCard == null)
+            {
+                _isRewardSelectionPending = false;
+                CompleteSettlementPhase();
+                return;
+            }
+
+            if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
                 Deck.DeckManager.Instance.AddCardToHand(e.ChosenCard);
+                _isRewardSelectionPending = false;
+                CompleteSettlementPhase();
+                return;
+            }
+
+            StartCoroutine(PlayRewardCardIntoHandAndComplete(e));
+        }
+
+        private IEnumerator PlayRewardCardIntoHandAndComplete(GameEvents.CardRewardSelected selection)
+        {
+            var addedCard = Deck.DeckManager.Instance.AddCardToHand(selection.ChosenCard);
+            if (UIManager.Instance != null && UIManager.Instance.handPanel != null && addedCard != null)
+            {
+                Vector3? sourcePosition = selection.HasSourceWorldPosition ? selection.SourceWorldPosition : null;
+                yield return UIManager.Instance.handPanel.PlayIncomingCard(addedCard, UIHandIncomingAnimationKind.RewardPick, sourcePosition);
+            }
+
+            if (RewardPickOutroSeconds > 0f)
+            {
+                yield return new WaitForSeconds(RewardPickOutroSeconds);
             }
 
             _isRewardSelectionPending = false;
             CompleteSettlementPhase();
         }
+
 
         private void CompleteSettlementPhase()
         {

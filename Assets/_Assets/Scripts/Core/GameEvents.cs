@@ -1,5 +1,6 @@
 using BaoZuPo.Board;
 using BaoZuPo.GameFlow;
+using UnityEngine;
 
 namespace BaoZuPo.Core
 {
@@ -196,6 +197,8 @@ namespace BaoZuPo.Core
         public struct CardRewardSelected
         {
             public Card.CardData ChosenCard;            // 玩家选中的卡牌，null 表示跳过
+            public bool HasSourceWorldPosition;
+            public Vector3 SourceWorldPosition;
         }
     }
 }

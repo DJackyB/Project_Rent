@@ -176,11 +176,11 @@ namespace BaoZuPo.Deck
         /// 4. UpdateDebugInfo()
         /// </summary>
         /// <param name="data">要生成的卡牌数据</param>
-        public void AddCardToHand(CardData data)
+        public CardInstance AddCardToHand(CardData data)
         {
             if (data == null)
             {
-                return;
+                return null;
             }
 
             var card = CreateCardInstance(data);
@@ -198,6 +198,7 @@ namespace BaoZuPo.Deck
             }
 
             UpdateDebugInfo();
+            return card;
         }
 
         /// <summary>

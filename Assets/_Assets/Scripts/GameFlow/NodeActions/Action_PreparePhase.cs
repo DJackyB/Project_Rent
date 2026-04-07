@@ -36,7 +36,14 @@ namespace BaoZuPo.NodeActions
         protected override void OnExecute()
         {
             TurnManager.Instance.ExecutePreparePhase();
-            EndAction(true);
+        }
+
+        protected override void OnUpdate()
+        {
+            if (TurnManager.Instance == null || !TurnManager.Instance.IsPreparePresentationPending)
+            {
+                EndAction(true);
+            }
         }
     }
 }
