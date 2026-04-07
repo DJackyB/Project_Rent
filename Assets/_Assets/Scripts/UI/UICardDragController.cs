@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.GameFlow;
+using BaoZuPo.Integration.Feel;
 using BaoZuPo.UI.Common.Drag;
 using DG.Tweening;
 using Martian.Tooltip;
@@ -24,9 +25,12 @@ namespace BaoZuPo.UI
         [SerializeField] private RectTransform dragLayer;
         [SerializeField] private UICardDropZone playAreaDropZone;
 
+        [Header("Optional Feedback")]
+        [SerializeField] private BaoZuPoFeelFeedbackInstaller feelFeedbackInstaller;
+
         [Header("Drag Motion")]
         [SerializeField] private float returnDuration = 0.18f;
-        [SerializeField] private float successDuration = 0.18f;
+        [SerializeField] private float successDuration = 0.22f;
         [SerializeField] private float invalidShakeDuration = 0.14f;
         [SerializeField] private float invalidShakeStrength = 18f;
 
@@ -386,10 +390,13 @@ namespace BaoZuPo.UI
 
             SetZoneHighlight(false);
             _activeRect.DOKill(false);
+            _activeHandler?.CardView?.SetDragging(true);
 
             Sequence sequence = DOTween.Sequence().SetUpdate(true);
             if (shakeFirst)
             {
+                _activeHandler?.CardView?.PlayRejectedInteractionFeedback();
+                _currentZone?.PlayRejectedFeedback();
                 sequence.Append(_activeRect.DOShakeAnchorPos(invalidShakeDuration, invalidShakeStrength, 18, 90f, false, true));
             }
 
@@ -397,7 +404,7 @@ namespace BaoZuPo.UI
                 ? _placeholderObject.transform.position
                 : _activeRect.position;
 
-            sequence.Append(_activeRect.DOMove(targetWorldPosition, returnDuration).SetEase(Ease.OutCubic));
+            sequence.Append(_activeRect.DOMove(targetWorldPosition, returnDuration).SetEase(Ease.OutBack));
             sequence.Join(_activeRect.DOScale(Vector3.one, returnDuration).SetEase(Ease.OutQuad));
             sequence.OnComplete(RestoreToHandImmediate);
         }
@@ -451,14 +458,17 @@ namespace BaoZuPo.UI
             }
 
             SetZoneHighlight(true);
+            zone.PlayAcceptedFeedback();
+            _activeHandler.CardView?.PlayCommitInteractionFeedback();
 
             _activeRect.DOKill(false);
             Sequence sequence = DOTween.Sequence().SetUpdate(true);
-            sequence.Append(_activeRect.DOMove(zone.DropAnchor.position, successDuration).SetEase(Ease.OutCubic));
-            sequence.Join(_activeRect.DOScale(Vector3.one * 0.92f, successDuration).SetEase(Ease.OutQuad));
+            sequence.Append(_activeRect.DOScale(Vector3.one * 1.08f, successDuration * 0.28f).SetEase(Ease.OutQuad));
+            sequence.Append(_activeRect.DOMove(zone.DropAnchor.position, successDuration * 0.72f).SetEase(Ease.InQuad));
+            sequence.Join(_activeRect.DOScale(Vector3.one * 0.86f, successDuration * 0.72f).SetEase(Ease.InBack));
             if (_activeCanvasGroup != null)
             {
-                sequence.Join(_activeCanvasGroup.DOFade(0.35f, successDuration * 0.85f).SetEase(Ease.OutQuad));
+                sequence.Join(_activeCanvasGroup.DOFade(0.2f, successDuration * 0.72f).SetEase(Ease.OutQuad));
             }
 
             sequence.OnComplete(() => CommitPlay(validation));
@@ -492,6 +502,7 @@ namespace BaoZuPo.UI
                 return;
             }
 
+            PlayCardSuccessFeelFeedback();
             SetZoneHighlight(false);
             ClearActiveState(true);
 
@@ -499,6 +510,22 @@ namespace BaoZuPo.UI
             {
                 Destroy(draggedObject);
             }
+        }
+
+        private void PlayCardSuccessFeelFeedback()
+        {
+            if (feelFeedbackInstaller == null || feelFeedbackInstaller.FeelBackend == null)
+            {
+                return;
+            }
+
+            Vector3 position = _activeRect != null ? _activeRect.position : transform.position;
+            if (_currentZone != null && _currentZone.DropAnchor != null)
+            {
+                position = _currentZone.DropAnchor.position;
+            }
+
+            feelFeedbackInstaller.FeelBackend.PlaySlotAt(FeelFeedbackSlots.CardPlay, position, "CardPlay");
         }
 
         private void ClearActiveState(bool destroyPlaceholder)

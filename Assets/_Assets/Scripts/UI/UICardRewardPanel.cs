@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
+using BaoZuPo.Integration.Feel;
+using DG.Tweening;
 using Martian.EventBus;
 using TMPro;
 using UnityEngine;
@@ -10,9 +12,7 @@ using UnityEngine.UI;
 namespace BaoZuPo.UI
 {
     /// <summary>
-    /// 卡牌奖励选择面板，向玩家展示 3 张可选卡牌供选择或跳过。
-    /// 在游戏流程中由 UIManager 驱动，向 GameEvents.CardRewardSelected 发布玩家选择。
-    /// 支持普通和加强（Boosted）奖励的不同标题提示。
+    /// Reward selection panel that reveals up to three candidate cards and publishes the chosen result.
     /// </summary>
     public class UICardRewardPanel : MonoBehaviour
     {
@@ -34,13 +34,33 @@ namespace BaoZuPo.UI
         [SerializeField] private Button _skipButton;
         [SerializeField] private TextMeshProUGUI _skipButtonText;
 
+        [Header("Optional Feedback")]
+        [SerializeField] private BaoZuPoFeelFeedbackInstaller _feelFeedbackInstaller;
+
+        [Header("Reward Motion")]
+        [SerializeField] private float _revealDuration = 0.2f;
+        [SerializeField] private float _revealStagger = 0.06f;
+        [SerializeField] private float _revealYOffset = 24f;
+        [SerializeField] private float _selectedDuration = 0.16f;
+        [SerializeField] private float _nonSelectedFade = 0.18f;
+
         private CardData[] _options;
         private readonly List<GameObject> _spawnedCards = new();
         private bool _isBoosted;
+        private bool _selectionLocked;
+        private Sequence _revealSequence;
+        private Sequence _selectionSequence;
 
         private void Start()
         {
             Hide();
+        }
+
+        private void OnDisable()
+        {
+            KillSequences();
+            KillSpawnedCardTweens();
+            ClearSpawnedCards();
         }
 
         public void Show(CardData[] options, bool boosted)
@@ -51,6 +71,8 @@ namespace BaoZuPo.UI
             }
 
             EnsureConfigured();
+            KillSequences();
+            _selectionLocked = false;
 
             _options = options;
             _isBoosted = boosted;
@@ -93,11 +115,18 @@ namespace BaoZuPo.UI
                 button.interactable = true;
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() => OnCardClicked(capturedIndex));
+
+                PrepareCardForReveal(go);
             }
+
+            PlayRevealSequence();
+            PlayRewardFeelFeedback(_panelRoot.transform.position, "RewardReveal");
         }
 
         public void Hide()
         {
+            KillSequences();
+            _selectionLocked = false;
             ClearSpawnedCards();
 
             if (_skipButton != null)
@@ -113,20 +142,203 @@ namespace BaoZuPo.UI
 
         private void OnCardClicked(int index)
         {
-            if (_options == null || index < 0 || index >= _options.Length)
+            if (_selectionLocked || _options == null || index < 0 || index >= _options.Length)
             {
                 return;
             }
 
+            _selectionLocked = true;
             var chosen = _options[index];
-            Hide();
-            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = chosen });
+            var feedbackPosition = ResolveRewardCardPosition(index);
+            PlayRewardFeelFeedback(feedbackPosition, "RewardSelected");
+            PlayRewardSelectionSequence(index, () =>
+            {
+                Hide();
+                EventBus.Publish(new GameEvents.CardRewardSelected
+                {
+                    ChosenCard = chosen,
+                    HasSourceWorldPosition = true,
+                    SourceWorldPosition = feedbackPosition
+                });
+            });
         }
 
         private void OnSkipClicked()
         {
+            if (_selectionLocked)
+            {
+                return;
+            }
+
             Hide();
-            EventBus.Publish(new GameEvents.CardRewardSelected { ChosenCard = null });
+            EventBus.Publish(new GameEvents.CardRewardSelected
+            {
+                ChosenCard = null,
+                HasSourceWorldPosition = false,
+                SourceWorldPosition = Vector3.zero
+            });
+        }
+
+        private Vector3 ResolveRewardCardPosition(int index)
+        {
+            if (index >= 0 && index < _spawnedCards.Count && _spawnedCards[index] != null)
+            {
+                return _spawnedCards[index].transform.position;
+            }
+
+            return _panelRoot != null ? _panelRoot.transform.position : transform.position;
+        }
+
+        private void PlayRewardFeelFeedback(Vector3 position, string debugLabel)
+        {
+            if (_feelFeedbackInstaller == null || _feelFeedbackInstaller.FeelBackend == null)
+            {
+                return;
+            }
+
+            _feelFeedbackInstaller.FeelBackend.PlaySlotAt(FeelFeedbackSlots.RewardReveal, position, debugLabel);
+        }
+
+        private void PrepareCardForReveal(GameObject cardObject)
+        {
+            if (cardObject == null)
+            {
+                return;
+            }
+
+            var cardRect = cardObject.transform as RectTransform;
+            var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 0f;
+            }
+
+            if (cardRect != null)
+            {
+                cardRect.localScale = Vector3.one * 0.92f;
+                cardRect.anchoredPosition += new Vector2(0f, -_revealYOffset);
+            }
+        }
+
+        private void PlayRevealSequence()
+        {
+            KillRevealSequence();
+            _revealSequence = DOTween.Sequence().SetUpdate(true);
+            if (_panelRoot != null)
+            {
+                _revealSequence.SetLink(_panelRoot, LinkBehaviour.KillOnDestroy);
+            }
+
+            for (int i = 0; i < _spawnedCards.Count; i++)
+            {
+                var cardObject = _spawnedCards[i];
+                if (cardObject == null)
+                {
+                    continue;
+                }
+
+                var cardRect = cardObject.transform as RectTransform;
+                var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+                var targetPosition = cardRect != null ? cardRect.anchoredPosition + new Vector2(0f, _revealYOffset) : Vector2.zero;
+
+                if (i > 0)
+                {
+                    _revealSequence.AppendInterval(_revealStagger);
+                }
+
+                if (canvasGroup != null)
+                {
+                    _revealSequence.Join(
+                        canvasGroup.DOFade(1f, _revealDuration)
+                            .SetEase(Ease.OutQuad)
+                            .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                }
+
+                if (cardRect != null)
+                {
+                    _revealSequence.Join(
+                        cardRect.DOAnchorPos(targetPosition, _revealDuration)
+                            .SetEase(Ease.OutBack)
+                            .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                    _revealSequence.Join(
+                        cardRect.DOScale(Vector3.one, _revealDuration)
+                            .SetEase(Ease.OutBack)
+                            .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                }
+            }
+        }
+
+        private void PlayRewardSelectionSequence(int selectedIndex, Action onComplete)
+        {
+            KillSelectionSequence();
+            _selectionSequence = DOTween.Sequence().SetUpdate(true);
+            if (_panelRoot != null)
+            {
+                _selectionSequence.SetLink(_panelRoot, LinkBehaviour.KillOnDestroy);
+            }
+
+            for (int i = 0; i < _spawnedCards.Count; i++)
+            {
+                var cardObject = _spawnedCards[i];
+                if (cardObject == null)
+                {
+                    continue;
+                }
+
+                bool isSelected = i == selectedIndex;
+                var cardRect = cardObject.transform as RectTransform;
+                var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+                var cardView = cardObject.GetComponent<UICardView>();
+
+                if (cardView != null)
+                {
+                    cardView.SetSelected(isSelected);
+                    if (isSelected)
+                    {
+                        cardView.PlayCommitInteractionFeedback();
+                    }
+                }
+
+                if (cardRect != null)
+                {
+                    _selectionSequence.Join(cardRect.DOScale(Vector3.one * (isSelected ? 1.08f : 0.94f), _selectedDuration)
+                        .SetEase(isSelected ? Ease.OutBack : Ease.OutQuad)
+                        .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                    if (!isSelected)
+                    {
+                        _selectionSequence.Join(cardRect.DOAnchorPos(cardRect.anchoredPosition + new Vector2(0f, -10f), _selectedDuration)
+                            .SetEase(Ease.OutQuad)
+                            .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                    }
+                }
+
+                if (canvasGroup != null)
+                {
+                    _selectionSequence.Join(canvasGroup.DOFade(isSelected ? 1f : _nonSelectedFade, _selectedDuration)
+                        .SetEase(Ease.OutQuad)
+                        .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                }
+            }
+
+            _selectionSequence.OnComplete(() => onComplete?.Invoke());
+        }
+
+        private void KillSequences()
+        {
+            KillRevealSequence();
+            KillSelectionSequence();
+        }
+
+        private void KillRevealSequence()
+        {
+            _revealSequence?.Kill(false);
+            _revealSequence = null;
+        }
+
+        private void KillSelectionSequence()
+        {
+            _selectionSequence?.Kill(false);
+            _selectionSequence = null;
         }
 
         private void ClearSpawnedCards()
@@ -135,11 +347,43 @@ namespace BaoZuPo.UI
             {
                 if (go != null)
                 {
+                    KillCardTweens(go);
                     Destroy(go);
                 }
             }
 
             _spawnedCards.Clear();
+        }
+
+        private void KillSpawnedCardTweens()
+        {
+            foreach (var go in _spawnedCards)
+            {
+                KillCardTweens(go);
+            }
+        }
+
+        private static void KillCardTweens(GameObject cardObject)
+        {
+            if (cardObject == null)
+            {
+                return;
+            }
+
+            foreach (var rect in cardObject.GetComponentsInChildren<RectTransform>(true))
+            {
+                rect.DOKill(false);
+            }
+
+            foreach (var graphic in cardObject.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.DOKill(false);
+            }
+
+            foreach (var canvasGroup in cardObject.GetComponentsInChildren<CanvasGroup>(true))
+            {
+                canvasGroup.DOKill(false);
+            }
         }
 
         private void ApplyText()

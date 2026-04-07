@@ -6,6 +6,7 @@ using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Settlement;
+using DG.Tweening;
 using Martian.EventBus;
 using Martian.Feedback.Runtime;
 using Martian.Tooltip;
@@ -65,6 +66,11 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
             EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
+        }
+
+        private void OnApplicationQuit()
+        {
+            DOTween.KillAll(false);
         }
 
         private void OnPhaseChanged(GameEvents.PhaseChanged e)

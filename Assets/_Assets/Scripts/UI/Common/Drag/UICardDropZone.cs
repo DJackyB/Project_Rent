@@ -24,12 +24,18 @@ namespace BaoZuPo.UI.Common.Drag
         [SerializeField] private RectTransform dropAnchor;
         [SerializeField] private Graphic highlightGraphic;
         [SerializeField] private Color highlightColor = new Color(0.48f, 0.84f, 0.62f, 0.26f);
+        [SerializeField] private Color rejectColor = new Color(1f, 0.42f, 0.36f, 0.28f);
         [SerializeField] private float highlightFadeSeconds = 0.12f;
+        [SerializeField] private float highlightScale = 1.04f;
+        [SerializeField] private float pulseDuration = 0.2f;
 
         private Graphic _raycastGraphic;
         private Color _hiddenColor;
         private RoomSlot _boundRoom;
         private bool _isHighlighted;
+        private RectTransform _highlightRect;
+        private Tween _highlightScaleTween;
+        private Tween _highlightColorTween;
 
         public static IReadOnlyList<UICardDropZone> Zones => RegisteredZones;
 
@@ -146,15 +152,36 @@ namespace BaoZuPo.UI.Common.Drag
             }
 
             highlightGraphic.DOKill();
+            _highlightScaleTween?.Kill(false);
+            _highlightColorTween?.Kill(false);
             Color targetColor = highlighted ? highlightColor : _hiddenColor;
+            Vector3 targetScale = highlighted ? Vector3.one * highlightScale : Vector3.one;
 
             if (immediate)
             {
                 highlightGraphic.color = targetColor;
+                if (_highlightRect != null)
+                {
+                    _highlightRect.localScale = targetScale;
+                }
                 return;
             }
 
-            highlightGraphic.DOColor(targetColor, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            _highlightColorTween = highlightGraphic.DOColor(targetColor, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            if (_highlightRect != null)
+            {
+                _highlightScaleTween = _highlightRect.DOScale(targetScale, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+        }
+
+        public void PlayAcceptedFeedback()
+        {
+            PlayPulse(highlightColor, 0.95f, 0.1f);
+        }
+
+        public void PlayRejectedFeedback()
+        {
+            PlayPulse(rejectColor, 0.7f, 0.06f);
         }
 
         public void OnDrop(PointerEventData eventData)
@@ -199,6 +226,7 @@ namespace BaoZuPo.UI.Common.Drag
             else
             {
                 highlightGraphic.raycastTarget = false;
+                _highlightRect = highlightGraphic.rectTransform;
             }
         }
 
@@ -210,11 +238,50 @@ namespace BaoZuPo.UI.Common.Drag
             }
 
             _hiddenColor = new Color(highlightColor.r, highlightColor.g, highlightColor.b, 0f);
+            if (_highlightRect != null)
+            {
+                _highlightRect.localScale = Vector3.one;
+            }
         }
 
         private static bool RequiresRoomTarget(CardInstance card)
         {
             return CardTargeting.GetRequiredTargetKind(card != null ? card.Data : null) == CardPlayTargetKind.Room;
+        }
+
+        private void PlayPulse(Color pulseColor, float targetAlpha, float scalePunch)
+        {
+            if (highlightGraphic == null)
+            {
+                return;
+            }
+
+            EnsureVisuals();
+            highlightGraphic.DOKill();
+            _highlightScaleTween?.Kill(false);
+            _highlightColorTween?.Kill(false);
+
+            var visibleColor = new Color(pulseColor.r, pulseColor.g, pulseColor.b, targetAlpha);
+            DG.Tweening.Sequence sequence = DOTween.Sequence().SetUpdate(true);
+            sequence.AppendCallback(() =>
+            {
+                highlightGraphic.color = visibleColor;
+                if (_highlightRect != null)
+                {
+                    _highlightRect.localScale = Vector3.one;
+                }
+            });
+
+            if (_highlightRect != null)
+            {
+                sequence.Join(_highlightRect.DOPunchScale(Vector3.one * scalePunch, pulseDuration, 8, 0.7f).SetUpdate(true));
+            }
+
+            sequence.Append(highlightGraphic.DOColor(_isHighlighted ? highlightColor : _hiddenColor, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true));
+            if (_highlightRect != null)
+            {
+                sequence.Join(_highlightRect.DOScale(_isHighlighted ? Vector3.one * highlightScale : Vector3.one, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true));
+            }
         }
     }
 }

@@ -30,8 +30,13 @@ namespace BaoZuPo.UI.Settlement
         [SerializeField] private float transferFadeOutSeconds = 0.08f;
         [SerializeField] private float transferScale = 1.02f;
 
+        [Header("Playback Timing")]
+        [SerializeField] private float entryGapSeconds = 0.04f;
+        [SerializeField] private float stageGapSeconds = 0.1f;
+
         private readonly Queue<UISettlementPlaybackBatch> _pendingBatches = new();
         private Sequence _activeTransferSequence;
+        private Tween _activePlaybackDelayTween;
         private Canvas _canvas;
         private RectTransform _canvasRect;
         private bool _isPlaybackRunning;
@@ -186,22 +191,22 @@ namespace BaoZuPo.UI.Settlement
             var stage = stages[index];
             if (stage == null || stage.Entries == null || stage.Entries.Count == 0)
             {
-                PlayStage(stages, index + 1, onCompleted);
+                PlayNextStageAfterGap(stages, index, onCompleted);
                 return;
             }
 
             switch (stage.Kind)
             {
                 case UISettlementPlaybackStageKind.Parallel:
-                    PlayParallel(stage.Entries, () => PlayStage(stages, index + 1, onCompleted));
+                    PlayParallel(stage.Entries, () => PlayNextStageAfterGap(stages, index, onCompleted));
                     break;
                 case UISettlementPlaybackStageKind.Barrier:
-                    PlayStage(stages, index + 1, onCompleted);
+                    PlayNextStageAfterGap(stages, index, onCompleted);
                     break;
                 case UISettlementPlaybackStageKind.Aggregate:
                 case UISettlementPlaybackStageKind.Serial:
                 default:
-                    PlaySerial(stage.Entries, 0, () => PlayStage(stages, index + 1, onCompleted));
+                    PlaySerial(stage.Entries, 0, () => PlayNextStageAfterGap(stages, index, onCompleted));
                     break;
             }
         }
@@ -215,7 +220,7 @@ namespace BaoZuPo.UI.Settlement
             }
 
             var entry = entries[index];
-            PlayEntry(entry, () => PlaySerial(entries, index + 1, onCompleted));
+            PlayEntry(entry, () => PlayNextSerialEntry(entries, index, onCompleted));
         }
 
         private void PlayParallel(IReadOnlyList<UISettlementPlaybackEntry> entries, Action onCompleted)
@@ -271,6 +276,40 @@ namespace BaoZuPo.UI.Settlement
                 handle.Cancelled -= CompletePlayback;
                 onCompleted?.Invoke();
             }
+        }
+
+        private void PlayNextSerialEntry(IReadOnlyList<UISettlementPlaybackEntry> entries, int currentIndex, Action onCompleted)
+        {
+            int nextIndex = currentIndex + 1;
+            if (entries == null || nextIndex >= entries.Count || entryGapSeconds <= 0f)
+            {
+                PlaySerial(entries, nextIndex, onCompleted);
+                return;
+            }
+
+            SchedulePlaybackDelay(entryGapSeconds, () => PlaySerial(entries, nextIndex, onCompleted));
+        }
+
+        private void PlayNextStageAfterGap(IReadOnlyList<UISettlementPlaybackStage> stages, int currentIndex, Action onCompleted)
+        {
+            int nextIndex = currentIndex + 1;
+            if (stages == null || nextIndex >= stages.Count || stageGapSeconds <= 0f)
+            {
+                PlayStage(stages, nextIndex, onCompleted);
+                return;
+            }
+
+            SchedulePlaybackDelay(stageGapSeconds, () => PlayStage(stages, nextIndex, onCompleted));
+        }
+
+        private void SchedulePlaybackDelay(float seconds, Action callback)
+        {
+            _activePlaybackDelayTween?.Kill(false);
+            _activePlaybackDelayTween = DOVirtual.DelayedCall(seconds, () =>
+            {
+                _activePlaybackDelayTween = null;
+                callback?.Invoke();
+            }).SetUpdate(true);
         }
 
         private void PlayTransfer(UISettlementPlaybackEntry entry, Action onCompleted)
@@ -413,7 +452,7 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            if (_pendingBatches.Count > 0 || _activeTransferSequence != null)
+            if (_pendingBatches.Count > 0 || _activeTransferSequence != null || _activePlaybackDelayTween != null)
             {
                 return;
             }
@@ -429,6 +468,8 @@ namespace BaoZuPo.UI.Settlement
             _isSettling = false;
             _activeTransferSequence?.Kill(false);
             _activeTransferSequence = null;
+            _activePlaybackDelayTween?.Kill(false);
+            _activePlaybackDelayTween = null;
         }
 
         private void PlayBatchMoneyJump(UISettlementPlaybackBatch batch, Action onCompleted)

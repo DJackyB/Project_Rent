@@ -3,6 +3,7 @@ using BaoZuPo.Card;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Common.Drag;
+using DG.Tweening;
 using Martian.Localization;
 using Martian.Tooltip;
 using TMPro;
@@ -43,6 +44,20 @@ namespace BaoZuPo.UI
         [Header("Skin Configuration")]
         [SerializeField] private CardSkinDatabase skinDatabase;
 
+        [Header("Interaction Visuals")]
+        [SerializeField] private Color hoverFaceTint = new Color(1f, 0.97f, 0.9f, 1f);
+        [SerializeField] private Color hoverFrameTint = new Color(1f, 0.93f, 0.68f, 1f);
+        [SerializeField] private Color dragFaceTint = new Color(0.9f, 0.98f, 1f, 1f);
+        [SerializeField] private Color dragFrameTint = new Color(0.42f, 0.92f, 0.9f, 1f);
+        [SerializeField] private Color invalidFlashTint = new Color(1f, 0.56f, 0.5f, 1f);
+        [SerializeField] private Color hoverNameTint = new Color(1f, 0.98f, 0.84f, 1f);
+        [SerializeField] private Color dragNameTint = new Color(0.88f, 1f, 0.98f, 1f);
+        [SerializeField] private float hoverArtScale = 1.025f;
+        [SerializeField] private float dragArtScale = 1.07f;
+        [SerializeField] private float visualTransitionSeconds = 0.14f;
+        [SerializeField] private float invalidFlashSeconds = 0.08f;
+        [SerializeField] private float invalidPunchScale = 0.08f;
+
         private TextMeshProUGUI typeText;
         private TextMeshProUGUI durabilityText;
         private TextMeshProUGUI waitText;
@@ -53,6 +68,7 @@ namespace BaoZuPo.UI
         private bool _loggedMissingTooltipTrigger;
         private bool _loggedMissingDragHandler;
         private bool _initialVisualStateCached;
+        private bool _dragging;
         private ILanguageService _subscribedLanguageService;
         private Sprite _initialBackgroundSprite;
         private Image.Type _initialBackgroundType;
@@ -63,6 +79,18 @@ namespace BaoZuPo.UI
         private Sprite _initialArtSprite;
         private Color _initialArtColor;
         private bool _initialArtEnabled;
+        private Vector3 _initialArtScale;
+        private Color _initialNameColor;
+        private Color _initialCostColor;
+        private Color _initialDescColor;
+        private Tween _backgroundColorTween;
+        private Tween _frameColorTween;
+        private Tween _artScaleTween;
+        private Tween _nameColorTween;
+        private Tween _costColorTween;
+        private Tween _descColorTween;
+        private Tween _invalidFramePunchTween;
+        private Tween _invalidBackgroundPunchTween;
 
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
@@ -91,6 +119,9 @@ namespace BaoZuPo.UI
             UnsubscribeFromLanguageChanges();
             DisableTooltipTrigger();
             _dragHandler?.Unbind();
+            StopInteractionTweens();
+            KillAllVisualTweenTargets();
+            ResetInteractionVisualState();
         }
 
         public void Setup(CardInstance card, UIHandPanel panel)
@@ -135,10 +166,53 @@ namespace BaoZuPo.UI
             return true;
         }
 
-        public void SetSelected(bool selected)
+        public void SetSelected(bool selected, bool immediate = false)
         {
             _selected = selected;
-            UpdateBackground();
+            ApplyInteractionVisualState(immediate);
+        }
+
+        public void SetDragging(bool dragging, bool immediate = false)
+        {
+            _dragging = dragging;
+            ApplyInteractionVisualState(immediate);
+        }
+
+        public void PlayRejectedInteractionFeedback()
+        {
+            StopInteractionTweens();
+            if (frameImage != null)
+            {
+                frameImage.color = invalidFlashTint;
+                _frameColorTween = frameImage.DOColor(ResolveFrameTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _invalidFramePunchTween = frameImage.rectTransform
+                    .DOPunchScale(Vector3.one * invalidPunchScale, invalidFlashSeconds * 2f, 8, 0.7f)
+                    .SetUpdate(true);
+            }
+
+            if (background != null)
+            {
+                background.color = Color.Lerp(ResolveFaceTint(), invalidFlashTint, 0.5f);
+                _backgroundColorTween = background.DOColor(ResolveFaceTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _invalidBackgroundPunchTween = background.rectTransform
+                    .DOPunchScale(Vector3.one * (invalidPunchScale * 0.45f), invalidFlashSeconds * 2f, 8, 0.7f)
+                    .SetUpdate(true);
+            }
+        }
+
+        public void PlayCommitInteractionFeedback()
+        {
+            if (frameImage != null)
+            {
+                frameImage.rectTransform.DOKill(false);
+                frameImage.rectTransform.DOPunchScale(Vector3.one * 0.1f, 0.18f, 8, 0.65f).SetUpdate(true);
+            }
+
+            if (artImage != null)
+            {
+                artImage.rectTransform.DOKill(false);
+                artImage.rectTransform.DOPunchScale(Vector3.one * 0.06f, 0.18f, 8, 0.55f).SetUpdate(true);
+            }
         }
 
         private void CacheReferences()
@@ -278,6 +352,7 @@ namespace BaoZuPo.UI
             UpdateMainText();
             UpdateContextualText();
             UpdateButtonState();
+            ApplyInteractionVisualState(true);
         }
 
         private void UpdateBackground()
@@ -553,6 +628,7 @@ namespace BaoZuPo.UI
                 artImage.sprite = _initialArtSprite;
                 artImage.enabled = _initialArtEnabled;
                 artImage.color = _initialArtColor;
+                artImage.rectTransform.localScale = _initialArtScale == default ? Vector3.one : _initialArtScale;
             }
 
             if (background != null)
@@ -567,6 +643,21 @@ namespace BaoZuPo.UI
                 frameImage.sprite = _initialFrameSprite;
                 frameImage.type = _initialFrameType;
                 frameImage.color = _initialFrameColor;
+            }
+
+            if (nameText != null)
+            {
+                nameText.color = _initialNameColor;
+            }
+
+            if (costText != null)
+            {
+                costText.color = _initialCostColor;
+            }
+
+            if (descText != null)
+            {
+                descText.color = _initialDescColor;
             }
         }
 
@@ -707,9 +798,250 @@ namespace BaoZuPo.UI
                 _initialArtSprite = artImage.sprite;
                 _initialArtColor = artImage.color;
                 _initialArtEnabled = artImage.enabled;
+                _initialArtScale = artImage.rectTransform.localScale;
+            }
+
+            if (nameText != null)
+            {
+                _initialNameColor = nameText.color;
+            }
+
+            if (costText != null)
+            {
+                _initialCostColor = costText.color;
+            }
+
+            if (descText != null)
+            {
+                _initialDescColor = descText.color;
             }
 
             _initialVisualStateCached = true;
+        }
+
+        private void ApplyInteractionVisualState(bool immediate)
+        {
+            if (!_initialVisualStateCached)
+            {
+                CacheInitialVisualState();
+            }
+
+            Color targetFaceTint = ResolveFaceTint();
+            Color targetFrameTint = ResolveFrameTint();
+            Color targetNameTint = ResolveNameTint();
+            Vector3 targetArtScale = ResolveArtScale();
+
+            if (immediate)
+            {
+                if (background != null)
+                {
+                    background.color = targetFaceTint;
+                }
+
+                if (frameImage != null)
+                {
+                    frameImage.color = targetFrameTint;
+                }
+
+                if (artImage != null)
+                {
+                    artImage.rectTransform.localScale = targetArtScale;
+                }
+
+                if (nameText != null)
+                {
+                    nameText.color = targetNameTint;
+                }
+
+                if (costText != null)
+                {
+                    costText.color = _initialCostColor;
+                }
+
+                if (descText != null)
+                {
+                    descText.color = _initialDescColor;
+                }
+
+                return;
+            }
+
+            StopInteractionTweens();
+
+            if (background != null)
+            {
+                _backgroundColorTween = background.DOColor(targetFaceTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+
+            if (frameImage != null)
+            {
+                _frameColorTween = frameImage.DOColor(targetFrameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+
+            if (artImage != null)
+            {
+                _artScaleTween = artImage.rectTransform.DOScale(targetArtScale, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+
+            if (nameText != null)
+            {
+                _nameColorTween = nameText.DOColor(targetNameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+
+            if (costText != null)
+            {
+                _costColorTween = costText.DOColor(_initialCostColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+
+            if (descText != null)
+            {
+                _descColorTween = descText.DOColor(_initialDescColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+        }
+
+        private Color ResolveFaceTint()
+        {
+            if (_dragging)
+            {
+                return Color.Lerp(_initialBackgroundColor, dragFaceTint, 0.85f);
+            }
+
+            if (_selected)
+            {
+                return Color.Lerp(_initialBackgroundColor, hoverFaceTint, 0.72f);
+            }
+
+            return _initialBackgroundColor;
+        }
+
+        private Color ResolveFrameTint()
+        {
+            if (_dragging)
+            {
+                return Color.Lerp(_initialFrameColor, dragFrameTint, 0.96f);
+            }
+
+            if (_selected)
+            {
+                return Color.Lerp(_initialFrameColor, hoverFrameTint, 0.92f);
+            }
+
+            return _initialFrameColor;
+        }
+
+        private Color ResolveNameTint()
+        {
+            if (_dragging)
+            {
+                return Color.Lerp(_initialNameColor, dragNameTint, 0.95f);
+            }
+
+            if (_selected)
+            {
+                return Color.Lerp(_initialNameColor, hoverNameTint, 0.85f);
+            }
+
+            return _initialNameColor;
+        }
+
+        private Vector3 ResolveArtScale()
+        {
+            Vector3 baseScale = _initialArtScale == default ? Vector3.one : _initialArtScale;
+            if (_dragging)
+            {
+                return baseScale * dragArtScale;
+            }
+
+            if (_selected)
+            {
+                return baseScale * hoverArtScale;
+            }
+
+            return baseScale;
+        }
+
+        private void ResetInteractionVisualState()
+        {
+            _selected = false;
+            _dragging = false;
+
+            if (background != null)
+            {
+                background.color = _initialBackgroundColor;
+            }
+
+            if (frameImage != null)
+            {
+                frameImage.color = _initialFrameColor;
+            }
+
+            if (artImage != null)
+            {
+                artImage.rectTransform.localScale = _initialArtScale == default ? Vector3.one : _initialArtScale;
+            }
+
+            if (nameText != null)
+            {
+                nameText.color = _initialNameColor;
+            }
+
+            if (costText != null)
+            {
+                costText.color = _initialCostColor;
+            }
+
+            if (descText != null)
+            {
+                descText.color = _initialDescColor;
+            }
+        }
+
+        private void StopInteractionTweens()
+        {
+            _backgroundColorTween?.Kill(false);
+            _frameColorTween?.Kill(false);
+            _artScaleTween?.Kill(false);
+            _nameColorTween?.Kill(false);
+            _costColorTween?.Kill(false);
+            _descColorTween?.Kill(false);
+            _invalidFramePunchTween?.Kill(false);
+            _invalidBackgroundPunchTween?.Kill(false);
+
+            _backgroundColorTween = null;
+            _frameColorTween = null;
+            _artScaleTween = null;
+            _nameColorTween = null;
+            _costColorTween = null;
+            _descColorTween = null;
+            _invalidFramePunchTween = null;
+            _invalidBackgroundPunchTween = null;
+        }
+
+        private void KillAllVisualTweenTargets()
+        {
+            (transform as RectTransform)?.DOKill(false);
+
+            if (background != null)
+            {
+                background.DOKill(false);
+                background.rectTransform.DOKill(false);
+            }
+
+            if (frameImage != null)
+            {
+                frameImage.DOKill(false);
+                frameImage.rectTransform.DOKill(false);
+            }
+
+            if (artImage != null)
+            {
+                artImage.DOKill(false);
+                artImage.rectTransform.DOKill(false);
+            }
+
+            nameText?.DOKill(false);
+            costText?.DOKill(false);
+            descText?.DOKill(false);
         }
     }
 }

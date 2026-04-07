@@ -51,6 +51,7 @@ namespace BaoZuPo.UI.Common.Drag
         private void OnDisable()
         {
             StopTweens();
+            _rectTransform?.DOKill(false);
             if (UICardDragController.Instance != null)
             {
                 UICardDragController.Instance.NotifySourceDisabled(this);
@@ -72,6 +73,8 @@ namespace BaoZuPo.UI.Common.Drag
             _idleAnchoredPosition = _rectTransform.anchoredPosition;
             _isBound = _cardView != null && _cardView.CurrentContext == CardViewContext.Hand && _cardView.Card != null;
             enabled = _isBound;
+            _cardView?.SetDragging(false, true);
+            _cardView?.SetSelected(false, true);
             ResetToIdleVisual(false);
         }
 
@@ -79,6 +82,8 @@ namespace BaoZuPo.UI.Common.Drag
         {
             _isBound = false;
             enabled = false;
+            _cardView?.SetDragging(false, true);
+            _cardView?.SetSelected(false, true);
             ResetToIdleVisual(false);
         }
 
@@ -127,6 +132,7 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
+            _cardView?.SetSelected(true);
             AnimateHover(true);
         }
 
@@ -137,6 +143,7 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
+            _cardView?.SetSelected(false);
             AnimateHover(false);
         }
 
@@ -150,11 +157,15 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (dragging)
             {
+                _cardView?.SetDragging(true);
+                _cardView?.SetSelected(true);
                 _hoverMoveTween = _rectTransform.DOAnchorPos(_rectTransform.anchoredPosition, 0f).SetUpdate(true);
                 _hoverScaleTween = _rectTransform.DOScale(Vector3.one * dragScale, dragScaleDuration).SetEase(Ease.OutQuad).SetUpdate(true);
                 return;
             }
 
+            _cardView?.SetDragging(false);
+            _cardView?.SetSelected(false);
             ResetToIdleVisual(true);
         }
 
@@ -172,11 +183,15 @@ namespace BaoZuPo.UI.Common.Drag
             {
                 _rectTransform.anchoredPosition = targetPosition;
                 _rectTransform.localScale = Vector3.one;
+                _cardView?.SetDragging(false, true);
+                _cardView?.SetSelected(false, true);
                 return;
             }
 
             _hoverMoveTween = _rectTransform.DOAnchorPos(targetPosition, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
             _hoverScaleTween = _rectTransform.DOScale(Vector3.one, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+            _cardView?.SetDragging(false);
+            _cardView?.SetSelected(false);
         }
 
         private void AnimateHover(bool hovered)
