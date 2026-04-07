@@ -113,7 +113,7 @@ namespace BaoZuPo.Integration.Martian.Tooltip
 
             // 用原始卡牌数据重新初始化克隆的卡牌视图
             cardView.Setup(card, CardViewContext.TooltipPreview, null);
-            cardView.SetSelected(false);
+            cardView.SetSelected(false, true);
         }
 
         /// <summary>

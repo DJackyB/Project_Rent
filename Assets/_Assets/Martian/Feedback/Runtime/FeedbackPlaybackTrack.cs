@@ -19,6 +19,8 @@ namespace Martian.Feedback.Runtime
         private RectTransform _panelRoot;
         private CanvasGroup _panelGroup;
         private Image _panelImage;
+        private Image _glowImage;
+        private Image _accentImage;
         private TextMeshProUGUI _label;
         private Func<TMP_FontAsset> _fontResolver;
 
@@ -163,19 +165,25 @@ namespace Martian.Feedback.Runtime
 
                 bool isFinalStep = resolvedStepIndex == validStepCount - 1;
                 Vector2 anchoredPosition = ResolveAnchoredPosition(request, step, canvasCamera);
-                float riseDistance = isFinalStep ? 24f : 18f;
-                Vector2 targetPosition = anchoredPosition + new Vector2(0f, riseDistance);
+                Vector2 entryPosition = anchoredPosition + new Vector2(0f, isFinalStep ? -18f : -12f);
+                Vector2 settlePosition = anchoredPosition + new Vector2(0f, isFinalStep ? 12f : 8f);
+                Vector2 exitPosition = anchoredPosition + new Vector2(0f, isFinalStep ? 28f : 18f);
                 float fadeInSeconds = Mathf.Max(0.01f, step.FadeInSeconds);
                 float fadeOutSeconds = Mathf.Max(0.01f, step.FadeOutSeconds);
                 float holdSeconds = Mathf.Max(0f, step.HoldSeconds);
-                float moveSeconds = Mathf.Max(0.01f, fadeInSeconds + holdSeconds);
+                float baseScale = Mathf.Max(0.85f, step.Scale);
+                float emphasizedScale = isFinalStep ? Mathf.Max(baseScale, 1.12f) : baseScale;
+                float entryScale = emphasizedScale * (isFinalStep ? 0.92f : 0.95f);
+                float exitScale = emphasizedScale * (isFinalStep ? 1.06f : 1.02f);
 
-                sequence.AppendCallback(() => PrepareStep(step, isFinalStep, anchoredPosition));
+                sequence.AppendCallback(() => PrepareStep(step, isFinalStep, entryPosition, entryScale));
                 sequence.Append(_panelGroup.DOFade(1f, fadeInSeconds));
-                sequence.Join(_panelRoot.DOScale(step.Scale, fadeInSeconds));
-                sequence.Join(_panelRoot.DOAnchorPos(targetPosition, moveSeconds).SetEase(Ease.OutQuad));
+                sequence.Join(_panelRoot.DOScale(emphasizedScale, fadeInSeconds).SetEase(isFinalStep ? Ease.OutBack : Ease.OutQuad));
+                sequence.Join(_panelRoot.DOAnchorPos(settlePosition, fadeInSeconds).SetEase(Ease.OutCubic));
                 sequence.AppendInterval(holdSeconds);
                 sequence.Append(_panelGroup.DOFade(0f, fadeOutSeconds));
+                sequence.Join(_panelRoot.DOScale(exitScale, fadeOutSeconds).SetEase(Ease.OutQuad));
+                sequence.Join(_panelRoot.DOAnchorPos(exitPosition, fadeOutSeconds).SetEase(Ease.InCubic));
 
                 if (!isFinalStep && request.GapSeconds > 0f)
                 {
@@ -188,7 +196,7 @@ namespace Martian.Feedback.Runtime
             return sequence;
         }
 
-        private void PrepareStep(FeedbackPlaybackStep step, bool isFinalStep, Vector2 anchoredPosition)
+        private void PrepareStep(FeedbackPlaybackStep step, bool isFinalStep, Vector2 anchoredPosition, float entryScale)
         {
             if (_panelRoot == null || _panelGroup == null || _label == null || step == null)
             {
@@ -196,16 +204,31 @@ namespace Martian.Feedback.Runtime
             }
 
             _panelRoot.anchoredPosition = anchoredPosition;
-            _panelRoot.localScale = Vector3.one;
+            _panelRoot.localScale = Vector3.one * entryScale;
             _panelRoot.gameObject.SetActive(true);
             _panelGroup.alpha = 0f;
             _label.text = step.Text;
             ApplyResolvedFont();
-            _label.color = isFinalStep ? Color.Lerp(step.Color, Color.white, 0.16f) : step.Color;
+            _label.color = isFinalStep ? Color.Lerp(step.Color, Color.white, 0.18f) : Color.Lerp(step.Color, Color.white, 0.05f);
             _label.fontStyle = isFinalStep ? FontStyles.Bold : FontStyles.Normal;
-            _label.fontSize = isFinalStep ? 26f : 24f;
+            _label.fontSize = isFinalStep ? 27f : 24f;
             _label.alignment = TextAlignmentOptions.Center;
             _label.textWrappingMode = TextWrappingModes.NoWrap;
+            if (_panelImage != null)
+            {
+                _panelImage.color = ResolvePanelColor(step, isFinalStep);
+            }
+
+            if (_glowImage != null)
+            {
+                _glowImage.color = ResolveGlowColor(step, isFinalStep);
+            }
+
+            if (_accentImage != null)
+            {
+                _accentImage.color = ResolveAccentColor(step, isFinalStep);
+            }
+
             ApplySizing(step.Text);
         }
 
@@ -268,9 +291,47 @@ namespace Martian.Feedback.Runtime
             _panelGroup.interactable = false;
 
             _panelImage.sprite = FeedbackSpriteUtility.WhiteSprite;
-            _panelImage.type = Image.Type.Sliced;
+            _panelImage.type = Image.Type.Simple;
             _panelImage.color = _options.PanelColor;
             _panelImage.raycastTarget = false;
+
+            if (_glowImage == null)
+            {
+                _glowImage = EnsureChildImage("Glow");
+            }
+
+            if (_accentImage == null)
+            {
+                _accentImage = EnsureChildImage("Accent");
+            }
+
+            if (_glowImage != null)
+            {
+                var glowRect = _glowImage.rectTransform;
+                glowRect.anchorMin = Vector2.zero;
+                glowRect.anchorMax = Vector2.one;
+                glowRect.offsetMin = new Vector2(-12f, -12f);
+                glowRect.offsetMax = new Vector2(12f, 12f);
+                glowRect.SetAsFirstSibling();
+                _glowImage.sprite = FeedbackSpriteUtility.WhiteSprite;
+                _glowImage.type = Image.Type.Simple;
+                _glowImage.raycastTarget = false;
+                _glowImage.color = new Color(1f, 1f, 1f, 0f);
+            }
+
+            if (_accentImage != null)
+            {
+                var accentRect = _accentImage.rectTransform;
+                accentRect.anchorMin = new Vector2(0f, 1f);
+                accentRect.anchorMax = new Vector2(1f, 1f);
+                accentRect.pivot = new Vector2(0.5f, 1f);
+                accentRect.anchoredPosition = Vector2.zero;
+                accentRect.sizeDelta = new Vector2(0f, 8f);
+                _accentImage.sprite = FeedbackSpriteUtility.WhiteSprite;
+                _accentImage.type = Image.Type.Simple;
+                _accentImage.raycastTarget = false;
+                _accentImage.color = new Color(1f, 1f, 1f, 0f);
+            }
 
             if (_label == null)
             {
@@ -306,6 +367,23 @@ namespace Martian.Feedback.Runtime
             {
                 _panelGroup.alpha = 0f;
             }
+        }
+
+        private Image EnsureChildImage(string childName)
+        {
+            var child = transform.Find(childName);
+            GameObject childObject;
+            if (child == null)
+            {
+                childObject = new GameObject(childName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                childObject.transform.SetParent(transform, false);
+            }
+            else
+            {
+                childObject = child.gameObject;
+            }
+
+            return childObject.GetComponent<Image>();
         }
 
         private void ApplyResolvedFont()
@@ -445,6 +523,29 @@ namespace Martian.Feedback.Runtime
         private static void CancelHandle(FeedbackPlaybackRequest request)
         {
             request?.Handle?.Cancel();
+        }
+
+        private static Color ResolvePanelColor(FeedbackPlaybackStep step, bool isFinalStep)
+        {
+            Color baseColor = step != null ? step.Color : Color.white;
+            Color darkPanel = new Color(0.07f, 0.1f, 0.16f, 0.88f);
+            Color tinted = Color.Lerp(darkPanel, baseColor, isFinalStep ? 0.3f : 0.2f);
+            tinted.a = isFinalStep ? 0.92f : 0.8f;
+            return tinted;
+        }
+
+        private static Color ResolveGlowColor(FeedbackPlaybackStep step, bool isFinalStep)
+        {
+            Color baseColor = step != null ? step.Color : Color.white;
+            baseColor.a = isFinalStep ? 0.22f : 0.14f;
+            return baseColor;
+        }
+
+        private static Color ResolveAccentColor(FeedbackPlaybackStep step, bool isFinalStep)
+        {
+            Color baseColor = step != null ? step.Color : Color.white;
+            baseColor.a = isFinalStep ? 0.96f : 0.84f;
+            return baseColor;
         }
     }
 

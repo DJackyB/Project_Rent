@@ -3,7 +3,8 @@
   "references": [
     "Martian.Feedback",
     "Martian.Feedback.Runtime",
-    "Martian.Feedback.Presets"
+    "Martian.Feedback.Presets",
+    "BaoZuPo"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
