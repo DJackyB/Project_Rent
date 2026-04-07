@@ -86,7 +86,7 @@ namespace BaoZuPo.Editor
         /// 流程：打开 Excel → 解析 → 验证 → 生成资产 → 刷新 AssetDatabase
         /// 任何验证失败都会中止并输出错误信息。
         /// </summary>
-        [MenuItem("Tools/BaoZuPo/Cards/Import Card Data")]
+        [MenuItem("Tools/BaoZuPo/卡牌/导入卡牌数据")]
         public static void Import()
         {
             CardEffectRegistration.EnsureRegistered();
@@ -224,7 +224,7 @@ namespace BaoZuPo.Editor
             Debug.Log($"[CardDataImporter] Done. Created {created}, updated {updated}, synced Card localization, and refreshed Card libraries.");
         }
 
-        [MenuItem("Tools/BaoZuPo/Cards/Sync Card Libraries")]
+        [MenuItem("Tools/BaoZuPo/卡牌/同步卡库")]
         public static void SyncCardLibraries()
         {
             if (!AssetDatabase.IsValidFolder(LibraryOutputFolder))

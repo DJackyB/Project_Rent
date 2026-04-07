@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using BaoZuPo.Card;
 using UnityEditor;
 using UnityEngine;
@@ -70,7 +72,7 @@ namespace BaoZuPo.Editor
             ("ROI%",   62f),
         };
 
-        [MenuItem("Tools/BaoZuPo/Simulation/Balance Simulator")]
+        [MenuItem("Tools/BaoZuPo/数值/平衡模拟器")]
         public static void Open()
         {
             var w = GetWindow<BalanceSimulatorWindow>("平衡模拟器");
@@ -97,17 +99,32 @@ namespace BaoZuPo.Editor
         private void DrawConfigBar()
         {
             EditorGUILayout.LabelField("平衡模拟器", EditorStyles.boldLabel);
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                IntField("起始金钱", ref _startingMoney, 70, 70);
-                IntField("贷款基础", ref _loanBase, 60, 70);
-                IntField("间隔回合", ref _loanInterval, 60, 45);
-                FloatField("增长倍率", ref _loanGrowth, 60, 45);
-                IntField("模拟回合", ref _simulateTurns, 60, 45);
-                IntField("∞参考T", ref _unlimitedRef, 50, 40);
 
-                if (GUILayout.Button("刷新", GUILayout.Width(50)))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("模拟参数", EditorStyles.boldLabel);
+                EditorGUI.BeginChangeCheck();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    IntField("起始金钱", ref _startingMoney, 70, 70);
+                    IntField("贷款基础", ref _loanBase, 60, 70);
+                    IntField("间隔回合", ref _loanInterval, 60, 45);
+                    FloatField("增长倍率", ref _loanGrowth, 60, 45);
+                    IntField("模拟回合", ref _simulateTurns, 60, 45);
+                    IntField("∞参考T", ref _unlimitedRef, 50, 40);
+                }
+                if (EditorGUI.EndChangeCheck())
                     _dirty = true;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("手动刷新", GUILayout.Width(70)))
+                        _dirty = true;
+                    if (GUILayout.Button("导出分析 CSV", GUILayout.Width(100)))
+                        ExportAnalysisCsv();
+                    GUILayout.FlexibleSpace();
+                    GUILayout.Label($"共加载 {_stats.Count} 张卡", EditorStyles.miniLabel);
+                }
             }
         }
 
@@ -220,6 +237,50 @@ namespace BaoZuPo.Editor
                 GUILayout.Label(s.BreakEvenLabel,         GUILayout.Width(55));
                 GUILayout.Label(s.RoiLabel,               RoiStyle(s.Roi),  GUILayout.Width(62));
             }
+        }
+
+        // ── CSV 导出 ──────────────────────────────────────────────
+
+        private void ExportAnalysisCsv()
+        {
+            if (_dirty) Refresh();
+
+            string defaultName = $"CardAnalysis_{System.DateTime.Now:yyyyMMdd_HHmm}.csv";
+            string path = EditorUtility.SaveFilePanel("导出卡牌分析 CSV", "", defaultName, "csv");
+            if (string.IsNullOrEmpty(path)) return;
+
+            var filtered = GetFilteredSorted();
+            var sb = new StringBuilder();
+            sb.AppendLine("ID,名称,类型,稀有度,费用,基础租金,耐久,即时收益,结算总,销毁罚,净收益,回本T,ROI%");
+
+            foreach (var s in filtered)
+            {
+                sb.Append(s.CardId).Append(',');
+                sb.Append(CsvEscape(s.CardName)).Append(',');
+                sb.Append(s.TypeLabel).Append(',');
+                sb.Append(s.RarityLabel).Append(',');
+                sb.Append(s.Cost).Append(',');
+                sb.Append(s.BaseRent).Append(',');
+                sb.Append(s.DurabilityLabel).Append(',');
+                sb.Append(s.InstantIncome).Append(',');
+                sb.Append(s.SettleTotal).Append(',');
+                sb.Append(s.DestroyPenalty).Append(',');
+                sb.Append(s.NetGain).Append(',');
+                sb.Append(s.BreakEvenLabel).Append(',');
+                sb.AppendLine(s.RoiLabel);
+            }
+
+            File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+            EditorUtility.RevealInFinder(path);
+            Debug.Log($"[BalanceSimulator] 导出 {filtered.Count} 条记录到 {path}");
+        }
+
+        private static string CsvEscape(string v)
+        {
+            if (string.IsNullOrEmpty(v)) return string.Empty;
+            return v.IndexOfAny(new[] { ',', '"', '\n' }) >= 0
+                ? "\"" + v.Replace("\"", "\"\"") + "\""
+                : v;
         }
 
         // ── 数据刷新 ──────────────────────────────────────────────
