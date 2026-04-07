@@ -49,7 +49,13 @@
       "Bash(node:*)",
       "Bash(powershell:*)",
       "mcp__UnityMCP__manage_asset",
-      "mcp__UnityMCP__manage_prefabs"
+      "mcp__UnityMCP__manage_prefabs",
+      "Bash(cat /e/SDL/PJ/Project_Rent/Assets/Feel/MMFeedbacks/MMFeedbacks/*.asmdef)",
+      "Bash(xargs grep:*)",
+      "Bash(find:*)",
+      "mcp__UnityMCP__refresh_unity",
+      "WebFetch(domain:feel.moremountains.com)",
+      "WebFetch(domain:feel-docs.moremountains.com)"
     ]
   },
   "hooks": {

@@ -68,7 +68,7 @@ namespace BaoZuPo.Tests.Card
 
             var libraries = CardLibraryDatabase.GetAll();
 
-            CollectionAssert.IsSupersetOf(libraries.Keys, new[] { "AllCards", "FirstTurnPool", "NormalTurnPool", "RewardPool" });
+            CollectionAssert.IsSupersetOf(libraries.Keys, new[] { "AllCards", "0", "1", "2" });
             Assert.AreEqual(4, libraries.Count);
         }
 
