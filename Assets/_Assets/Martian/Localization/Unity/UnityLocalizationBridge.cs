@@ -11,7 +11,6 @@ namespace Martian.Localization.Unity
 {
     internal static class UnityLocalizationRuntimeInstaller
     {
-        private const string DefaultLanguageCode = "zh-Hans";
         private const string PlayerPrefsKey = "Martian.Localization.SelectedLocale";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -23,31 +22,18 @@ namespace Martian.Localization.Unity
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InitializeBeforeSceneLoad()
         {
-            var bootstrap = new UnityLocalizationBootstrap(DefaultLanguageCode, PlayerPrefsKey);
+            var bootstrap = new UnityLocalizationBootstrap(PlayerPrefsKey);
             LocalizationServices.SetBootstrap(bootstrap);
-
-            try
-            {
-                bootstrap.Initialize();
-            }
-            catch (Exception exception)
-            {
-                Debug.LogError(
-                    "[Martian.Localization] Failed to initialize Unity Localization bridge. " +
-                    "The project will continue with fallback text until the localization setup is fixed.\n" +
-                    exception);
-            }
+            bootstrap.Initialize();
         }
     }
 
     public sealed class UnityLocalizationBootstrap : ILocalizationBootstrap
     {
-        private readonly string _defaultLanguageCode;
         private readonly string _playerPrefsKey;
 
-        public UnityLocalizationBootstrap(string defaultLanguageCode = "zh-Hans", string playerPrefsKey = "Martian.Localization.SelectedLocale")
+        public UnityLocalizationBootstrap(string playerPrefsKey = "Martian.Localization.SelectedLocale")
         {
-            _defaultLanguageCode = string.IsNullOrWhiteSpace(defaultLanguageCode) ? "zh-Hans" : defaultLanguageCode;
             _playerPrefsKey = string.IsNullOrWhiteSpace(playerPrefsKey) ? "Martian.Localization.SelectedLocale" : playerPrefsKey;
         }
 
@@ -64,16 +50,20 @@ namespace Martian.Localization.Unity
             {
                 throw new InvalidOperationException(
                     "[UnityLocalizationBootstrap] LocalizationSettings asset is missing. " +
-                    "Create and assign Unity Localization settings instead of relying on runtime fallback.");
+                    "Configure Unity Localization (Window → Asset Management → Localization Settings).");
             }
 
             LocalizationSettings.InitializationOperation.WaitForCompletion();
 
-            string configuredDefaultLanguageCode = LocalizationSettings.ProjectLocale != null
-                ? LocalizationSettings.ProjectLocale.Identifier.Code
-                : _defaultLanguageCode;
+            if (LocalizationSettings.ProjectLocale == null)
+            {
+                throw new InvalidOperationException(
+                    "[UnityLocalizationBootstrap] ProjectLocale is not set in Localization Settings. " +
+                    "Assign a Project Locale in Window → Asset Management → Localization Settings.");
+            }
 
-            var languageService = new UnityLanguageService(configuredDefaultLanguageCode, _playerPrefsKey);
+            string defaultLanguageCode = LocalizationSettings.ProjectLocale.Identifier.Code;
+            var languageService = new UnityLanguageService(defaultLanguageCode, _playerPrefsKey);
             var textService = new UnityLocalizedTextService();
 
             languageService.Initialize();
