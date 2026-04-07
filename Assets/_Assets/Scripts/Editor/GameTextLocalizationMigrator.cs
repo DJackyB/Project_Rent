@@ -27,11 +27,31 @@ namespace BaoZuPo.Editor.Localization
         private readonly List<TextEntry> _entries = new();
         private Vector2 _scroll;
         private string _statusMessage;
+        private bool _gameTextAdvanced;
+        private bool _cardTextAdvanced;
 
-        [MenuItem("Tools/BaoZuPo/Localization/Text Tools")]
+        [MenuItem("Tools/BaoZuPo/文本/文本工具")]
         public static void Open()
         {
-            GetWindow<GameTextLocalizationMigrator>("Localization Text Tools").Show();
+            GetWindow<GameTextLocalizationMigrator>("文本工具").Show();
+        }
+
+        /// <summary>
+        /// 静默同步：不打开窗口，直接在临时实例里完成 Parse → 保留 zh-Hans → 生成 Table → 导出 CSV。
+        /// 适合改完 GameText.cs 后快速推送，无需交互。
+        /// </summary>
+        [MenuItem("Tools/BaoZuPo/文本/同步 GameText")]
+        public static void SyncGameTextDirect()
+        {
+            var tool = CreateInstance<GameTextLocalizationMigrator>();
+            try
+            {
+                tool.SyncGameText();
+            }
+            finally
+            {
+                DestroyImmediate(tool);
+            }
         }
 
         private void OnEnable()
@@ -41,101 +61,156 @@ namespace BaoZuPo.Editor.Localization
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Localization Text Tools", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("文本工具", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Project-owned text tools. Use GameText for shared UI copy, and Card Text for card name/description bilingual sync.",
+                "GameText：管理全局 UI 文案（中英双语）。卡牌文本：维护卡牌名称和描述的双语 CSV。",
                 MessageType.Info);
             EditorGUILayout.Space(4f);
+
+            // 状态提示置顶，避免被下方滚动区遮住
+            if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                EditorGUILayout.HelpBox(_statusMessage, MessageType.None);
+                EditorGUILayout.Space(2f);
+            }
 
             DrawGameTextSection();
             EditorGUILayout.Space(8f);
             DrawCardTextSection();
             EditorGUILayout.Space(6f);
 
-            if (!string.IsNullOrEmpty(_statusMessage))
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                EditorGUILayout.HelpBox(_statusMessage, MessageType.None);
+                EditorGUILayout.LabelField("Key", EditorStyles.boldLabel, GUILayout.Width(270f));
+                EditorGUILayout.LabelField("英文（en）", EditorStyles.boldLabel, GUILayout.Width(230f));
+                EditorGUILayout.LabelField("中文（zh-Hans）", EditorStyles.boldLabel, GUILayout.Width(200f));
+                GUILayout.FlexibleSpace();
+                GUILayout.Label($"共 {_entries.Count} 条", EditorStyles.miniLabel);
             }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            EditorGUILayout.LabelField("Key", EditorStyles.boldLabel, GUILayout.Width(270f));
-            EditorGUILayout.LabelField("en", EditorStyles.boldLabel, GUILayout.Width(230f));
-            EditorGUILayout.LabelField("zh-Hans", EditorStyles.boldLabel, GUILayout.Width(200f));
-            EditorGUILayout.EndHorizontal();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
             foreach (TextEntry entry in _entries)
             {
-                EditorGUILayout.BeginHorizontal();
+                bool missingZh = string.IsNullOrWhiteSpace(entry.ZhValue);
+                if (missingZh)
+                {
+                    var prevColor = GUI.backgroundColor;
+                    GUI.backgroundColor = new Color(1f, 0.85f, 0.5f, 0.4f);
+                    EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+                    GUI.backgroundColor = prevColor;
+                }
+                else
+                {
+                    EditorGUILayout.BeginHorizontal();
+                }
+
                 EditorGUILayout.SelectableLabel(entry.Key, GUILayout.Width(270f), GUILayout.Height(EditorGUIUtility.singleLineHeight));
                 EditorGUILayout.SelectableLabel(entry.EnValue, GUILayout.Width(230f), GUILayout.Height(EditorGUIUtility.singleLineHeight));
-                EditorGUILayout.LabelField(string.IsNullOrWhiteSpace(entry.ZhValue) ? "-" : entry.ZhValue, GUILayout.Width(200f));
+                EditorGUILayout.LabelField(missingZh ? "（待翻译）" : entry.ZhValue, GUILayout.Width(200f));
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndScrollView();
-
-            EditorGUILayout.LabelField($"Entries: {_entries.Count}", EditorStyles.miniLabel);
         }
 
         private void DrawGameTextSection()
         {
-            EditorGUILayout.LabelField("GameText", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("GameText（UI 公共文案）", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Parses GameText.cs, exports/imports GameText.csv, then writes the GameText string table.",
+                "读取 GameText.cs → 保留已有 zh-Hans → 写入 en → 生成 String Table → 输出 CSV。\n" +
+                "补翻译流程：同步 → 打开 CSV → 填 zh-Hans 列 → 导入 CSV → 同步",
                 MessageType.None);
 
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("1. Parse GameText"))
-            {
-                ParseGameText();
-            }
+            if (GUILayout.Button("同步 GameText", GUILayout.Height(28)))
+                SyncGameText();
 
-            if (GUILayout.Button("2. Export GameText CSV"))
+            _gameTextAdvanced = EditorGUILayout.Foldout(_gameTextAdvanced, "分步操作（高级）");
+            if (_gameTextAdvanced)
             {
-                ExportTsv();
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("① 解析")) { ParseGameText(); }
+                if (GUILayout.Button("② 导出 CSV")) { ExportTsv(); }
+                if (GUILayout.Button("③ 导入 CSV")) { ImportTsv(); }
+                if (GUILayout.Button("④ 生成 Table")) { GenerateStringTable(); }
+                EditorGUILayout.EndHorizontal();
             }
-
-            if (GUILayout.Button("3. Import GameText CSV"))
-            {
-                ImportTsv();
-            }
-
-            if (GUILayout.Button("4. Generate GameText Table"))
-            {
-                GenerateStringTable();
-            }
-            EditorGUILayout.EndHorizontal();
         }
 
         private void DrawCardTextSection()
         {
-            EditorGUILayout.LabelField("Card Text", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("卡牌文本（双语 CSV）", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Syncs CardData into the Card localization table, exports Card.csv for translation, and imports translated English back into the table.",
+                "zh-Hans 从 CardData 自动同步；en 需手动填 CSV 后导入。\n" +
+                "补 en 流程：同步双语表 → 打开 CSV → 填 en 列 → 导入 CSV",
                 MessageType.None);
 
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("1. Sync Card Tables"))
+            if (GUILayout.Button("同步卡牌双语表", GUILayout.Height(28)))
             {
                 CardLocalizationSyncUtility.SyncCardTablesFromCardData();
-                SetStatus("Card tables synced from CardData and Card.csv updated.");
+                SetStatus("卡牌双语表已同步，Card.csv 已更新。");
             }
 
-            if (GUILayout.Button("2. Export Card CSV"))
+            _cardTextAdvanced = EditorGUILayout.Foldout(_cardTextAdvanced, "分步操作（高级）");
+            if (_cardTextAdvanced)
             {
-                CardLocalizationSyncUtility.SyncCardTablesFromCardData();
-                EditorUtility.RevealInFinder(CardCsvPath);
-                SetStatus("Card.csv exported to Assets/_Assets/Data/Localization.");
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("导出卡牌 CSV"))
+                {
+                    CardLocalizationSyncUtility.SyncCardTablesFromCardData();
+                    EditorUtility.RevealInFinder(CardCsvPath);
+                    SetStatus("Card.csv 已导出并在 Finder 中定位。");
+                }
+                if (GUILayout.Button("导入卡牌 CSV"))
+                {
+                    CardLocalizationSyncUtility.ImportCardCsv();
+                    SetStatus("Card.csv 已导入到英语 Card Table。");
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        /// <summary>
+        /// 一键同步：Parse GameText.cs → 保留表中已有 zh-Hans → 写入 en → 生成表 → 更新 CSV。
+        /// </summary>
+        public void SyncGameText()
+        {
+            ParseGameText();
+            LoadZhHansFromTable();
+            GenerateStringTable();
+            ExportTsv();
+            SetStatus($"Synced {_entries.Count} GameText entries.");
+        }
+
+        /// <summary>
+        /// 从现有 GameText_zh-Hans 表把已翻译的条目读回 _entries，
+        /// 使 GenerateStringTable 不会覆盖掉已有的中文翻译。
+        /// </summary>
+        private void LoadZhHansFromTable()
+        {
+            StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(CollectionName);
+            if (collection == null)
+            {
+                return;
             }
 
-            if (GUILayout.Button("3. Import Card CSV"))
+            StringTable zhTable = collection.GetTable(new LocaleIdentifier(ZhLocaleCode)) as StringTable;
+            if (zhTable == null)
             {
-                CardLocalizationSyncUtility.ImportCardCsv();
-                SetStatus("Card.csv imported into the Card English table.");
+                return;
             }
-            EditorGUILayout.EndHorizontal();
+
+            foreach (TextEntry entry in _entries)
+            {
+                if (!string.IsNullOrWhiteSpace(entry.ZhValue))
+                {
+                    continue;
+                }
+
+                StringTableEntry existing = zhTable.GetEntry(entry.Key);
+                if (existing != null && !string.IsNullOrWhiteSpace(existing.Value))
+                {
+                    entry.ZhValue = existing.Value;
+                }
+            }
         }
 
         private void ParseGameText()

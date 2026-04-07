@@ -23,20 +23,20 @@ namespace BaoZuPo.Editor
         private const string EnLocaleCode = "en";
         private const string ZhLocaleCode = "zh-Hans";
 
-        [MenuItem("Tools/BaoZuPo/Localization/Advanced/Cards/Sync Card Tables")]
+        [MenuItem("Tools/BaoZuPo/文本/同步卡牌双语表")]
         public static void SyncCardTablesMenu()
         {
             SyncCardTablesFromCardData();
         }
 
-        [MenuItem("Tools/BaoZuPo/Localization/Advanced/Cards/Export Card CSV")]
+        [MenuItem("Tools/BaoZuPo/文本/导出卡牌翻译 CSV")]
         public static void ExportCardCsvMenu()
         {
             SyncCardTablesFromCardData();
             EditorUtility.RevealInFinder(CsvPath);
         }
 
-        [MenuItem("Tools/BaoZuPo/Localization/Advanced/Cards/Import Card CSV")]
+        [MenuItem("Tools/BaoZuPo/文本/导入卡牌翻译 CSV")]
         public static void ImportCardCsvMenu()
         {
             ImportCardCsv();
@@ -242,8 +242,19 @@ namespace BaoZuPo.Editor
         private static StringTableCollection EnsureCollection(params Locale[] locales)
         {
             StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(CollectionName);
+
+            if (collection != null)
+            {
+                string collectionPath = AssetDatabase.GetAssetPath(collection);
+                if (!string.IsNullOrEmpty(collectionPath) && !collectionPath.StartsWith(LocalizationAssetDir))
+                {
+                    collection = MigrateCollection(collection);
+                }
+            }
+
             if (collection == null)
             {
+                EnsureLocalizationDir();
                 collection = LocalizationEditorSettings.CreateStringTableCollection(CollectionName, LocalizationAssetDir, locales);
             }
 
@@ -259,6 +270,57 @@ namespace BaoZuPo.Editor
             }
 
             return collection;
+        }
+
+        /// <summary>
+        /// Card 表目录与 GameText 表目录不一致时自动迁移（移动 .asset 文件）。
+        /// zh-Hans 数据不会丢失（来自 CardData，Sync 后重建）；en 数据保留在 Card.csv，Import 后恢复。
+        /// </summary>
+        private static StringTableCollection MigrateCollection(StringTableCollection collection)
+        {
+            EnsureLocalizationDir();
+
+            var assetPaths = new List<string>();
+
+            foreach (var table in collection.StringTables)
+            {
+                string path = AssetDatabase.GetAssetPath(table);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    assetPaths.Add(path);
+                }
+            }
+
+            if (collection.SharedData != null)
+            {
+                string path = AssetDatabase.GetAssetPath(collection.SharedData);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    assetPaths.Add(path);
+                }
+            }
+
+            string collPath = AssetDatabase.GetAssetPath(collection);
+            if (!string.IsNullOrEmpty(collPath))
+            {
+                assetPaths.Add(collPath);
+            }
+
+            foreach (string oldPath in assetPaths)
+            {
+                string fileName = Path.GetFileName(oldPath);
+                string newPath = LocalizationAssetDir + "/" + fileName;
+                string error = AssetDatabase.MoveAsset(oldPath, newPath);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Debug.LogError($"[CardLocalizationSync] Failed to move '{oldPath}': {error}");
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[CardLocalizationSync] Migrated Card tables to {LocalizationAssetDir}.");
+            return LocalizationEditorSettings.GetStringTableCollection(CollectionName);
         }
 
         private static void RemoveStaleEntries(StringTableCollection collection, HashSet<string> liveKeys)
@@ -319,15 +381,11 @@ namespace BaoZuPo.Editor
         private static void WriteCsv(IReadOnlyList<CardTextRow> rows)
         {
             StringBuilder builder = new StringBuilder();
-            builder.AppendLine("CardId,Field,Key,zh-Hans,en");
+            builder.AppendLine("Key,zh-Hans,en");
 
             for (int i = 0; i < rows.Count; i++)
             {
                 CardTextRow row = rows[i];
-                builder.Append(EscapeCsv(row.CardId.ToString()));
-                builder.Append(',');
-                builder.Append(EscapeCsv(row.Field));
-                builder.Append(',');
                 builder.Append(EscapeCsv(row.Key));
                 builder.Append(',');
                 builder.Append(EscapeCsv(row.ZhHans));
@@ -368,12 +426,7 @@ namespace BaoZuPo.Editor
                     continue;
                 }
 
-                int.TryParse(GetField(row, headerMap, "CardId"), out int cardId);
-                result[key] = new CardTextRow(
-                    cardId,
-                    GetField(row, headerMap, "Field"),
-                    key,
-                    GetField(row, headerMap, "zh-Hans"))
+                result[key] = new CardTextRow(0, string.Empty, key, GetField(row, headerMap, "zh-Hans"))
                 {
                     En = GetField(row, headerMap, "en")
                 };

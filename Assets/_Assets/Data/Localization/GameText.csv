@@ -23,9 +23,10 @@ GameText.Cost,Cost {0},费用 {0}
 GameText.FeedbackCost,Cost -{0},费用 -{0}
 GameText.FeedbackLoan,Loan -{0},贷款 -{0}
 GameText.Wait,Wait {0},等待 {0}
-GameText.RoomSummary,Room {0}  Tenant {1}/{2}  Equip {3}/{4},房间 {0}  租客 {1}/{2}  设备 {3}/{4}
-GameText.GameOverInfo,You survived {0} turns\nFinal Money: {1},你存活了 {0} 个回合\n最终资金：{1}
 GameText.SettlementRoomTitle,Room {0},房间 {0}
+GameText.PhaseName.Prepare,Prepare,准备
+GameText.PhaseName.Action,Action,行动
+GameText.PhaseName.Settle,Settle,结算
 GameText.TypeLabel.Tenant,Tenant,租客
 GameText.TypeLabel.Equipment,Equipment,设备
 GameText.TypeLabel.Event,Event,事件

@@ -21,21 +21,21 @@ namespace BaoZuPo.Editor
         private const string CatalogAssetName = "AudioCatalog.asset";
         private const string SettingsAssetName = "AudioSettings.asset";
 
-        [MenuItem("Tools/BaoZuPo/Audio/Setup/Generate Audio Assets")]
+        [MenuItem("Tools/BaoZuPo/音频/生成音频资产")]
         public static void GenerateAudioAssets()
         {
             string targetFolder = ResolveTargetFolder();
             EnsureAudioAssets(targetFolder);
         }
 
-        [MenuItem("Tools/BaoZuPo/Audio/Setup/Setup Active Scene Audio")]
+        [MenuItem("Tools/BaoZuPo/音频/配置当前场景音频")]
         public static void SetupActiveSceneAudio()
         {
             string targetFolder = ResolveTargetFolder();
             SetupActiveSceneAudio(targetFolder);
         }
 
-        [MenuItem("Tools/BaoZuPo/Audio/Setup/Assign Clips By Cue Id")]
+        [MenuItem("Tools/BaoZuPo/音频/自动绑定音频 Clip")]
         public static void AssignClipsByCueId()
         {
             string targetFolder = ResolveTargetFolder();

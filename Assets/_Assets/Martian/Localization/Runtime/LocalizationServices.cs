@@ -18,10 +18,12 @@ namespace Martian.Localization
     /// 3. LocalizationServices.Text.Resolve() 获取本地化文本
     /// 4. LocalizationFontUtility.ApplyToText() 应用语言特定的字体
     ///
-    /// 当前状态（包租婆项目）：
-    /// - ILanguageService：未接线（使用 Null 实现）
-    /// - ILocalizedTextService：未接线（使用 Null 实现，回落到 GameText）
-    /// - FontProfile：已接线（应用 SourceHanSansSC 中文字体）
+    /// 初始化时序（SubsystemRegistration → BeforeSceneLoad → AfterSceneLoad）：
+    /// - SubsystemRegistration：Reset() 将服务还原为 Null 实现（过渡状态，不影响运行时）
+    /// - BeforeSceneLoad：UnityLocalizationRuntimeInstaller 注册真实实现
+    /// - AfterSceneLoad：LocalizationFontUtility 应用字体，此时真实服务已就位
+    ///
+    /// 默认语言由 Localization Settings 的 ProjectLocale 决定，代码层不做硬编码。
     /// </summary>
     public static class LocalizationServices
     {

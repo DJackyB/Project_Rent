@@ -16,6 +16,8 @@ namespace BaoZuPo.Card
     /// </summary>
     public static class CardEffectRegistration
     {
+        public static bool IsRegistered { get; private set; }
+
         /// <summary>
         /// 初始化并注册所有内置效果。
         ///
@@ -77,6 +79,13 @@ namespace BaoZuPo.Card
 
             // SpawnRandomTenantInSelectedRoom - 在选中房间生成一个随机租客（无参数）
             CardEffectFactory.Register("SpawnRandomTenantInSelectedRoom", _ => new SpawnRandomTenantInSelectedRoomEffect());
+
+            IsRegistered = true;
+        }
+
+        public static void MarkUnregisteredForTesting()
+        {
+            IsRegistered = false;
         }
     }
 }
