@@ -135,6 +135,17 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void CardInstance_ThrowsWhenEffectsAreNotRegistered()
+        {
+            CardEffectFactory.ClearAll();
+            var card = CreateCardData(12, "Unregistered Effect Card");
+            card.instantEffect = "AddMoney;10";
+
+            var exception = Assert.Throws<InvalidOperationException>(() => new CardInstance(card));
+            StringAssert.Contains("Card effects are not registered", exception.Message);
+        }
+
+        [Test]
         public void DrawFromLibrary_UsesSpecifiedLibrary_AndHonorsHandCap()
         {
             var deckManager = CreateComponent<DeckManager>("DeckManager");

@@ -208,6 +208,7 @@ namespace BaoZuPo.Card
         public static void ClearAll()
         {
             _registry.Clear();
+            CardEffectRegistration.MarkUnregisteredForTesting();
         }
 
         /// <summary>

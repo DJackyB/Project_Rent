@@ -47,6 +47,8 @@ namespace BaoZuPo.Core
         /// </summary>
         public GameContext GameContext { get; private set; }
 
+        public bool IsInitialized => GameContext != null;
+
         private void OnEnable()
         {
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
@@ -61,6 +63,21 @@ namespace BaoZuPo.Core
         {
             base.Awake();
             _turnFlowFsm = GetComponent<FSMOwner>();
+
+            EnsureInitialized();
+        }
+
+        public void EnsureInitialized()
+        {
+            if (IsInitialized)
+            {
+                return;
+            }
+
+            if (_turnFlowFsm == null)
+            {
+                _turnFlowFsm = GetComponent<FSMOwner>();
+            }
 
             if (gameConfig == null)
             {

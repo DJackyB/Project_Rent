@@ -119,6 +119,8 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         public void ExecutePreparePhase()
         {
+            EnsureGameManagerInitialized();
+
             if (_isGameOver)
             {
                 return;
@@ -157,6 +159,8 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         public void StartActionPhase()
         {
+            EnsureGameManagerInitialized();
+
             if (_isGameOver)
             {
                 return;
@@ -261,6 +265,8 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         public bool PlayCard(CardInstance card, RoomSlot targetRoom = null)
         {
+            EnsureGameManagerInitialized();
+
             var validation = ValidatePlay(card, targetRoom);
             if (!validation.IsValid)
             {
@@ -362,6 +368,8 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         public void ExecuteSettlePhase()
         {
+            EnsureGameManagerInitialized();
+
             if (_isGameOver)
             {
                 return;
@@ -1068,6 +1076,11 @@ namespace BaoZuPo.GameFlow
         private static string BuildLaneKey(string batchId, int sourceIndex)
         {
             return $"{DefaultSettlementLaneKey}:{batchId}:{sourceIndex}";
+        }
+
+        private static void EnsureGameManagerInitialized()
+        {
+            GameManager.Instance?.EnsureInitialized();
         }
 
         private static void FinalizeSourceCounts(UISettlementPlaybackBatch batch)

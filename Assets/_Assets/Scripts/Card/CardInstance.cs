@@ -1,3 +1,5 @@
+using System;
+
 namespace BaoZuPo.Card
 {
     /// <summary>
@@ -48,6 +50,11 @@ namespace BaoZuPo.Card
         /// </summary>
         public CardInstance(CardData data)
         {
+            if (!CardEffectRegistration.IsRegistered)
+            {
+                throw new InvalidOperationException("[CardInstance] Card effects are not registered. Run CardEffectRegistration.EnsureRegistered() during game initialization before creating card instances.");
+            }
+
             Data = data;
             CurrentDurability = data.durability;
             CurrentWait = data.waitTurns;
