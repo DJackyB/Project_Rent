@@ -50,11 +50,16 @@ namespace BaoZuPo.Integration.Martian.Feedback
             options.PanelPadding = new UnityEngine.Vector2(28f, 14f);
             options.PanelColor = new UnityEngine.Color(0.07f, 0.1f, 0.16f, 0.88f);
             options.TextColor = UnityEngine.Color.white;
-            options.PositiveColor = new UnityEngine.Color(1f, 0.84f, 0.34f, 1f);
-            options.CostColor = new UnityEngine.Color(1f, 0.62f, 0.38f, 1f);
-            options.LoanColor = new UnityEngine.Color(1f, 0.46f, 0.38f, 1f);
-            options.FinalColor = new UnityEngine.Color(1f, 0.93f, 0.62f, 1f);
+
+            // 注册项目特有的类别颜色
+            options.DefaultColor = new UnityEngine.Color(1f, 0.84f, 0.34f, 1f);
+            options.CategoryColors[BaoZuPoFeedbackCategories.Money] = new UnityEngine.Color(1f, 0.84f, 0.34f, 1f);
+            options.CategoryColors[BaoZuPoFeedbackCategories.Cost] = new UnityEngine.Color(1f, 0.62f, 0.38f, 1f);
+            options.CategoryColors[BaoZuPoFeedbackCategories.Loan] = new UnityEngine.Color(1f, 0.46f, 0.38f, 1f);
+            options.CategoryColors[BaoZuPoFeedbackCategories.Settlement] = new UnityEngine.Color(1f, 0.84f, 0.34f, 1f);
+            options.FinalStepColor = new UnityEngine.Color(1f, 0.93f, 0.62f, 1f);
             options.MultiplierColor = new UnityEngine.Color(0.78f, 0.88f, 1f, 1f);
+
             options.SingleHoldSeconds = 0.48f;
             options.NormalHoldSeconds = 0.46f;
             options.FinalHoldSeconds = 0.6f;
@@ -71,7 +76,6 @@ namespace BaoZuPo.Integration.Martian.Feedback
             }
 
             options.EnableFeedback = config.enableFeedback;
-            options.EnableMoneyFeedback = config.enableMoneyFeedback;
             options.EnableLogs = config.enableFeedbackLogs;
             return options;
         }

@@ -184,31 +184,16 @@ namespace Martian.Feedback.Runtime
             return isFinalStep ? options.FinalScale : options.SingleScale;
         }
 
-        private static Color ResolveColor(FeedbackRuntimeOptions options, FeedbackCategory category, bool isFinalStep, bool isMultiplier)
+        private static Color ResolveColor(FeedbackRuntimeOptions options, string category, bool isFinalStep, bool isMultiplier)
         {
             if (options == null)
             {
-                if (isFinalStep)
-                {
-                    return new Color(1f, 0.86f, 0.32f);
-                }
-
-                if (isMultiplier)
-                {
-                    return new Color(0.82f, 0.76f, 1f);
-                }
-
-                return category switch
-                {
-                    FeedbackCategory.Cost => new Color(1f, 0.58f, 0.42f),
-                    FeedbackCategory.Loan => new Color(1f, 0.48f, 0.36f),
-                    _ => new Color(0.58f, 1f, 0.62f)
-                };
+                return Color.white;
             }
 
             if (isFinalStep)
             {
-                return options.FinalColor;
+                return options.FinalStepColor;
             }
 
             if (isMultiplier)
@@ -216,12 +201,13 @@ namespace Martian.Feedback.Runtime
                 return options.MultiplierColor;
             }
 
-            return category switch
+            if (!string.IsNullOrEmpty(category) &&
+                options.CategoryColors.TryGetValue(category, out var color))
             {
-                FeedbackCategory.Cost => options.CostColor,
-                FeedbackCategory.Loan => options.LoanColor,
-                _ => options.PositiveColor
-            };
+                return color;
+            }
+
+            return options.DefaultColor;
         }
     }
 }

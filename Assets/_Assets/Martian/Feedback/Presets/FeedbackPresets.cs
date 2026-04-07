@@ -5,7 +5,7 @@ namespace Martian.Feedback.Presets
 {
     public static class FeedbackPresets
     {
-        public static FeedbackRequest SignedNumber(string targetKey, int amount, FeedbackCategory category = FeedbackCategory.Money, RectTransform anchor = null, string debugLabel = null)
+        public static FeedbackRequest SignedNumber(string targetKey, int amount, string category = FeedbackCategories.Default, RectTransform anchor = null, string debugLabel = null)
         {
             return new FeedbackRequest
             {
@@ -18,7 +18,7 @@ namespace Martian.Feedback.Presets
             };
         }
 
-        public static FeedbackStep Step(string label, int amount, FeedbackCategory category = FeedbackCategory.Money, bool isMultiplier = false, float holdSeconds = -1f, Vector2 offset = default)
+        public static FeedbackStep Step(string label, int amount, string category = FeedbackCategories.Default, bool isMultiplier = false, float holdSeconds = -1f, Vector2 offset = default)
         {
             return new FeedbackStep
             {

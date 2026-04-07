@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Martian.Feedback
@@ -7,7 +8,6 @@ namespace Martian.Feedback
     public class FeedbackRuntimeOptions
     {
         public bool EnableFeedback = true;
-        public bool EnableMoneyFeedback = true;
         public bool EnableLogs = false;
         public int SortingOrder = 6000;
         public Vector2 DefaultScreenOffset = new Vector2(0f, 96f);
@@ -16,11 +16,19 @@ namespace Martian.Feedback
         public Vector2 PanelPadding = new Vector2(44f, 20f);
         public Color PanelColor = new Color(0f, 0f, 0f, 0.56f);
         public Color TextColor = Color.white;
-        public Color PositiveColor = new Color(0.58f, 1f, 0.62f);
-        public Color CostColor = new Color(1f, 0.58f, 0.42f);
-        public Color LoanColor = new Color(1f, 0.48f, 0.36f);
-        public Color FinalColor = new Color(1f, 0.86f, 0.32f);
+
+        /// <summary>类别 → 颜色映射表。键为 Category 字符串。</summary>
+        public Dictionary<string, Color> CategoryColors = new();
+
+        /// <summary>默认颜色（找不到 Category 对应颜色时使用）。</summary>
+        public Color DefaultColor = new Color(0.58f, 1f, 0.62f);
+
+        /// <summary>序列最后一步的高亮颜色。</summary>
+        public Color FinalStepColor = new Color(1f, 0.86f, 0.32f);
+
+        /// <summary>乘数步骤的颜色。</summary>
         public Color MultiplierColor = new Color(0.82f, 0.76f, 1f);
+
         public float SingleHoldSeconds = 0.6f;
         public float NormalHoldSeconds = 0.55f;
         public float FinalHoldSeconds = 0.75f;
@@ -34,7 +42,10 @@ namespace Martian.Feedback
 
         public FeedbackRuntimeOptions Clone()
         {
-            return (FeedbackRuntimeOptions)MemberwiseClone();
+            var clone = (FeedbackRuntimeOptions)MemberwiseClone();
+            clone.CategoryColors = new Dictionary<string, Color>(CategoryColors);
+            return clone;
         }
     }
 }
+

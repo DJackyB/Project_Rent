@@ -2,7 +2,6 @@ using Martian.Feedback;
 using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Martian.Feedback.Runtime
 {
@@ -21,7 +20,6 @@ namespace Martian.Feedback.Runtime
     /// 3. 运行时可通过 Configure() 或 SetBackend() 改变配置
     /// 4. FeedbackServiceLocator 将自动指向这个启动程序的 Coordinator
     /// </summary>
-    [MovedFrom("BaoZuPo.Feedback.Runtime")]
     [DisallowMultipleComponent]
     public class FeedbackBootstrap : MonoBehaviour
     {

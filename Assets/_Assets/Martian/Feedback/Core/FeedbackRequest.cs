@@ -33,7 +33,7 @@ namespace Martian.Feedback
         public string TargetKey;
 
         /// <summary>目标类型。决定反馈如何锚定到世界或屏幕。</summary>
-        public FeedbackTargetKind TargetKind = FeedbackTargetKind.Global;
+        public string TargetKind = FeedbackTargetKinds.Global;
 
         /// <summary>反馈渠道。决定使用哪种后端（如浮动文本、音效等）。</summary>
         public FeedbackChannel Channel = FeedbackChannel.FloatingText;
@@ -59,7 +59,7 @@ namespace Martian.Feedback
         public int NumericDelta;
 
         /// <summary>反馈类别。影响样式、颜色、音效等。</summary>
-        public FeedbackCategory Category = FeedbackCategory.Money;
+        public string Category = FeedbackCategories.Default;
 
         /// <summary>优先级。数值越高越优先。高优先级反馈可能会先执行。</summary>
         public int Priority;

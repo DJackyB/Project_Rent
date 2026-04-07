@@ -1,5 +1,6 @@
 using System.Reflection;
 using BaoZuPo.Integration.Feel;
+using BaoZuPo.Integration.Martian.Feedback;
 using Martian.Feedback;
 using Martian.Feedback.Runtime;
 using NUnit.Framework;
@@ -57,7 +58,7 @@ namespace BaoZuPo.Tests.Feedback
             Assert.DoesNotThrow(() => backend.PlaySlotAt("missing", new Vector3(12f, 34f, 0f), "MissingSlot"));
             Assert.IsNull(backend.Publish(new FeedbackRequest
             {
-                Category = FeedbackCategory.Money,
+                Category = BaoZuPoFeedbackCategories.Money,
                 TargetKey = "hud:money",
                 Text = "+1"
             }));

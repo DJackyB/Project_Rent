@@ -2,7 +2,6 @@ using System;
 using Martian.Feedback;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Martian.Feedback.Runtime
 {
@@ -26,7 +25,6 @@ namespace Martian.Feedback.Runtime
     /// 3. 其他代码通过 IFeedbackService 发布反馈
     /// 4. 协调器将请求转发给当前后端执行
     /// </summary>
-    [MovedFrom("BaoZuPo.Feedback.Runtime")]
     public class FeedbackPlaybackCoordinator : MonoBehaviour, IFeedbackService
     {
         /// <summary>当前活跃的反馈后端实现（默认为浮动文本）。</summary>

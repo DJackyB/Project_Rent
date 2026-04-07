@@ -89,13 +89,13 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 DebugLabel = string.IsNullOrWhiteSpace(batchId) ? "SettlementMoneyTotal" : $"SettlementMoneyTotal_{batchId}",
                 LaneKey = string.IsNullOrWhiteSpace(batchId) ? "settlement-money-total" : $"settlement-money-total:{batchId}",
                 TargetKey = "hud:money",
-                TargetKind = FeedbackTargetKind.Global,
+                TargetKind = BaoZuPoFeedbackTargetKinds.Global,
                 Anchor = anchor,
                 UseScreenCenterFallback = anchor == null,
                 ScreenOffset = new Vector2(0f, 40f),
                 Text = FormatSignedAmount(totalDelta),
                 NumericDelta = totalDelta,
-                Category = totalDelta < 0 ? FeedbackCategory.Cost : FeedbackCategory.Money
+                Category = totalDelta < 0 ? BaoZuPoFeedbackCategories.Cost : BaoZuPoFeedbackCategories.Money
             });
         }
 
@@ -122,7 +122,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 ScreenOffset = screenOffset,
                 Text = GameText.FeedbackCost(cost),
                 NumericDelta = -cost,
-                Category = FeedbackCategory.Cost
+                Category = BaoZuPoFeedbackCategories.Cost
             });
         }
 
@@ -149,7 +149,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                 ScreenOffset = screenOffset,
                 Text = FormatSignedAmount(moneyDelta),
                 NumericDelta = moneyDelta,
-                Category = moneyDelta < 0 ? FeedbackCategory.Cost : FeedbackCategory.Money
+                Category = moneyDelta < 0 ? BaoZuPoFeedbackCategories.Cost : BaoZuPoFeedbackCategories.Money
             });
         }
 
@@ -170,24 +170,24 @@ namespace BaoZuPo.Integration.Martian.Feedback
             {
                 DebugLabel = "LoanPayment",
                 TargetKey = targetKey,
-                TargetKind = FeedbackTargetKind.Global,
+                TargetKind = BaoZuPoFeedbackTargetKinds.Global,
                 Anchor = anchor,
                 UseScreenCenterFallback = useCenterFallback,
                 ScreenOffset = screenOffset,
                 Text = GameText.FeedbackLoan(amount),
                 NumericDelta = -amount,
-                Category = FeedbackCategory.Loan
+                Category = BaoZuPoFeedbackCategories.Loan
             });
         }
 
-        private static FeedbackCategory ResolveStepCategory(GameEvents.SettlementStep step)
+        private static string ResolveStepCategory(GameEvents.SettlementStep step)
         {
             if (step.IsMultiplier)
             {
-                return FeedbackCategory.Settlement;
+                return BaoZuPoFeedbackCategories.Settlement;
             }
 
-            return step.Amount < 0 ? FeedbackCategory.Cost : FeedbackCategory.Money;
+            return step.Amount < 0 ? BaoZuPoFeedbackCategories.Cost : BaoZuPoFeedbackCategories.Money;
         }
 
         private static string ResolveStepLabel(GameEvents.SettlementSequenceQueued payload, GameEvents.SettlementStep step)
@@ -229,7 +229,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             RoomSlot room,
             CardInstance card,
             out string targetKey,
-            out FeedbackTargetKind targetKind,
+            out string targetKind,
             out RectTransform anchor,
             out bool useCenterFallback,
             out Vector2 screenOffset)
@@ -238,7 +238,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             {
                 case GameEvents.SettlementSourceKind.Room when room != null:
                     targetKey = $"room:{room.RoomIndex}";
-                    targetKind = FeedbackTargetKind.Room;
+                    targetKind = BaoZuPoFeedbackTargetKinds.Room;
                     anchor = UIManager.Instance != null && UIManager.Instance.boardPanel != null
                         ? UIManager.Instance.boardPanel.ResolveRoomAnchor(room)
                         : null;
@@ -247,7 +247,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                     return;
                 case GameEvents.SettlementSourceKind.Contract when card != null:
                     targetKey = $"card:{card.GetHashCode()}";
-                    targetKind = FeedbackTargetKind.Card;
+                    targetKind = BaoZuPoFeedbackTargetKinds.Card;
                     anchor = UIManager.Instance != null && UIManager.Instance.boardPanel != null
                         ? UIManager.Instance.boardPanel.ResolveContractAnchor(card)
                         : null;
@@ -256,7 +256,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
                     return;
                 default:
                     ResolveGlobalTarget(card != null ? $"event:{card.GetHashCode()}" : "event", out targetKey, out anchor, out useCenterFallback, out screenOffset);
-                    targetKind = FeedbackTargetKind.Global;
+                    targetKind = BaoZuPoFeedbackTargetKinds.Global;
                     return;
             }
         }
@@ -265,7 +265,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             CardInstance card,
             RoomSlot targetRoom,
             out string targetKey,
-            out FeedbackTargetKind targetKind,
+            out string targetKind,
             out RectTransform anchor,
             out bool useCenterFallback,
             out Vector2 screenOffset)
@@ -273,7 +273,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             if (targetRoom != null)
             {
                 targetKey = $"room:{targetRoom.RoomIndex}";
-                targetKind = FeedbackTargetKind.Room;
+                targetKind = BaoZuPoFeedbackTargetKinds.Room;
                 anchor = UIManager.Instance != null && UIManager.Instance.boardPanel != null
                     ? UIManager.Instance.boardPanel.ResolveRoomAnchor(targetRoom)
                     : null;
@@ -285,7 +285,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             if (card != null && card.Data != null && card.Data.cardType == CardType.Contract)
             {
                 targetKey = $"card:{card.GetHashCode()}";
-                targetKind = FeedbackTargetKind.Card;
+                targetKind = BaoZuPoFeedbackTargetKinds.Card;
                 anchor = UIManager.Instance != null && UIManager.Instance.boardPanel != null
                     ? UIManager.Instance.boardPanel.ResolveContractAnchor(card)
                     : null;
@@ -295,7 +295,7 @@ namespace BaoZuPo.Integration.Martian.Feedback
             }
 
             ResolveGlobalTarget(card != null ? $"play:{card.GetHashCode()}" : "play", out targetKey, out anchor, out useCenterFallback, out screenOffset);
-            targetKind = FeedbackTargetKind.Global;
+            targetKind = BaoZuPoFeedbackTargetKinds.Global;
         }
 
         private static void ResolveGlobalTarget(

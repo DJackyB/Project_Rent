@@ -9,7 +9,7 @@ namespace Martian.Feedback.Runtime
         public string DebugLabel;
         public string LaneKey;
         public string TargetKey;
-        public FeedbackTargetKind TargetKind;
+        public string TargetKind;
         public RectTransform Anchor;
         public bool UseScreenCenterFallback;
         public Vector2 ScreenOffset;
@@ -28,6 +28,6 @@ namespace Martian.Feedback.Runtime
         public float Scale;
         public Vector2 Offset;
         public bool IsFinalStep;
-        public FeedbackCategory Category;
+        public string Category;
     }
 }

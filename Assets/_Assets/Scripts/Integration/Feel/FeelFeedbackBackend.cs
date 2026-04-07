@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BaoZuPo.Integration.Martian.Feedback;
 using Martian.Feedback;
 using Martian.Feedback.Runtime;
 using MoreMountains.Feedbacks;
@@ -135,14 +136,14 @@ namespace BaoZuPo.Integration.Feel
             player.PlayFeedbacks(position);
         }
 
-        private static string ResolveSlot(FeedbackCategory category, int numericDelta)
+        private static string ResolveSlot(string category, int numericDelta)
         {
             return category switch
             {
-                FeedbackCategory.Money => FeelFeedbackSlots.MoneyDelta,
-                FeedbackCategory.Cost => FeelFeedbackSlots.MoneyDelta,
-                FeedbackCategory.Settlement => FeelFeedbackSlots.SettlementStep,
-                FeedbackCategory.Loan => FeelFeedbackSlots.LoanPayment,
+                BaoZuPoFeedbackCategories.Money => FeelFeedbackSlots.MoneyDelta,
+                BaoZuPoFeedbackCategories.Cost => FeelFeedbackSlots.MoneyDelta,
+                BaoZuPoFeedbackCategories.Settlement => FeelFeedbackSlots.SettlementStep,
+                BaoZuPoFeedbackCategories.Loan => FeelFeedbackSlots.LoanPayment,
                 _ => null
             };
         }

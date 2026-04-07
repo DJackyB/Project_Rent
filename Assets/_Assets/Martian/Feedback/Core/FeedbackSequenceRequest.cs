@@ -11,7 +11,7 @@ namespace Martian.Feedback
         public string DebugLabel;
         public string LaneKey;
         public string TargetKey;
-        public FeedbackTargetKind TargetKind = FeedbackTargetKind.Global;
+        public string TargetKind = FeedbackTargetKinds.Global;
         public FeedbackChannel Channel = FeedbackChannel.Sequence;
         public RectTransform Anchor;
         public bool UseScreenCenterFallback = true;
