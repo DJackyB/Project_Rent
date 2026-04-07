@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3e1f0ce4ebe4b12840cffa8a1ff896d, type: 3}
   m_Name: FirstTurnPool
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardLibrary
-  libraryId: FirstTurnPool
+  libraryId: 0
   displayName: First Turn Pool
   cards:
   - {fileID: 11400000, guid: ef2a612e6519d4240a405096dfee36a1, type: 2}

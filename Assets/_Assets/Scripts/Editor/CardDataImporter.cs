@@ -1,31 +1,20 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using BaoZuPo.Card;
+using BaoZuPo.Core;
 using BaoZuPo.GameFlow;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using UnityEditor;
 using UnityEngine;
-using BaoZuPo.Core;
 
 namespace BaoZuPo.Editor
 {
     /// <summary>
-    /// 卡牌数据导表工具。
-    /// 从 Excel 文件读取卡牌定义，生成游戏资产（CardData.asset 和 CardLibrary.asset）。
-    ///
-    /// 使用流程：
-    /// 1. 在 Excel 中编辑卡牌数据 (Assets/_Assets/Data/Excel/CardData.xlsx)
-    /// 2. 在 Editor 中运行菜单项：Tools → BaoZuPo → Import Card Data
-    /// 3. 工具读取 Excel，验证数据，生成资产到 Assets/Resources/Cards/ 和 Assets/Resources/CardLibraries/
-    /// 4. 验证失败时中止，输出错误信息
-    /// 5. 验证成功后，资产立即可用（ResourceManager.Load<CardData>(...) 可访问）
-    ///
-    /// 验证项目：
-    /// - Excel 格式：表头行、英文列名、数据类型声明
-    /// - 卡牌库配置：firstTurnDrawLibrary、normalTurnDrawLibrary、rewardLibrary 必须存在且非空
-    /// - 卡牌效果：每张卡的 preEffect、instantEffect、settleEffect、destroyEffect 必须能被 CardEffectFactory 解析
-    /// - 卡牌目标：每张卡的 targetKind 与 cardType 必须匹配（例如 Tenant/Equipment 需要 Room 目标）
+    /// Imports card assets from Excel and rebuilds CardLibrary assets from the
+    /// per-card `libraries` column. Library ids remain code-defined in
+    /// CardSheetCatalog.
     /// </summary>
     public static class CardDataImporter
     {
@@ -33,9 +22,9 @@ namespace BaoZuPo.Editor
         private const string OutputFolder = "Assets/Resources/Cards";
         private const string LibraryOutputFolder = "Assets/Resources/CardLibraries";
         private const string GameConfigAssetPath = "Assets/_Assets/Data/Config/GameConfig.asset";
-        private const int HeaderRowIndex = 1;      // 英文列名行
-        private const int DataStartRowIndex = 3;   // 数据开始行（跳过中文名、英文名、类型行）
-        private const int SheetIndex = 0;          // 工作表索引
+        private const int HeaderRowIndex = 1;
+        private const int DataStartRowIndex = 3;
+        private const int SheetIndex = 0;
 
         private const string Col_CardId = "cardId";
         private const string Col_CardName = "cardName";
@@ -52,6 +41,9 @@ namespace BaoZuPo.Editor
         private const string Col_InstantEffect = "instantEffect";
         private const string Col_SettleEffect = "settleEffect";
         private const string Col_DestroyEffect = "destroyEffect";
+        private const string Col_Libraries = "libraries";
+
+        private static readonly char[] LibrarySeparators = { '|', ',', '\n', '\r' };
 
         private static readonly string[] RequiredColumns =
         {
@@ -70,6 +62,7 @@ namespace BaoZuPo.Editor
             Col_InstantEffect,
             Col_SettleEffect,
             Col_DestroyEffect,
+            Col_Libraries,
         };
 
         private static readonly Dictionary<string, CardType> CardTypeMap = new()
@@ -81,22 +74,13 @@ namespace BaoZuPo.Editor
             { "Card_Contract", CardType.Contract },
         };
 
-        /// <summary>
-        /// 导入卡牌数据的主入口（菜单项）。
-        /// 流程：打开 Excel → 解析 → 验证 → 生成资产 → 刷新 AssetDatabase
-        /// 任何验证失败都会中止并输出错误信息。
-        /// </summary>
         [MenuItem("Tools/BaoZuPo/卡牌/导入卡牌数据")]
         public static void Import()
         {
             CardEffectRegistration.EnsureRegistered();
 
-            string projectRoot = Path.GetDirectoryName(Application.dataPath);
-            string excelPath = Path.Combine(projectRoot, ExcelRelativePath);
-
-            if (!File.Exists(excelPath))
+            if (!TryLoadExcelSheet(out var sheet, out var columnMap))
             {
-                Debug.LogError($"[CardDataImporter] Excel file not found: {excelPath}");
                 return;
             }
 
@@ -105,42 +89,8 @@ namespace BaoZuPo.Editor
                 CreateFolderRecursive(OutputFolder);
             }
 
-            IWorkbook workbook;
-            using (var stream = new FileStream(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                workbook = new XSSFWorkbook(stream);
-            }
-
-            ISheet sheet = workbook.GetSheetAt(SheetIndex);
-            if (sheet == null)
-            {
-                Debug.LogError($"[CardDataImporter] Sheet {SheetIndex} not found.");
-                return;
-            }
-
-            IRow headerRow = sheet.GetRow(HeaderRowIndex);
-            if (headerRow == null)
-            {
-                Debug.LogError($"[CardDataImporter] Header row {HeaderRowIndex + 1} is empty.");
-                return;
-            }
-
-            var columnMap = new Dictionary<string, int>();
-            for (int col = headerRow.FirstCellNum; col < headerRow.LastCellNum; col++)
-            {
-                ICell cell = headerRow.GetCell(col);
-                if (cell != null)
-                {
-                    string headerText = cell.ToString().Trim();
-                    if (!string.IsNullOrEmpty(headerText))
-                    {
-                        columnMap[headerText] = col;
-                    }
-                }
-            }
-
-            Debug.Log($"[CardDataImporter] Found {columnMap.Count} columns: {string.Join(", ", columnMap.Keys)}");
-            ValidateRequiredColumns(columnMap);
+            ValidateRequiredColumns(columnMap, RequiredColumns);
+            var libraryCardIdsByLibraryId = BuildLibraryCardIdMap(sheet, columnMap);
 
             int created = 0;
             int updated = 0;
@@ -185,10 +135,7 @@ namespace BaoZuPo.Editor
                 cardData.instantEffect = GetStringValue(row, columnMap, Col_InstantEffect);
                 cardData.settleEffect = GetStringValue(row, columnMap, Col_SettleEffect);
                 cardData.destroyEffect = GetStringValue(row, columnMap, Col_DestroyEffect);
-                cardData.targetKind = ParseTargetKind(
-                    GetStringValue(row, columnMap, Col_TargetKind),
-                    rowIndex,
-                    cardId);
+                cardData.targetKind = ParseTargetKind(GetStringValue(row, columnMap, Col_TargetKind), rowIndex, cardId);
 
                 ValidateEffectField(rowIndex, cardId, Col_PreEffect, cardData.preEffect);
                 ValidateEffectField(rowIndex, cardId, Col_InstantEffect, cardData.instantEffect);
@@ -219,13 +166,25 @@ namespace BaoZuPo.Editor
             CardLocalizationSyncUtility.SyncCardTablesFromCardData(exportCsv: true, logSummary: false);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            SyncCardLibraries();
+
+            SyncCardLibraries(libraryCardIdsByLibraryId);
 
             Debug.Log($"[CardDataImporter] Done. Created {created}, updated {updated}, synced Card localization, and refreshed Card libraries.");
         }
 
         [MenuItem("Tools/BaoZuPo/卡牌/同步卡库")]
         public static void SyncCardLibraries()
+        {
+            if (!TryLoadExcelSheet(out var sheet, out var columnMap))
+            {
+                return;
+            }
+
+            var libraryCardIdsByLibraryId = BuildLibraryCardIdMap(sheet, columnMap);
+            SyncCardLibraries(libraryCardIdsByLibraryId);
+        }
+
+        private static void SyncCardLibraries(Dictionary<string, List<int>> libraryCardIdsByLibraryId)
         {
             if (!AssetDatabase.IsValidFolder(LibraryOutputFolder))
             {
@@ -240,14 +199,20 @@ namespace BaoZuPo.Editor
                 string assetPath = $"{LibraryOutputFolder}/{spec.AssetName}.asset";
                 var library = AssetDatabase.LoadAssetAtPath<CardLibrary>(assetPath);
                 bool isNew = library == null;
+
                 if (isNew)
                 {
                     library = ScriptableObject.CreateInstance<CardLibrary>();
                 }
 
+                if (!libraryCardIdsByLibraryId.TryGetValue(spec.LibraryId, out var configuredCardIds))
+                {
+                    throw new InvalidDataException($"[CardDataImporter] Missing generated card list for library '{spec.LibraryId}'.");
+                }
+
                 library.libraryId = spec.LibraryId;
                 library.displayName = spec.DisplayName;
-                library.cards = ResolveLibraryCards(spec, cardsById);
+                library.cards = ResolveLibraryCards(spec.LibraryId, configuredCardIds, cardsById);
 
                 if (isNew)
                 {
@@ -267,26 +232,65 @@ namespace BaoZuPo.Editor
             AssetDatabase.Refresh();
         }
 
+        private static bool TryLoadExcelSheet(out ISheet sheet, out Dictionary<string, int> columnMap)
+        {
+            sheet = null;
+            columnMap = null;
+
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            string excelPath = Path.Combine(projectRoot, ExcelRelativePath);
+
+            if (!File.Exists(excelPath))
+            {
+                Debug.LogError($"[CardDataImporter] Excel file not found: {excelPath}");
+                return false;
+            }
+
+            IWorkbook workbook;
+            using (var stream = new FileStream(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                workbook = new XSSFWorkbook(stream);
+            }
+
+            sheet = workbook.GetSheetAt(SheetIndex);
+            if (sheet == null)
+            {
+                Debug.LogError($"[CardDataImporter] Sheet {SheetIndex} not found.");
+                return false;
+            }
+
+            IRow headerRow = sheet.GetRow(HeaderRowIndex);
+            if (headerRow == null)
+            {
+                Debug.LogError($"[CardDataImporter] Header row {HeaderRowIndex + 1} is empty.");
+                return false;
+            }
+
+            columnMap = BuildColumnMap(headerRow);
+            Debug.Log($"[CardDataImporter] Found {columnMap.Count} columns: {string.Join(", ", columnMap.Keys)}");
+            return true;
+        }
+
         private static string GetStringValue(IRow row, Dictionary<string, int> columnMap, string columnName)
         {
             if (!columnMap.TryGetValue(columnName, out int colIndex))
             {
-                return "";
+                return string.Empty;
             }
 
             ICell cell = row.GetCell(colIndex);
             if (cell == null)
             {
-                return "";
+                return string.Empty;
             }
 
             return cell.CellType switch
             {
-                CellType.String => cell.StringCellValue?.Trim() ?? "",
+                CellType.String => cell.StringCellValue?.Trim() ?? string.Empty,
                 CellType.Numeric => cell.NumericCellValue.ToString(),
                 CellType.Boolean => cell.BooleanCellValue.ToString(),
-                CellType.Formula => cell.ToString()?.Trim() ?? "",
-                _ => ""
+                CellType.Formula => cell.ToString()?.Trim() ?? string.Empty,
+                _ => string.Empty,
             };
         }
 
@@ -306,10 +310,10 @@ namespace BaoZuPo.Editor
             return cell.CellType switch
             {
                 CellType.Numeric => (int)cell.NumericCellValue,
-                CellType.String => int.TryParse(cell.StringCellValue, out int val)
-                    ? val
+                CellType.String => int.TryParse(cell.StringCellValue, out int value)
+                    ? value
                     : throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is not a valid int."),
-                _ => throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is not a valid int.")
+                _ => throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}: column '{columnName}' is not a valid int."),
             };
         }
 
@@ -346,23 +350,19 @@ namespace BaoZuPo.Editor
                 throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: targetKind is required.");
             }
 
-            CardPlayTargetKind parsedTarget;
-            if (System.Enum.TryParse(configuredTarget, true, out CardPlayTargetKind enumTarget))
+            if (Enum.TryParse(configuredTarget, true, out CardPlayTargetKind enumTarget))
             {
-                parsedTarget = enumTarget;
-            }
-            else if (int.TryParse(configuredTarget, out int numericTarget)
-                && System.Enum.IsDefined(typeof(CardPlayTargetKind), numericTarget))
-            {
-                parsedTarget = (CardPlayTargetKind)numericTarget;
-            }
-            else
-            {
-                throw new InvalidDataException(
-                    $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: invalid targetKind '{configuredTarget}'.");
+                return enumTarget;
             }
 
-            return parsedTarget;
+            if (int.TryParse(configuredTarget, out int numericTarget)
+                && Enum.IsDefined(typeof(CardPlayTargetKind), numericTarget))
+            {
+                return (CardPlayTargetKind)numericTarget;
+            }
+
+            throw new InvalidDataException(
+                $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: invalid targetKind '{configuredTarget}'.");
         }
 
         private static void ValidateConfiguredTarget(int rowIndex, int cardId, CardData cardData)
@@ -372,13 +372,12 @@ namespace BaoZuPo.Editor
                 return;
             }
 
-            throw new InvalidDataException(
-                $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: {warning}");
+            throw new InvalidDataException($"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: {warning}");
         }
 
-        private static void ValidateRequiredColumns(Dictionary<string, int> columnMap)
+        private static void ValidateRequiredColumns(Dictionary<string, int> columnMap, params string[] requiredColumns)
         {
-            foreach (string requiredColumn in RequiredColumns)
+            foreach (string requiredColumn in requiredColumns)
             {
                 if (!columnMap.ContainsKey(requiredColumn))
                 {
@@ -406,6 +405,28 @@ namespace BaoZuPo.Editor
             return true;
         }
 
+        private static Dictionary<string, int> BuildColumnMap(IRow headerRow)
+        {
+            var columnMap = new Dictionary<string, int>();
+
+            for (int col = headerRow.FirstCellNum; col < headerRow.LastCellNum; col++)
+            {
+                ICell cell = headerRow.GetCell(col);
+                if (cell == null)
+                {
+                    continue;
+                }
+
+                string headerText = cell.ToString().Trim();
+                if (!string.IsNullOrEmpty(headerText))
+                {
+                    columnMap[headerText] = col;
+                }
+            }
+
+            return columnMap;
+        }
+
         private static void CreateFolderRecursive(string folderPath)
         {
             string[] parts = folderPath.Split('/');
@@ -427,6 +448,7 @@ namespace BaoZuPo.Editor
         {
             var cardsById = new Dictionary<int, CardData>();
             string[] guids = AssetDatabase.FindAssets("t:CardData", new[] { OutputFolder });
+
             foreach (string guid in guids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
@@ -442,14 +464,133 @@ namespace BaoZuPo.Editor
             return cardsById;
         }
 
-        private static List<CardData> ResolveLibraryCards(CardSheetCatalog.LibraryRow spec, Dictionary<int, CardData> cardsById)
+        private static Dictionary<string, List<int>> BuildLibraryCardIdMap(ISheet sheet, Dictionary<string, int> columnMap)
         {
-            var cards = new List<CardData>(spec.CardIds.Length);
-            foreach (int cardId in spec.CardIds)
+            ValidateRequiredColumns(columnMap, Col_CardId, Col_Libraries);
+
+            var librarySpecsById = BuildLibrarySpecsById();
+            var libraryCardIdsByLibraryId = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+            var autoIncludeLibraryIds = new List<string>();
+
+            foreach (var spec in CardSheetCatalog.Libraries)
+            {
+                libraryCardIdsByLibraryId[spec.LibraryId] = new List<int>();
+
+                if (spec.IncludeAllCards)
+                {
+                    autoIncludeLibraryIds.Add(spec.LibraryId);
+                }
+            }
+
+            for (int rowIndex = DataStartRowIndex; rowIndex <= sheet.LastRowNum; rowIndex++)
+            {
+                IRow row = sheet.GetRow(rowIndex);
+                if (row == null || IsRowEmpty(row))
+                {
+                    continue;
+                }
+
+                int cardId = GetRequiredIntValue(row, columnMap, Col_CardId, rowIndex);
+
+                for (int i = 0; i < autoIncludeLibraryIds.Count; i++)
+                {
+                    libraryCardIdsByLibraryId[autoIncludeLibraryIds[i]].Add(cardId);
+                }
+
+                string configuredLibraries = GetStringValue(row, columnMap, Col_Libraries);
+                var explicitLibraryIds = ParseExplicitLibraryIds(configuredLibraries, rowIndex, cardId, librarySpecsById);
+                for (int i = 0; i < explicitLibraryIds.Count; i++)
+                {
+                    string libraryId = explicitLibraryIds[i];
+                    libraryCardIdsByLibraryId[libraryId].Add(cardId);
+                }
+            }
+
+            return libraryCardIdsByLibraryId;
+        }
+
+        private static Dictionary<string, CardSheetCatalog.LibraryRow> BuildLibrarySpecsById()
+        {
+            var librarySpecsById = new Dictionary<string, CardSheetCatalog.LibraryRow>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var spec in CardSheetCatalog.Libraries)
+            {
+                if (librarySpecsById.ContainsKey(spec.LibraryId))
+                {
+                    throw new InvalidOperationException($"[CardDataImporter] Duplicate library definition '{spec.LibraryId}' in CardSheetCatalog.");
+                }
+
+                librarySpecsById[spec.LibraryId] = spec;
+            }
+
+            return librarySpecsById;
+        }
+
+        private static List<string> ParseExplicitLibraryIds(
+            string configuredLibraries,
+            int rowIndex,
+            int cardId,
+            Dictionary<string, CardSheetCatalog.LibraryRow> librarySpecsById)
+        {
+            var explicitLibraryIds = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(configuredLibraries))
+            {
+                return explicitLibraryIds;
+            }
+
+            string[] tokens = configuredLibraries.Split(LibrarySeparators, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string rawToken in tokens)
+            {
+                string trimmedToken = rawToken.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedToken))
+                {
+                    continue;
+                }
+
+                if (!librarySpecsById.TryGetValue(trimmedToken, out var spec))
+                {
+                    throw new InvalidDataException(
+                        $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: unknown libraryId '{trimmedToken}' in '{Col_Libraries}'. Known ids: {GetKnownExplicitLibraryIds()}");
+                }
+
+                if (spec.IncludeAllCards)
+                {
+                    throw new InvalidDataException(
+                        $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: library '{spec.LibraryId}' is auto-populated and should not be listed in '{Col_Libraries}'.");
+                }
+
+                // Repeated ids are preserved as extra weight within the same library.
+                explicitLibraryIds.Add(spec.LibraryId);
+            }
+
+            return explicitLibraryIds;
+        }
+
+        private static string GetKnownExplicitLibraryIds()
+        {
+            var libraryIds = new List<string>();
+
+            foreach (var spec in CardSheetCatalog.Libraries)
+            {
+                if (!spec.IncludeAllCards)
+                {
+                    libraryIds.Add(spec.LibraryId);
+                }
+            }
+
+            return string.Join(", ", libraryIds);
+        }
+
+        private static List<CardData> ResolveLibraryCards(string libraryId, List<int> cardIds, Dictionary<int, CardData> cardsById)
+        {
+            var cards = new List<CardData>(cardIds.Count);
+
+            foreach (int cardId in cardIds)
             {
                 if (!cardsById.TryGetValue(cardId, out var card))
                 {
-                    throw new InvalidDataException($"[CardDataImporter] Library '{spec.LibraryId}' references missing cardId {cardId}. Import cards first.");
+                    throw new InvalidDataException($"[CardDataImporter] Library '{libraryId}' references missing cardId {cardId}. Import cards first.");
                 }
 
                 cards.Add(card);
@@ -467,12 +608,12 @@ namespace BaoZuPo.Editor
                 return;
             }
 
-            gameConfig.firstTurnDrawLibrary = librariesById["FirstTurnPool"];
-            gameConfig.normalTurnDrawLibrary = librariesById["NormalTurnPool"];
-            gameConfig.rewardLibrary = librariesById["RewardPool"];
+            gameConfig.firstTurnDrawLibrary = librariesById[CardSheetCatalog.FirstTurnLibraryId];
+            gameConfig.normalTurnDrawLibrary = librariesById[CardSheetCatalog.NormalTurnLibraryId];
+            gameConfig.rewardLibrary = librariesById[CardSheetCatalog.RewardLibraryId];
             EditorUtility.SetDirty(gameConfig);
 
-            Debug.Log("[CardDataImporter] Synced GameConfig draw libraries to FirstTurnPool / NormalTurnPool / RewardPool.");
+            Debug.Log("[CardDataImporter] Synced GameConfig draw libraries to library ids 0 / 1 / 2.");
         }
 
         private static void DeleteStaleCardAssets(HashSet<int> importedCardIds)
