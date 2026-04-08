@@ -8,7 +8,6 @@ using BaoZuPo.Integration.Martian.Tooltip;
 using BaoZuPo.UI.Settlement;
 using DG.Tweening;
 using Martian.EventBus;
-using Martian.Feedback.Runtime;
 using Martian.Tooltip;
 using UnityEngine;
 
@@ -31,7 +30,6 @@ namespace BaoZuPo.UI
 
         public GamePhase CurrentPhase { get; private set; } = GamePhase.Prepare;
 
-        [SerializeField] private FeedbackBootstrap _feedbackBootstrap;
         [SerializeField] private UISettlementSequenceController _settlementSequenceController;
         [SerializeField] private UICardRewardPanel _cardRewardPanel;
 
@@ -52,7 +50,7 @@ namespace BaoZuPo.UI
             }
 
             BaoZuPoMartianTooltipIntegration.Install();
-            ConfigureFeedbackBootstrap();
+            ConfigureFeedbackSettings();
             ValidateRequiredSceneReferences();
             InitializeCardDragController();
             RefreshAll();
@@ -189,16 +187,9 @@ namespace BaoZuPo.UI
             }
         }
 
-        private void ConfigureFeedbackBootstrap()
+        private void ConfigureFeedbackSettings()
         {
-            if (_feedbackBootstrap == null)
-            {
-                Debug.LogError("[UIManager] _feedbackBootstrap is not assigned in the Inspector. Create a child object under UIManager and add FeedbackBootstrap.");
-                return;
-            }
-
             BaoZuPoMartianFeedbackIntegration.Configure(
-                _feedbackBootstrap,
                 GameManager.Instance != null ? GameManager.Instance.gameConfig : null);
         }
     }

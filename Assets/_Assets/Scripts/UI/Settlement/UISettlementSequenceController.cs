@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using BaoZuPo.Core;
 using BaoZuPo.GameFlow;
-using BaoZuPo.Integration.Martian.Feedback;
 using BaoZuPo.Economy;
+using BaoZuPo.UI.Common.Animation;
+using BaoZuPo.UI.Common.FeedbackPopup;
 using Martian.EventBus;
-using Martian.Feedback;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -39,6 +39,7 @@ namespace BaoZuPo.UI.Settlement
         private Tween _activePlaybackDelayTween;
         private Canvas _canvas;
         private RectTransform _canvasRect;
+        private UIFeedbackPopupLayer _popupLayer;
         private bool _isPlaybackRunning;
         private bool _isSettling;
         private bool _runtimeTransferViewBuilt;
@@ -253,29 +254,67 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            var handle = BaoZuPoFeedbackAdapter.PublishSettlementSequence(entry.Payload, entry.LaneKey);
-            if (handle == null || handle.IsFinished)
+            if (!TryPlayPopupSettlementEntry(entry, onCompleted))
+            {
+                onCompleted?.Invoke();
+            }
+        }
+
+        private bool TryPlayPopupSettlementEntry(UISettlementPlaybackEntry entry, Action onCompleted)
+        {
+            var payload = entry != null ? entry.Payload : null;
+            if (payload == null || payload.Steps == null || payload.Steps.Length == 0)
+            {
+                return false;
+            }
+
+            var layer = ResolvePopupLayer();
+            if (layer == null)
+            {
+                return false;
+            }
+
+            PlayPopupSettlementStep(layer, payload, 0, onCompleted);
+            return true;
+        }
+
+        private void PlayPopupSettlementStep(
+            UIFeedbackPopupLayer layer,
+            GameEvents.SettlementSequenceQueued payload,
+            int stepIndex,
+            Action onCompleted)
+        {
+            if (payload == null || payload.Steps == null || stepIndex >= payload.Steps.Length)
             {
                 onCompleted?.Invoke();
                 return;
             }
 
-            void CompletePlayback(FeedbackPlaybackHandle _)
+            var step = payload.Steps[stepIndex];
+            string text = FormatPopupStepText(payload, step);
+            if (string.IsNullOrWhiteSpace(text))
             {
-                handle.Completed -= CompletePlayback;
-                handle.Cancelled -= CompletePlayback;
-                onCompleted?.Invoke();
+                PlayPopupSettlementStep(layer, payload, stepIndex + 1, onCompleted);
+                return;
             }
 
-            handle.Completed += CompletePlayback;
-            handle.Cancelled += CompletePlayback;
-
-            if (handle.IsFinished)
+            bool isFinalStep = step.Kind == GameEvents.SettlementStepKind.Final;
+            layer.Show(new UIFeedbackPopupRequest
             {
-                handle.Completed -= CompletePlayback;
-                handle.Cancelled -= CompletePlayback;
-                onCompleted?.Invoke();
-            }
+                Anchor = ResolveSourceAnchor(payload),
+                Text = text,
+                Category = ResolvePopupCategory(step, isFinalStep),
+                IsFinal = isFinalStep,
+                UseScreenCenterFallback = true,
+                ScreenOffset = ResolveSourceOffset(payload),
+                AnchorFeedback = PlayPopupAnchorFeedback,
+                Completed = () => PlayPopupSettlementStep(layer, payload, stepIndex + 1, onCompleted)
+            });
+        }
+
+        private static void PlayPopupAnchorFeedback(RectTransform anchor)
+        {
+            UIAnimationTweenUtility.PunchScalePreserveBase(anchor, 0.045f, 0.14f, 6, 0.45f);
         }
 
         private void PlayNextSerialEntry(IReadOnlyList<UISettlementPlaybackEntry> entries, int currentIndex, Action onCompleted)
@@ -488,33 +527,37 @@ namespace BaoZuPo.UI.Settlement
             }
 
             UIManager.Instance.CommitDisplayedDelta(totalDelta);
-            var handle = BaoZuPoFeedbackAdapter.PublishSettlementMoneyJump(
-                batch.CompletionBatchId,
-                totalDelta,
-                UIManager.Instance.ResolveMoneyTargetAnchor());
-
-            if (handle == null || handle.IsFinished)
+            if (!TryPlayPopupBatchMoneyJump(totalDelta, onCompleted))
             {
                 onCompleted?.Invoke();
-                return;
             }
+        }
 
-            void CompleteJump(FeedbackPlaybackHandle _)
+        private bool TryPlayPopupBatchMoneyJump(int totalDelta, Action onCompleted)
+        {
+            var layer = ResolvePopupLayer();
+            if (layer == null || UIManager.Instance == null)
             {
-                handle.Completed -= CompleteJump;
-                handle.Cancelled -= CompleteJump;
-                onCompleted?.Invoke();
+                return false;
             }
 
-            handle.Completed += CompleteJump;
-            handle.Cancelled += CompleteJump;
+            RectTransform anchor = UIManager.Instance.ResolveMoneyTargetAnchor();
+            float verticalGap = UIManager.Instance.topBar != null
+                ? UIManager.Instance.topBar.SettlementTotalPopupVerticalGap
+                : 40f;
 
-            if (handle.IsFinished)
+            layer.Show(new UIFeedbackPopupRequest
             {
-                handle.Completed -= CompleteJump;
-                handle.Cancelled -= CompleteJump;
-                onCompleted?.Invoke();
-            }
+                Anchor = anchor,
+                Text = FormatSignedAmount(totalDelta),
+                Category = totalDelta < 0 ? UIFeedbackPopupCategory.Negative : UIFeedbackPopupCategory.Final,
+                IsFinal = totalDelta >= 0,
+                UseScreenCenterFallback = anchor == null,
+                ScreenOffset = ResolveAboveAnchorOffset(anchor, verticalGap),
+                AnchorFeedback = PlayPopupAnchorFeedback,
+                Completed = onCompleted
+            });
+            return true;
         }
 
         private static bool ShouldFinalizeBatch(UISettlementPlaybackBatch batch)
@@ -656,6 +699,105 @@ namespace BaoZuPo.UI.Settlement
             }
 
             return fallbackScreenPoint;
+        }
+
+        private static Vector2 ResolveAboveAnchorOffset(RectTransform anchor, float verticalGap)
+        {
+            if (anchor == null)
+            {
+                return new Vector2(0f, 54f);
+            }
+
+            var rect = anchor.rect;
+            return new Vector2(
+                rect.width * (0.5f - anchor.pivot.x),
+                rect.height * (1f - anchor.pivot.y) + verticalGap);
+        }
+
+        private UIFeedbackPopupLayer ResolvePopupLayer()
+        {
+            if (_popupLayer != null)
+            {
+                return _popupLayer;
+            }
+
+            if (_canvas == null)
+            {
+                _canvas = GetComponentInParent<Canvas>();
+            }
+
+            if (_canvas == null && UIManager.Instance != null)
+            {
+                _canvas = UIManager.Instance.GetComponentInParent<Canvas>();
+            }
+
+            _popupLayer = UIFeedbackPopupLayer.GetOrCreate(_canvas);
+            return _popupLayer;
+        }
+
+        private static string FormatPopupStepText(GameEvents.SettlementSequenceQueued payload, GameEvents.SettlementStep step)
+        {
+            string label = ResolvePopupStepLabel(payload, step);
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                if (step.IsMultiplier)
+                {
+                    float multiplier = step.Amount / 100f;
+                    return $"{label} x{multiplier:0.##}";
+                }
+
+                if (label.Contains("{0}"))
+                {
+                    return string.Format(label, FormatSignedAmount(step.Amount));
+                }
+
+                return $"{label} {FormatSignedAmount(step.Amount)}";
+            }
+
+            if (step.IsMultiplier)
+            {
+                float multiplier = step.Amount / 100f;
+                return $"x{multiplier:0.##}";
+            }
+
+            return FormatSignedAmount(step.Amount);
+        }
+
+        private static string ResolvePopupStepLabel(GameEvents.SettlementSequenceQueued payload, GameEvents.SettlementStep step)
+        {
+            if (!string.IsNullOrWhiteSpace(step.Label))
+            {
+                return step.Label;
+            }
+
+            if (payload != null && payload.Card != null && payload.Card.Data != null && step.Kind == GameEvents.SettlementStepKind.Delta)
+            {
+                return CardText.Name(payload.Card);
+            }
+
+            return step.Kind switch
+            {
+                GameEvents.SettlementStepKind.Base => GameText.SettlementBase,
+                GameEvents.SettlementStepKind.Delta => GameText.SettlementBonus,
+                GameEvents.SettlementStepKind.Multiplier => GameText.SettlementMultiplier,
+                GameEvents.SettlementStepKind.Final => GameText.SettlementFinal,
+                _ => null
+            };
+        }
+
+        private static string ResolvePopupCategory(GameEvents.SettlementStep step, bool isFinalStep)
+        {
+            if (isFinalStep || step.Kind == GameEvents.SettlementStepKind.Final)
+            {
+                return UIFeedbackPopupCategory.Final;
+            }
+
+            if (step.IsMultiplier || step.Kind == GameEvents.SettlementStepKind.Multiplier)
+            {
+                return UIFeedbackPopupCategory.Multiplier;
+            }
+
+            return step.Amount < 0 ? UIFeedbackPopupCategory.Negative : UIFeedbackPopupCategory.Positive;
         }
 
         private static string FormatSignedAmount(int amount)

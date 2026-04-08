@@ -95,5 +95,16 @@ namespace BaoZuPo.UI.Common.Animation
             target.localScale = Vector3.one;
             return target.DOPunchScale(Vector3.one * punchScale, duration, vibrato, elasticity).SetUpdate(true);
         }
+
+        public static Tween PunchScalePreserveBase(RectTransform target, float punchScale = 0.06f, float duration = 0.16f, int vibrato = 7, float elasticity = 0.5f)
+        {
+            if (target == null)
+            {
+                return null;
+            }
+
+            target.DOKill(false);
+            return target.DOPunchScale(Vector3.one * punchScale, duration, vibrato, elasticity).SetUpdate(true);
+        }
     }
 }

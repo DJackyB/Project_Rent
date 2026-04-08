@@ -20,6 +20,9 @@ namespace BaoZuPo.UI
         public TextMeshProUGUI moneyText;
         public TextMeshProUGUI deckText;
         [SerializeField] private RectTransform moneyTargetAnchor;
+        [SerializeField] private float playCostPopupVerticalGap = 18f;
+        [SerializeField] private float settlementTotalPopupVerticalGap = 40f;
+        [SerializeField] private bool useRuntimeGeneratedLayout;
 
         private bool _deferredMoneyDisplay;
         private int _displayedMoney;
@@ -28,6 +31,8 @@ namespace BaoZuPo.UI
         public bool IsDeferredMoneyDisplayActive => _deferredMoneyDisplay;
 
         public RectTransform MoneyTargetAnchor => moneyTargetAnchor != null ? moneyTargetAnchor : moneyText != null ? moneyText.rectTransform : null;
+        public float PlayCostPopupVerticalGap => playCostPopupVerticalGap;
+        public float SettlementTotalPopupVerticalGap => settlementTotalPopupVerticalGap;
 
         private void OnEnable()
         {
@@ -150,28 +155,45 @@ namespace BaoZuPo.UI
                 return;
             }
 
+            bool createdTurnText = false;
+            bool createdDeckText = false;
+            bool createdMoneyText = false;
+
             if (turnText == null)
             {
                 turnText = CreateRuntimeLabel(rootCanvas.transform, "TurnSummary");
+                createdTurnText = true;
             }
 
             if (deckText == null)
             {
                 deckText = CreateRuntimeLabel(rootCanvas.transform, "SpendSummary");
+                createdDeckText = true;
             }
 
             if (moneyText == null)
             {
                 moneyText = CreateRuntimeLabel(rootCanvas.transform, "MoneyHUD");
+                createdMoneyText = true;
             }
 
-            turnText.transform.SetParent(rootCanvas.transform, false);
-            deckText.transform.SetParent(rootCanvas.transform, false);
-            moneyText.transform.SetParent(rootCanvas.transform, false);
+            if (useRuntimeGeneratedLayout || createdTurnText)
+            {
+                turnText.transform.SetParent(rootCanvas.transform, false);
+                ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
+            }
 
-            ApplyTopLayout(turnText.rectTransform, new Vector2(-120f, -20f), TextAlignmentOptions.MidlineLeft);
-            ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
-            ApplyMoneyLayout(moneyText.rectTransform);
+            if (useRuntimeGeneratedLayout || createdDeckText)
+            {
+                deckText.transform.SetParent(rootCanvas.transform, false);
+                ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
+            }
+
+            if (useRuntimeGeneratedLayout || createdMoneyText)
+            {
+                moneyText.transform.SetParent(rootCanvas.transform, false);
+                ApplyMoneyLayout(moneyText.rectTransform);
+            }
 
             if (moneyTargetAnchor == null)
             {
@@ -235,7 +257,7 @@ namespace BaoZuPo.UI
                 return;
             }
 
-            UIAnimationTweenUtility.PunchScale(moneyText.rectTransform, 0.06f, 0.18f);
+            UIAnimationTweenUtility.PunchScalePreserveBase(moneyText.rectTransform, 0.06f, 0.18f);
         }
     }
 }

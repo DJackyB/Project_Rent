@@ -24,9 +24,14 @@ namespace BaoZuPo.Integration.Martian.Feedback
         /// 配置 FeedbackBootstrap 的运行时选项。
         /// 通常由游戏初始化流程调用。
         /// </summary>
-        public static void Configure(FeedbackBootstrap bootstrap, GameConfig config)
+        public static void Configure(GameConfig config)
         {
             MoneyFeedbackEnabled = config == null || config.enableMoneyFeedback;
+        }
+
+        public static void Configure(FeedbackBootstrap bootstrap, GameConfig config)
+        {
+            Configure(config);
 
             if (bootstrap == null)
             {

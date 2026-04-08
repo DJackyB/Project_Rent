@@ -12,7 +12,7 @@
 - Tooltip 和反馈模块允许“缺失只影响表现，不影响流程”。
 - 奖励面板不属于可选模块；缺失时应直接暴露配置错误。
 - 当前固定文案真源是 [GameText.cs](../../Assets/_Assets/Scripts/UI/GameText.cs)。
-- 当前没有语言切换，也没有运行时字体切换链路。
+- 资金 popup 文字会通过项目侧文本配置应用当前字体；通用 popup 视图本身不直接依赖多语言服务。
 
 ## 1. UIManager
 
@@ -28,14 +28,14 @@
 - `phasePanel`
 - `gameOverPanel`
 - `cardDragController`
-- `_feedbackBootstrap`
 - `_settlementSequenceController`
 - `_cardRewardPanel`
 
 当前要求：
 
-- `cardDragController` 和 `_feedbackBootstrap` 缺失时会报错。
+- `cardDragController` 缺失时会报错。
 - `_cardRewardPanel` 属于主流程必需引用，缺失时会 fail-fast。
+- 资金 popup 不再要求 `UIManager` 配置 `_feedbackBootstrap`。
 
 ## 2. 手牌区
 
@@ -101,7 +101,9 @@
 建议显式配置：
 
 - `nameText`
+- `costBadgeRoot`
 - `costText`
+- `rentBadgeRoot`
 - `descText`
 - `cardButton`
 - `background`
@@ -111,6 +113,12 @@
 - `frameImage`
 - `artImage`
 - `skinDatabase`
+
+当前显示规则：
+
+- 手牌卡显示完整信息，包括类型标签、费用、租金、耐久和等待。
+- 租金只在租客卡且 `baseRent > 0` 时显示。
+- 耐久只在当前耐久 `> 1` 时显示。
 
 ## 6. 拖拽层与公共落点
 
@@ -137,15 +145,23 @@
 - [TooltipServices.cs](../../Assets/_Assets/Martian/Tooltip/TooltipServices.cs)
 - [TooltipRuntimeService.cs](../../Assets/_Assets/Martian/Tooltip/Runtime/TooltipRuntimeService.cs)
 - [BaoZuPoCardTooltipPresenter.cs](../../Assets/_Assets/Scripts/Integration/Martian/Tooltip/BaoZuPoCardTooltipPresenter.cs)
-- [FeedbackBootstrap.cs](../../Assets/_Assets/Martian/Feedback/Runtime/FeedbackBootstrap.cs)
-- [FeedbackPlaybackCoordinator.cs](../../Assets/_Assets/Martian/Feedback/Runtime/FeedbackPlaybackCoordinator.cs)
+- [UIFeedbackPopupLayer.cs](../../Assets/_Assets/Scripts/UI/Common/FeedbackPopup/UIFeedbackPopupLayer.cs)
+- [UIFeedbackPopupView.cs](../../Assets/_Assets/Scripts/UI/Common/FeedbackPopup/UIFeedbackPopupView.cs)
 - [BaoZuPoFeedbackAdapter.cs](../../Assets/_Assets/Scripts/Integration/Martian/Feedback/BaoZuPo/BaoZuPoFeedbackAdapter.cs)
 - [UISettlementSequenceController.cs](../../Assets/_Assets/Scripts/UI/Settlement/UISettlementSequenceController.cs)
 
 当前现状：
 
 - Tooltip 运行时模块缺失时，会通过 `NullTooltipService` 安全降级。
-- 反馈模块关闭或未初始化时，会退化为 no-op，但不阻断结算。
+- 资金反馈固定走 `UIFeedbackPopupLayer`；旧 `FeedbackRequest / FeedbackSequenceRequest` 跳字兜底已清理。
+- `UIFeedbackPopupLayer.popupPrefab` 可选，不填时会运行时代码生成默认 popup。
+
+钱栏 popup 配置：
+
+- 在 `UITopBar` 上配置 `Money Target Anchor`，推荐指向手摆的 `MoneyPopupAnchor`。
+- `Play Cost Popup Vertical Gap` 控制出牌扣款和贷款扣款离钱栏锚点的高度。
+- `Settlement Total Popup Vertical Gap` 控制结算最终入账离钱栏锚点的高度。
+- `Use Runtime Generated Layout` 默认关闭；关闭时保留场景中已绑定 TopBar 文本的位置和父物体。
 
 ## 8. 奖励面板
 
@@ -180,8 +196,8 @@
 验收时需要确认：
 
 - 新增固定文案是否接入 `GameText`
-- 是否没有重新引入语言切换状态
-- 是否没有重新引入字体切换或中文字体依赖
+- popup 文案是否能走 `GameText` 或 `CardText`
+- 中文字体是否能通过 popup layer 的默认文本配置正常显示
 
 ## 10. 最短验收顺序
 
@@ -193,5 +209,6 @@
 6. 非法拖放会回弹。
 7. 拖拽开始、阶段切换、回合切换、GameOver 时 Tooltip 会自动关闭。
 8. 结算跳字按顺序播放。
-9. 结算后奖励面板会弹出。
-10. 选择奖励或跳过都能进入下一回合。
+9. 出牌扣款、贷款扣款和结算最终入账都出现在 `Money Target Anchor` 上方。
+10. 结算后奖励面板会弹出。
+11. 选择奖励或跳过都能进入下一回合。
