@@ -507,7 +507,6 @@ namespace BaoZuPo.Tests.Card
 
             context.TurnManager.StartActionPhase();
 
-            LogAssert.Expect(LogType.Exception, "System.Exception: SelectedLocale is null. Database could not get table.");
             bool played = context.TurnManager.PlayCard(card, room);
 
             Assert.IsTrue(played);
@@ -624,6 +623,7 @@ namespace BaoZuPo.Tests.Card
 
             context.TurnManager.StartActionPhase();
 
+            LogAssert.Expect(LogType.Exception, "System.Exception: SelectedLocale is null. Database could not get table.");
             bool played = context.TurnManager.PlayCard(card, room);
 
             Assert.IsTrue(played);
