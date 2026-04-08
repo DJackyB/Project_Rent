@@ -6,6 +6,7 @@ GameText.Durability,Durability,耐久
 GameText.EmptyEquipmentSlot,Empty Equipment Slot,空设备槽
 GameText.EmptyTenantSlot,Empty Tenant Slot,空租客槽
 GameText.GameOverTitle,Game Over,游戏结束
+GameText.GameOverPlayAgain,Play Again,再来一局
 GameText.EndTurnButton,End Turn,结束回合
 GameText.WaitingButton,Waiting,等待中
 GameText.SettlementFallbackTitle,Settle,结算
@@ -23,6 +24,7 @@ GameText.Cost,Cost {0},费用 {0}
 GameText.FeedbackCost,Cost -{0},费用 -{0}
 GameText.FeedbackLoan,Loan -{0},贷款 -{0}
 GameText.Wait,Wait {0},等待 {0}
+GameText.GameOverInfo,You survived {0} turns\nTotal Money: {1},坚持了 {0} 回合\n总资金：{1}
 GameText.SettlementRoomTitle,Room {0},房间 {0}
 GameText.PhaseName.Prepare,Prepare,准备
 GameText.PhaseName.Action,Action,行动

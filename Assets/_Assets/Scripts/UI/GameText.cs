@@ -26,6 +26,7 @@ namespace BaoZuPo.UI
         public static string EmptyEquipmentSlot => Resolve("GameText.EmptyEquipmentSlot", "Empty Equipment Slot");
         public static string EmptyTenantSlot => Resolve("GameText.EmptyTenantSlot", "Empty Tenant Slot");
         public static string GameOverTitle => Resolve("GameText.GameOverTitle", "Game Over");
+        public static string GameOverPlayAgain => Resolve("GameText.GameOverPlayAgain", "Play Again");
         public static string EndTurnButton => Resolve("GameText.EndTurnButton", "End Turn");
         public static string WaitingButton => Resolve("GameText.WaitingButton", "Waiting");
         public static string SettlementFallbackTitle => Resolve("GameText.SettlementFallbackTitle", "Settle");
@@ -47,12 +48,7 @@ namespace BaoZuPo.UI
                 equipmentCount,
                 equipmentCapacity);
 
-        public static string GameOverInfo(int totalTurns, int finalMoney)
-            => Resolve(
-                "GameText.GameOverInfo",
-                $"You survived {totalTurns} turns\nFinal Money: {finalMoney}",
-                totalTurns,
-                finalMoney);
+        public static string GameOverInfo(int totalTurns, int finalMoney) => Resolve("GameText.GameOverInfo", $"You survived {totalTurns} turns\nTotal Money: {finalMoney}", totalTurns, finalMoney);
 
         public static string PhaseName(string phaseName)
         {

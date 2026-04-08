@@ -4298,6 +4298,8 @@ MonoBehaviour:
   titleText: {fileID: 1286544643}
   infoText: {fileID: 508050356}
   panel: {fileID: 1894709263}
+  playAgainButton: {fileID: 416950056}
+  playAgainButtonText: {fileID: 921780620}
 --- !u!114 &960762406
 MonoBehaviour:
   m_ObjectHideFlags: 0
