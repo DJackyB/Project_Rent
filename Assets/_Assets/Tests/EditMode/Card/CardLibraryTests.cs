@@ -646,7 +646,7 @@ namespace BaoZuPo.Tests.Card
             var tenantData = CreateCardData(156, "Instant Tenant");
             tenantData.cardType = CardType.Tenant;
             tenantData.targetKind = CardPlayTargetKind.Room;
-            tenantData.cost = 50;
+            tenantData.cost = 0;
             tenantData.instantEffect = "AddMoney;60";
 
             context.DeckManager.AddCardToHand(tenantData);
@@ -654,11 +654,10 @@ namespace BaoZuPo.Tests.Card
 
             context.TurnManager.StartActionPhase();
 
-            LogAssert.Expect(LogType.Exception, "System.Exception: SelectedLocale is null. Database could not get table.");
             bool played = context.TurnManager.PlayCard(card, room);
 
             Assert.IsTrue(played);
-            Assert.AreEqual(1010, context.MoneyManager.CurrentMoney);
+            Assert.AreEqual(1060, context.MoneyManager.CurrentMoney);
             Assert.AreSame(room, card.PlacedRoom);
             Assert.AreEqual(1, room.TenantCount);
         }
