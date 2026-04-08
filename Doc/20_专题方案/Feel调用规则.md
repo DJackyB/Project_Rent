@@ -1,117 +1,51 @@
 # Feel 调用规则
 
-本文档规范项目中 Feel（MoreMountains Feedbacks）的使用方式，确保所有 Feel 调用收口在集成层，不污染业务逻辑。
+## 2026-04-08 当前状态
 
-## 核心原则
+- Feel 只保留框架入口：`CompositeFeedbackPlaybackBackend`、`FeelFeedbackBackend`、`FeelFeedbackSlots`、`BaoZuPoFeelFeedbackInstaller`。
+- 当前没有注册任何 `MMF_Player`，场景内也不保留 Feel 表现节点；所有 slot 调用均应 no-op。
+- 当前没有 active Feel 视觉表现、测试 sprite 或一次性 Editor 工具。
+- 后续恢复效果时仍按“单个 slot -> 独立 Play 验证 -> 接回 installer -> gameplay 验证”的顺序执行。
 
-1. **Feel 是可选视觉增强层**，不是反馈系统的真源。真源仍是 `Martian.Feedback`。
-2. **Feel 不参与时序控制**。所有 handle 由主后端（FloatingText）提供，Feel 只做 fire-and-forget 播放。
-3. **Feel 不播放音频**。音频真源是 `Martian.Audio` + `AudioEventBridge` + `AudioCatalog`。所有 MMF_Player 中的 Audio feedback 必须禁用。
-4. **玩法核心脚本不直接依赖 `MoreMountains.*`**。所有 Feel 调用收口在 `Assets/_Assets/Scripts/Integration/Feel/`。
+## 长期规则
 
-## 两种调用路径
+- 修改 Feel/MMFeedbacks 前，先阅读官方资料并检查项目当前效果列表：
+  - https://feel-docs.moremountains.com/mmfeedbacks.html
+  - https://feel-docs.moremountains.com/list_mmfeedbacks.html
+  - https://feel-docs.moremountains.com/API/index.html
+- `Martian.Feedback` 是反馈语义和时序真源；Feel 只做可选视觉增强。
+- Feel 不负责音频、haptics，也不引入 Cinemachine。音频继续归 `Martian.Audio`。
+- 业务核心脚本不直接 `using MoreMountains.*`。Feel 相关依赖收口在 `Assets/_Assets/Scripts/Integration/Feel/` 和 UI 表现层。
+- `CardPlay` 只能代表确认出牌成功，不能被 hover、奖励选择或泛用卡片 commit 动画触发。
+- 后续 Feel 默认是“对象效果”，不是“在某个点生成粒子”：只要反馈能归属于卡牌、房间、HUD 文本、按钮、奖励卡等具体 UI 对象，就优先把表现挂到该对象的 `RectTransform` 下播放。
+- 卡牌/房间/HUD 这类对象本体效果优先使用 `PlaySlotAttached(slot, targetRect, debugLabel)`；`PlaySlotAt(slot, anchor.position, debugLabel)` 只用于没有稳定宿主对象、确实需要空间落点的少数效果；只有真正全局效果才考虑 `PlaySlot()`。
 
-### 路径 A：走现有反馈链路（自动触发）
+## UI juice 参考原则
 
-适用于已通过 `BaoZuPoFeedbackAdapter` 接入的反馈类型：金钱增减、结算步骤、贷款扣款。
+参考 GDC Europe 2012 `Juice It or Lose It` 的核心思路：juicy 不是单个大特效，而是“少量输入触发多层清晰响应”。用于本项目时按以下规则落地：
 
-```
-业务层 → BaoZuPoFeedbackAdapter → FeedbackService.Publish()
-  → FeedbackPlaybackCoordinator
-    → CompositeFeedbackPlaybackBackend
-      ├── FloatingText（主，控时序）
-      └── FeelFeedbackBackend（副，视觉增强）
-```
+- 反馈必须回应玩家刚做的事：点击、拖拽、释放、成功、失败、获得、扣除，都要让玩家知道系统听见了。
+- 反馈优先叠在对象上：卡牌动卡牌，房间动房间，钱动 HUD 钱文本，奖励动奖励卡；不要默认在场景坐标上凭空生成粒子。
+- 一次交互允许有多层小响应：scale、alpha、颜色、轻停顿、短线/闪光、文本跳变可以组合，但每层都要有语义。
+- easing 比线性移动更重要；允许轻微 overshoot / squash / settle，但不要让 UI 显得橡皮或拖泥带水。
+- 停顿也属于反馈：关键动作可以先停 0.1-0.3 秒让玩家看见命中，再继续结算或销毁。
+- 声音非常有效，但本项目 Feel 层不接音频；需要声音时走 `Martian.Audio`，并和视觉同一语义触发。
+- 屏幕 shake / 全局抖动属于强药，只给贷款扣款、破产、重大结算等重事件；普通 UI 交互不默认使用。
+- 每个新增效果都要能单独开关、单独验证；禁用 Feel 后只失去增强，不改变玩法结果。
 
-**不需要改任何业务代码**。只要 `BaoZuPoFeelFeedbackInstaller` 已挂载且对应 slot 的 MMF_Player 已配置，Feel 效果就会自动触发。
+## 当前框架入口
 
-对应 slot 映射：
+- Installer：`Assets/_Assets/Scripts/Integration/Feel/BaoZuPoFeelFeedbackInstaller.cs`
+- 后端：`Assets/_Assets/Scripts/Integration/Feel/FeelFeedbackBackend.cs`
+- Slot 常量：`Assets/_Assets/Scripts/Integration/Feel/FeelFeedbackSlots.cs`
+- Composite 后端：`Assets/_Assets/Scripts/Integration/Feel/CompositeFeedbackPlaybackBackend.cs`
 
-| FeedbackCategory | FeelFeedbackSlots 常量 |
-|---|---|
-| `Money` | `MoneyDelta` |
-| `Cost` | `MoneyDelta` |
-| `Settlement` | `SettlementStep` |
-| `Loan` | `LoanPayment` |
+## 恢复单个效果的步骤
 
-### 路径 B：UI 层直接调用（手动触发）
-
-适用于不走 FeedbackCategory 的纯 UI 视觉效果：出牌成功、奖励揭示。
-
-```csharp
-// 获取 Installer 引用（通过 SerializeField 或 FindFirstObjectByType 缓存）
-[SerializeField] private BaoZuPoFeelFeedbackInstaller _feelInstaller;
-
-// 优先带位置播放，让视觉反馈贴近卡牌或面板锚点
-_feelInstaller.FeelBackend.PlaySlotAt(FeelFeedbackSlots.CardPlay, cardTransform.position, "CardPlay");
-_feelInstaller.FeelBackend.PlaySlotAt(FeelFeedbackSlots.RewardReveal, panelTransform.position, "RewardReveal");
-```
-
-**调用位置建议**：
-- `UICardDragController.CommitPlay()` 出牌成功时 → `FeelFeedbackSlots.CardPlay`，优先取 `DropAnchor.position`，没有则退回卡牌当前位置
-- `UICardRewardPanel.Show()` → 面板中心触发 `RewardReveal`
-- `UICardRewardPanel.OnCardClicked()` → 所选卡牌位置再次触发 `RewardReveal`
-
-**注意**：调用前检查 `_feelInstaller != null`（Installer 可能不存在），确保 Feel 缺失时不影响功能。
-
-## 新增 Feel 效果的步骤
-
-### 新增一个走反馈链路的 slot
-
-1. 在 `FeelFeedbackSlots.cs` 添加新常量。
-2. 在 `FeelFeedbackBackend.ResolveSlot()` 添加 `FeedbackCategory → slot` 映射。
-3. 在 `BaoZuPoFeelFeedbackInstaller` 添加对应的 `[SerializeField] private MMF_Player` 字段。
-4. 在 `RegisterPlayers()` 和 `ValidatePlayerReferences()` 中注册新字段。
-5. 创建 MMF_Player 预制体，放在 `Assets/_Assets/Prefabs/Feedback/Feel/`。
-6. 在场景中 Installer 组件上拖入**场景内 MMF_Player 实例**引用；prefab 仅作为复用模板，不让场景字段直接指向 prefab asset。
-
-### 新增一个 UI 直接调用的 slot
-
-1. 在 `FeelFeedbackSlots.cs` 添加新常量。
-2. 在 `BaoZuPoFeelFeedbackInstaller` 添加 `[SerializeField] private MMF_Player` 字段。
-3. 在 `RegisterPlayers()` 和 `ValidatePlayerReferences()` 中注册。
-4. 创建 MMF_Player 预制体。
-5. 在 UI 脚本中通过 `_feelInstaller.FeelBackend.PlaySlotAt(FeelFeedbackSlots.XXX, position, debugLabel)` 调用；只有不关心位置时才退回 `PlaySlot()`。
-
-## MMF_Player 预制体配置规范
-
-- 放置路径：`Assets/_Assets/Prefabs/Feedback/Feel/`
-- 命名：`{SlotName}Feedback.prefab`（如 `MoneyDeltaFeedback`、`CardPlayFeedback`）
-- **禁止**在 MMF_Player 中配置 Audio / Sound 类 feedback
-- **禁止**使用 Camera Shake（首轮不接 Cinemachine）
-- 首轮只使用 Canvas/UI 级效果：Scale、Color、Position、CanvasGroup Alpha 等
-- 每个 MMF_Player 应能独立播放，不依赖外部状态
-
-## 当前场景接线
-
-- 场景：`Assets/Scenes/SampleScene.unity`
-- Installer：`Canvas/FeelFeedbackInstaller`
-- Player Root：`Canvas/FeelFeedbackPlayers`
-- 场景内播放器：
-  - `MoneyDeltaFeedbackPlayer`
-  - `SettlementStepFeedbackPlayer`
-  - `LoanPaymentFeedbackPlayer`
-  - `CardPlayFeedbackPlayer`
-  - `RewardRevealFeedbackPlayer`
-- 已接 UI：
-  - `UICardDragController.feelFeedbackInstaller`
-  - `UICardRewardPanel._feelFeedbackInstaller`
-
-## 禁止事项
-
-| 禁止 | 原因 |
-|------|------|
-| 业务脚本直接 `using MoreMountains.Feedbacks` | 依赖不收口，拆除 Feel 时需要改业务代码 |
-| MMF_Player 中启用 Audio feedback | 音频真源是 Martian.Audio，不能有第二套 |
-| Feel 后端返回有效 handle 参与时序 | FeedbackPlaybackHandle.Complete() 是 internal，且设计上 Feel 不控制时序 |
-| 在 `Martian/Feedback/` 目录下写 Feel 相关代码 | 模块本体和项目集成必须分离 |
-| 直接构造 `FeelFeedbackBackend` 绕过 Installer | Installer 负责生命周期管理和 Composite 组装 |
-
-## 降级行为
-
-| 场景 | 行为 |
-|------|------|
-| Installer 未挂载 | 完全透明，FloatingText 照常，无 Feel 增强 |
-| 某 MMF_Player 未配置 | 该 slot 跳过，其他 slot 正常 |
-| MMF_Player.PlayFeedbacks() 抛异常 | Composite 吞掉异常 + LogError，主后端不受影响 |
-| Feel 包被移除 | 删除 `Integration/Feel/` 目录 + 移除 asmdef 引用即可，零业务代码改动 |
+1. 先确认要恢复的 slot 和触发点。
+2. 在场景 Canvas 下创建一个独立 `MMF_Player` 测试对象，运行时点 Play 必须能直接看见效果。
+3. 验证这个对象不依赖隐藏脚本、不播放音频、不阻挡 raycast、不使用大色块遮挡 UI。
+4. 只在测试对象通过后，把它接到 `BaoZuPoFeelFeedbackInstaller` 的显式 serialized 字段。
+5. 在 `Start()` 中只注册对应 slot。
+6. Play Mode 验证：启用 installer 能通过 gameplay 看到效果，禁用 installer 后效果消失，游戏逻辑和 floating text 不变；如果是对象效果，要确认播放位置跟随目标对象而不是停在旧坐标或 drop anchor。
+7. 更新本文档和接入计划。

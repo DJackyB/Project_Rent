@@ -184,19 +184,19 @@ namespace BaoZuPo.UI
             if (frameImage != null)
             {
                 frameImage.color = invalidFlashTint;
-                _frameColorTween = frameImage.DOColor(ResolveFrameTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _frameColorTween = frameImage.DOColor(ResolveFrameTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
                 _invalidFramePunchTween = frameImage.rectTransform
                     .DOPunchScale(Vector3.one * invalidPunchScale, invalidFlashSeconds * 2f, 8, 0.7f)
-                    .SetUpdate(true);
+                    .SetUpdate(true).SetLink(gameObject);
             }
 
             if (background != null)
             {
                 background.color = Color.Lerp(ResolveFaceTint(), invalidFlashTint, 0.5f);
-                _backgroundColorTween = background.DOColor(ResolveFaceTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _backgroundColorTween = background.DOColor(ResolveFaceTint(), invalidFlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
                 _invalidBackgroundPunchTween = background.rectTransform
                     .DOPunchScale(Vector3.one * (invalidPunchScale * 0.45f), invalidFlashSeconds * 2f, 8, 0.7f)
-                    .SetUpdate(true);
+                    .SetUpdate(true).SetLink(gameObject);
             }
         }
 
@@ -205,14 +205,15 @@ namespace BaoZuPo.UI
             if (frameImage != null)
             {
                 frameImage.rectTransform.DOKill(false);
-                frameImage.rectTransform.DOPunchScale(Vector3.one * 0.1f, 0.18f, 8, 0.65f).SetUpdate(true);
+                frameImage.rectTransform.DOPunchScale(Vector3.one * 0.1f, 0.18f, 8, 0.65f).SetUpdate(true).SetLink(gameObject);
             }
 
             if (artImage != null)
             {
                 artImage.rectTransform.DOKill(false);
-                artImage.rectTransform.DOPunchScale(Vector3.one * 0.06f, 0.18f, 8, 0.55f).SetUpdate(true);
+                artImage.rectTransform.DOPunchScale(Vector3.one * 0.06f, 0.18f, 8, 0.55f).SetUpdate(true).SetLink(gameObject);
             }
+
         }
 
         private void CacheReferences()
@@ -870,32 +871,32 @@ namespace BaoZuPo.UI
 
             if (background != null)
             {
-                _backgroundColorTween = background.DOColor(targetFaceTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _backgroundColorTween = background.DOColor(targetFaceTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
 
             if (frameImage != null)
             {
-                _frameColorTween = frameImage.DOColor(targetFrameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _frameColorTween = frameImage.DOColor(targetFrameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
 
             if (artImage != null)
             {
-                _artScaleTween = artImage.rectTransform.DOScale(targetArtScale, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _artScaleTween = artImage.rectTransform.DOScale(targetArtScale, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
 
             if (nameText != null)
             {
-                _nameColorTween = nameText.DOColor(targetNameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _nameColorTween = nameText.DOColor(targetNameTint, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
 
             if (costText != null)
             {
-                _costColorTween = costText.DOColor(_initialCostColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _costColorTween = costText.DOColor(_initialCostColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
 
             if (descText != null)
             {
-                _descColorTween = descText.DOColor(_initialDescColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _descColorTween = descText.DOColor(_initialDescColor, visualTransitionSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
         }
 

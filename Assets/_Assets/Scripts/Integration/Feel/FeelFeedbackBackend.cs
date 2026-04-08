@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using BaoZuPo.Integration.Martian.Feedback;
 using Martian.Feedback;
@@ -9,9 +10,8 @@ using UnityEngine;
 namespace BaoZuPo.Integration.Feel
 {
     /// <summary>
-    /// Feel 视觉反馈后端。把 Martian.Feedback 的请求映射到预配置的 MMF_Player 预制体。
-    /// 不参与时序控制——所有 handle 立即 Complete。
-    /// 不播放音频——所有 MMF_Player 的 Audio feedback 应在预制体上禁用。
+    /// Optional Feel visual feedback backend. It maps Martian.Feedback requests to explicitly registered MMF_Players.
+    /// With no registered players, it is intentionally inert.
     /// </summary>
     public sealed class FeelFeedbackBackend : IFeedbackPlaybackBackend
     {
@@ -20,27 +20,26 @@ namespace BaoZuPo.Integration.Feel
         private Transform _host;
         private Canvas _hostCanvas;
 
-        /// <summary>
-        /// 注册一个 MMF_Player 到指定的 slot。
-        /// slot 名称对应 <see cref="FeelFeedbackSlots"/> 中的常量。
-        /// </summary>
+        public bool IsAvailable => _attached && _players.Count > 0;
+
+        public event Action AllPlaybackCompleted
+        {
+            add { }
+            remove { }
+        }
+
         public void RegisterPlayer(string slot, MMF_Player player)
         {
             if (string.IsNullOrEmpty(slot)) return;
 
             if (player != null)
+            {
                 _players[slot] = player;
+            }
             else
+            {
                 _players.Remove(slot);
-        }
-
-        public bool IsAvailable => _attached && _players.Count > 0;
-
-        // Feel 不参与时序，此事件永不触发。
-        public event Action AllPlaybackCompleted
-        {
-            add { }
-            remove { }
+            }
         }
 
         public void Attach(Transform host)
@@ -52,43 +51,50 @@ namespace BaoZuPo.Integration.Feel
 
         public void Configure(FeedbackRuntimeOptions options)
         {
-            // Feel 后端不使用 Martian 的 runtime options。
         }
 
         public FeedbackPlaybackHandle Publish(FeedbackRequest request)
         {
+            if (_players.Count == 0)
+            {
+                return null;
+            }
+
             if (request != null)
             {
-                string slot = ResolveSlot(request.Category, request.NumericDelta);
+                string slot = ResolveSlot(request.Category);
                 if (TryResolvePosition(request.Anchor, request.ScreenOffset, request.UseScreenCenterFallback, out var position))
                 {
-                    PlaySlotAt(slot, position, request.DebugLabel);
+                    PlaySlotAt(slot, position);
                 }
                 else
                 {
-                    PlaySlot(slot, request.DebugLabel);
+                    PlaySlot(slot);
                 }
             }
 
-            // Feel 后端的 handle 不参与时序控制，由 Composite 丢弃，返回 null。
             return null;
         }
 
         public FeedbackPlaybackHandle PublishSequence(FeedbackSequenceRequest request)
         {
-            // 序列反馈：只在首步触发一次 Feel 效果，避免连续轰炸。
+            if (_players.Count == 0)
+            {
+                return null;
+            }
+
             if (request != null && request.Steps != null && request.Steps.Count > 0)
             {
                 FeedbackStep first = request.Steps[0];
-                string slot = ResolveSlot(first.Category, first.Amount);
+                string slot = ResolveSlot(first.Category);
                 Vector2 offset = request.ScreenOffset + first.Offset;
                 if (TryResolvePosition(request.Anchor, offset, request.UseScreenCenterFallback, out var position))
                 {
-                    PlaySlotAt(slot, position, request.DebugLabel);
+                    PlaySlotAt(slot, position);
                 }
                 else
                 {
-                    PlaySlot(slot, request.DebugLabel);
+                    PlaySlot(slot);
                 }
             }
 
@@ -100,14 +106,12 @@ namespace BaoZuPo.Integration.Feel
             foreach (var kvp in _players)
             {
                 if (kvp.Value != null && kvp.Value.IsPlaying)
+                {
                     kvp.Value.StopFeedbacks();
+                }
             }
         }
 
-        /// <summary>
-        /// 直接按 slot 名称触发 Feel 效果。
-        /// 供 UI 层直接调用（如出牌成功、奖励选择），不经过 Composite。
-        /// </summary>
         public void PlaySlot(string slot, string debugLabel = null)
         {
             if (string.IsNullOrEmpty(slot)) return;
@@ -120,9 +124,6 @@ namespace BaoZuPo.Integration.Feel
             player.PlayFeedbacks();
         }
 
-        /// <summary>
-        /// 在指定世界坐标播放 slot。用于让 Feel 视觉增强贴近房间、HUD 或卡牌锚点。
-        /// </summary>
         public void PlaySlotAt(string slot, Vector3 position, string debugLabel = null)
         {
             if (string.IsNullOrEmpty(slot)) return;
@@ -136,7 +137,76 @@ namespace BaoZuPo.Integration.Feel
             player.PlayFeedbacks(position);
         }
 
-        private static string ResolveSlot(string category, int numericDelta)
+        public float PlaySlotAttached(string slot, RectTransform anchor, string debugLabel = null)
+        {
+            if (string.IsNullOrEmpty(slot) || anchor == null)
+            {
+                return 0f;
+            }
+
+            if (!_players.TryGetValue(slot, out MMF_Player player) || player == null)
+            {
+                return 0f;
+            }
+
+            Transform playerTransform = player.transform;
+            Transform originalParent = playerTransform.parent;
+            int originalSiblingIndex = playerTransform.GetSiblingIndex();
+
+            Vector2 originalAnchorMin = Vector2.zero;
+            Vector2 originalAnchorMax = Vector2.zero;
+            Vector2 originalPivot = new Vector2(0.5f, 0.5f);
+            Vector2 originalSizeDelta = Vector2.zero;
+            Vector2 originalAnchoredPosition = Vector2.zero;
+            Vector3 originalLocalScale = Vector3.one;
+
+            var playerRect = playerTransform as RectTransform;
+            if (playerRect != null)
+            {
+                originalAnchorMin = playerRect.anchorMin;
+                originalAnchorMax = playerRect.anchorMax;
+                originalPivot = playerRect.pivot;
+                originalSizeDelta = playerRect.sizeDelta;
+                originalAnchoredPosition = playerRect.anchoredPosition;
+                originalLocalScale = playerRect.localScale;
+
+                playerRect.SetParent(anchor, false);
+                playerRect.SetAsFirstSibling();
+                playerRect.anchorMin = new Vector2(0.5f, 0.5f);
+                playerRect.anchorMax = new Vector2(0.5f, 0.5f);
+                playerRect.pivot = new Vector2(0.5f, 0.5f);
+                playerRect.anchoredPosition = Vector2.zero;
+                playerRect.sizeDelta = anchor.rect.size;
+                playerRect.localScale = Vector3.one;
+            }
+            else
+            {
+                playerTransform.SetParent(anchor, false);
+                playerTransform.SetAsFirstSibling();
+                playerTransform.localPosition = Vector3.zero;
+                playerTransform.localScale = Vector3.one;
+            }
+
+            player.PlayFeedbacks(anchor.position);
+
+            float duration = Mathf.Max(0f, player.TotalDuration);
+            player.StartCoroutine(RestorePlayerAfterDelay(
+                player,
+                originalParent,
+                originalSiblingIndex,
+                playerRect,
+                originalAnchorMin,
+                originalAnchorMax,
+                originalPivot,
+                originalSizeDelta,
+                originalAnchoredPosition,
+                originalLocalScale,
+                duration));
+
+            return duration;
+        }
+
+        private static string ResolveSlot(string category)
         {
             return category switch
             {
@@ -199,6 +269,48 @@ namespace BaoZuPo.Integration.Feel
             }
 
             return _hostCanvas.worldCamera != null ? _hostCanvas.worldCamera : Camera.main;
+        }
+
+        private static IEnumerator RestorePlayerAfterDelay(
+            MMF_Player player,
+            Transform originalParent,
+            int originalSiblingIndex,
+            RectTransform playerRect,
+            Vector2 originalAnchorMin,
+            Vector2 originalAnchorMax,
+            Vector2 originalPivot,
+            Vector2 originalSizeDelta,
+            Vector2 originalAnchoredPosition,
+            Vector3 originalLocalScale,
+            float duration)
+        {
+            if (duration > 0f)
+            {
+                yield return new WaitForSecondsRealtime(duration);
+            }
+
+            if (player == null || originalParent == null)
+            {
+                yield break;
+            }
+
+            if (playerRect != null)
+            {
+                playerRect.SetParent(originalParent, false);
+                playerRect.SetSiblingIndex(Mathf.Min(originalSiblingIndex, originalParent.childCount - 1));
+                playerRect.anchorMin = originalAnchorMin;
+                playerRect.anchorMax = originalAnchorMax;
+                playerRect.pivot = originalPivot;
+                playerRect.sizeDelta = originalSizeDelta;
+                playerRect.anchoredPosition = originalAnchoredPosition;
+                playerRect.localScale = originalLocalScale;
+            }
+            else
+            {
+                player.transform.SetParent(originalParent, false);
+                player.transform.SetSiblingIndex(Mathf.Min(originalSiblingIndex, originalParent.childCount - 1));
+                player.transform.localScale = originalLocalScale;
+            }
         }
     }
 }

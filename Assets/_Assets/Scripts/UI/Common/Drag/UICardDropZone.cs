@@ -167,10 +167,10 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
-            _highlightColorTween = highlightGraphic.DOColor(targetColor, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            _highlightColorTween = highlightGraphic.DOColor(targetColor, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             if (_highlightRect != null)
             {
-                _highlightScaleTween = _highlightRect.DOScale(targetScale, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+                _highlightScaleTween = _highlightRect.DOScale(targetScale, highlightFadeSeconds).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject);
             }
         }
 
@@ -262,7 +262,7 @@ namespace BaoZuPo.UI.Common.Drag
             _highlightColorTween?.Kill(false);
 
             var visibleColor = new Color(pulseColor.r, pulseColor.g, pulseColor.b, targetAlpha);
-            DG.Tweening.Sequence sequence = DOTween.Sequence().SetUpdate(true);
+            DG.Tweening.Sequence sequence = DOTween.Sequence().SetUpdate(true).SetLink(gameObject);
             sequence.AppendCallback(() =>
             {
                 highlightGraphic.color = visibleColor;
@@ -274,13 +274,13 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (_highlightRect != null)
             {
-                sequence.Join(_highlightRect.DOPunchScale(Vector3.one * scalePunch, pulseDuration, 8, 0.7f).SetUpdate(true));
+                sequence.Join(_highlightRect.DOPunchScale(Vector3.one * scalePunch, pulseDuration, 8, 0.7f).SetUpdate(true).SetLink(gameObject));
             }
 
-            sequence.Append(highlightGraphic.DOColor(_isHighlighted ? highlightColor : _hiddenColor, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true));
+            sequence.Append(highlightGraphic.DOColor(_isHighlighted ? highlightColor : _hiddenColor, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject));
             if (_highlightRect != null)
             {
-                sequence.Join(_highlightRect.DOScale(_isHighlighted ? Vector3.one * highlightScale : Vector3.one, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true));
+                sequence.Join(_highlightRect.DOScale(_isHighlighted ? Vector3.one * highlightScale : Vector3.one, pulseDuration).SetEase(Ease.OutQuad).SetUpdate(true).SetLink(gameObject));
             }
         }
     }

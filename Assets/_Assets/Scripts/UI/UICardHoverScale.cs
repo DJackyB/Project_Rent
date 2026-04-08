@@ -68,10 +68,10 @@ namespace BaoZuPo.UI
             _tween?.Kill();
             _moveTween?.Kill();
             _cardView?.SetSelected(true);
-            _tween = transform.DOScale(_originalScale * hoverScale, duration).SetEase(Ease.OutQuad);
+            _tween = transform.DOScale(_originalScale * hoverScale, duration).SetEase(Ease.OutQuad).SetLink(gameObject);
             if (_rectTransform != null)
             {
-                _moveTween = _rectTransform.DOAnchorPos(_originalAnchoredPosition + new Vector2(0f, hoverLift), duration).SetEase(Ease.OutQuad);
+                _moveTween = _rectTransform.DOAnchorPos(_originalAnchoredPosition + new Vector2(0f, hoverLift), duration).SetEase(Ease.OutQuad).SetLink(gameObject);
             }
         }
 
@@ -85,10 +85,10 @@ namespace BaoZuPo.UI
             _tween?.Kill();
             _moveTween?.Kill();
             _cardView?.SetSelected(false, true);
-            _tween = transform.DOScale(_originalScale, duration).SetEase(Ease.OutQuad);
+            _tween = transform.DOScale(_originalScale, duration).SetEase(Ease.OutQuad).SetLink(gameObject);
             if (_rectTransform != null)
             {
-                _moveTween = _rectTransform.DOAnchorPos(_originalAnchoredPosition, duration).SetEase(Ease.OutQuad);
+                _moveTween = _rectTransform.DOAnchorPos(_originalAnchoredPosition, duration).SetEase(Ease.OutQuad).SetLink(gameObject);
             }
         }
 
