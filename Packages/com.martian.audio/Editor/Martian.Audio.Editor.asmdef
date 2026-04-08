@@ -1,0 +1,9 @@
+{
+  "name": "Martian.Audio.Editor",
+  "references": [
+    "Martian.Audio"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

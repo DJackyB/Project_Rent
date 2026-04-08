@@ -10,6 +10,23 @@
 4. Add `AudioBootstrap` to a scene object, or call `AudioRuntimeInstaller.Install(catalog, settings)` from your own entrypoint.
 5. Play cues through `AudioServices.Current`.
 
+## Designer-Friendly Catalog Editing
+
+Select an `AudioCatalog` asset in the Unity Inspector to register or change cue definitions without editing code.
+
+- `Add Cue`: creates a blank cue entry for a designer-defined id.
+- `Add Selected AudioClips`: creates one cue per selected `AudioClip` in the Project window, using the clip name as the cue id.
+- `Sort By ID`: keeps the catalog easier to scan.
+- Each cue exposes `Cue ID`, `Bus`, `Clips`, `Base Volume`, `Cooldown`, `Pitch Min`, `Pitch Max`, and `Loop`.
+- Empty cue ids and duplicate cue ids show Inspector warnings.
+
+The catalog remains the runtime source of truth. Runtime code should trigger audio by cue id:
+
+```csharp
+AudioServices.Current.Play(AudioPlayRequest.Create("sfx.example"));
+AudioServices.Current.PlayMusic("bgm.example");
+```
+
 ## Cue Naming
 
 Use stable dotted ids so they survive refactors and cross-project moves:
