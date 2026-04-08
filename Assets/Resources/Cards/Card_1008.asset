@@ -26,4 +26,4 @@ MonoBehaviour:
   settleEffect: 
   destroyEffect: ReduceMoney;50
   durability: 6
-  waitTurns: 0
+  waitTurns: 2

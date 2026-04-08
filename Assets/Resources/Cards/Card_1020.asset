@@ -26,4 +26,4 @@ MonoBehaviour:
   settleEffect: AddMoneyBySelectedRoomTenantCount;25
   destroyEffect: AddMoney;70
   durability: 3
-  waitTurns: 0
+  waitTurns: 2

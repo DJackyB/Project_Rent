@@ -25,7 +25,9 @@ namespace BaoZuPo.UI
     {
         [Header("Main Text References")]
         [SerializeField] private TextMeshProUGUI nameText;
+        [SerializeField] private GameObject costBadgeRoot;
         [SerializeField] private TextMeshProUGUI costText;
+        [SerializeField] private GameObject rentBadgeRoot;
         [SerializeField] private TextMeshProUGUI descText;
 
         [Header("Badge References")]
@@ -59,6 +61,7 @@ namespace BaoZuPo.UI
         [SerializeField] private float invalidPunchScale = 0.08f;
 
         private TextMeshProUGUI typeText;
+        private TextMeshProUGUI rentText;
         private TextMeshProUGUI durabilityText;
         private TextMeshProUGUI waitText;
         private TooltipTrigger _tooltipTrigger;
@@ -243,6 +246,7 @@ namespace BaoZuPo.UI
                 background.raycastTarget = true;
             }
 
+            rentText = ResolveBadgeText(rentBadgeRoot, rentText);
             typeText = ResolveBadgeText(typeBadgeRoot, typeText);
             durabilityText = ResolveBadgeText(durabilityBadgeRoot, durabilityText);
             waitText = ResolveBadgeText(waitBadgeRoot, waitText);
@@ -272,6 +276,11 @@ namespace BaoZuPo.UI
                 costText.raycastTarget = false;
             }
 
+            if (rentText != null)
+            {
+                rentText.raycastTarget = false;
+            }
+
             if (descText != null)
             {
                 descText.raycastTarget = false;
@@ -280,6 +289,16 @@ namespace BaoZuPo.UI
             if (typeBadgeRoot != null)
             {
                 DisableBadgeRaycast(typeBadgeRoot);
+            }
+
+            if (costBadgeRoot != null)
+            {
+                DisableBadgeRaycast(costBadgeRoot);
+            }
+
+            if (rentBadgeRoot != null)
+            {
+                DisableBadgeRaycast(rentBadgeRoot);
             }
 
             if (durabilityBadgeRoot != null)
@@ -314,7 +333,10 @@ namespace BaoZuPo.UI
 
             var missing = new List<string>(13);
             if (nameText == null) missing.Add(nameof(nameText));
+            if (costBadgeRoot == null) missing.Add(nameof(costBadgeRoot));
             if (costText == null) missing.Add(nameof(costText));
+            if (rentBadgeRoot == null) missing.Add(nameof(rentBadgeRoot));
+            if (rentBadgeRoot != null && rentText == null) missing.Add($"{nameof(rentBadgeRoot)} child TMP");
             if (typeBadgeRoot == null) missing.Add(nameof(typeBadgeRoot));
             if (typeBadgeRoot != null && typeText == null) missing.Add($"{nameof(typeBadgeRoot)} child TMP");
             if (descText == null) missing.Add(nameof(descText));
@@ -415,15 +437,11 @@ namespace BaoZuPo.UI
                 nameText.gameObject.SetActive(true);
             }
 
-            bool showCost = CurrentContext == CardViewContext.Hand || CurrentContext == CardViewContext.TooltipPreview || CurrentContext == CardViewContext.RewardPick;
-            if (costText != null)
-            {
-                costText.gameObject.SetActive(showCost);
-                if (showCost)
-                {
-                    costText.text = GameText.Cost(Card.Data.cost);
-                }
-            }
+            bool showCost = ShouldShowCost();
+            SetBadge(costBadgeRoot, costText, showCost, showCost ? GameText.Cost(Card.Data.cost) : string.Empty);
+
+            bool showRent = ShouldShowRent();
+            SetBadge(rentBadgeRoot, rentText, showRent, showRent ? BuildRentText() : string.Empty);
 
             bool showDescription = CurrentContext == CardViewContext.Hand
                 || CurrentContext == CardViewContext.TooltipPreview
@@ -443,6 +461,35 @@ namespace BaoZuPo.UI
                     descText.text = CardText.Description(Card.Data);
                 }
             }
+        }
+
+        private bool ShouldShowCost()
+        {
+            return CurrentContext == CardViewContext.Hand
+                || CurrentContext == CardViewContext.TooltipPreview
+                || CurrentContext == CardViewContext.RewardPick;
+        }
+
+        private bool ShouldShowRent()
+        {
+            if (Card == null || Card.Data == null || Card.Data.cardType != CardType.Tenant || Card.Data.baseRent <= 0)
+            {
+                return false;
+            }
+
+            return CurrentContext == CardViewContext.Hand
+                || CurrentContext == CardViewContext.RoomTenant
+                || CurrentContext == CardViewContext.TooltipPreview;
+        }
+
+        private string BuildRentText()
+        {
+            if (Card == null || Card.Data == null || Card.Data.cardType != CardType.Tenant || Card.Data.baseRent <= 0)
+            {
+                return string.Empty;
+            }
+
+            return Card.Data.baseRent.ToString();
         }
 
         private void SubscribeToLanguageChanges()
@@ -496,7 +543,7 @@ namespace BaoZuPo.UI
 
         private string BuildDurabilityText()
         {
-            if (Card == null || Card.Data == null || Card.Data.durability <= 0)
+            if (Card == null || Card.Data == null || Card.CurrentDurability <= 1)
             {
                 return string.Empty;
             }
@@ -597,8 +644,14 @@ namespace BaoZuPo.UI
             if (costText != null)
             {
                 costText.text = string.Empty;
-                costText.gameObject.SetActive(false);
             }
+            HideBadge(costBadgeRoot, costText);
+
+            if (rentText != null)
+            {
+                rentText.text = string.Empty;
+            }
+            HideBadge(rentBadgeRoot, rentText);
 
             if (typeText != null)
             {

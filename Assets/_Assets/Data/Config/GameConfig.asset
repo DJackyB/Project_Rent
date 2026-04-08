@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45c1f5185b2aaab4d9a297e7686a45ba, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Core.GameConfig
-  startingMoney: 1000
+  startingMoney: 300
   loanAmount: 500
   loanInterval: 5
   loanGrowthFactor: 2

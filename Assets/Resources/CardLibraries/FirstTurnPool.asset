@@ -15,35 +15,40 @@ MonoBehaviour:
   libraryId: 0
   displayName: First Turn Pool
   cards:
-  - {fileID: 11400000, guid: ef2a612e6519d4240a405096dfee36a1, type: 2}
-  - {fileID: 11400000, guid: ef2a612e6519d4240a405096dfee36a1, type: 2}
   - {fileID: 11400000, guid: a942e22036adaae47858f36a2e4333a4, type: 2}
   - {fileID: 11400000, guid: 0008091251fe90943855c816b86483af, type: 2}
-  - {fileID: 11400000, guid: 83a61fca82685924084e78995ba3537b, type: 2}
-  - {fileID: 11400000, guid: 83a61fca82685924084e78995ba3537b, type: 2}
   - {fileID: 11400000, guid: a966ece59d4051a43b89fb5c6edda440, type: 2}
   - {fileID: 11400000, guid: 3ea93f2d3e5a45b48983ab026559a9c2, type: 2}
-  - {fileID: 11400000, guid: 741399d4dd8d97a4e8748dd2934d2c27, type: 2}
   - {fileID: 11400000, guid: 171cdbeac089d22498c244da2df24ab3, type: 2}
-  - {fileID: 11400000, guid: 4d8f8adcde798b843b109ce4722166b6, type: 2}
-  - {fileID: 11400000, guid: dd511a90e607aa747b8057e6c800b531, type: 2}
-  - {fileID: 11400000, guid: dd511a90e607aa747b8057e6c800b531, type: 2}
+  - {fileID: 11400000, guid: dd5111d8373f70a49b75b103570f2e58, type: 2}
   - {fileID: 11400000, guid: bd5c013ae06b30d47a79be87d7549b8a, type: 2}
   - {fileID: 11400000, guid: 8150d2c3f7a522c498415cec7d1f4c49, type: 2}
   - {fileID: 11400000, guid: f6cdd99b8f906564b98c087001417749, type: 2}
   - {fileID: 11400000, guid: 61cd48c8bcbd384429d27d87170c2cd7, type: 2}
   - {fileID: 11400000, guid: 18e629eea4e04026b1fa97cedbca4a1c, type: 2}
-  - {fileID: 11400000, guid: 2a1a5dcdbce04344948bb9f54a65f2b0, type: 2}
-  - {fileID: 11400000, guid: 90e3be8a5f5e4f3392a6a23b7cee8051, type: 2}
-  - {fileID: 11400000, guid: 413203e910e14a4888f27a6e9e1f8e3f, type: 2}
-  - {fileID: 11400000, guid: b315b942da0e41a68530be726c6560c9, type: 2}
-  - {fileID: 11400000, guid: b315b942da0e41a68530be726c6560c9, type: 2}
   - {fileID: 11400000, guid: a283e927b3244977a55fc10b8f3bdd83, type: 2}
-  - {fileID: 11400000, guid: fd4daf29441245809eabf63400f97cef, type: 2}
-  - {fileID: 11400000, guid: ce985f00b8dd44378feecd42cd3ff0d0, type: 2}
-  - {fileID: 11400000, guid: 846d684dd7c14f2c8a3ddefb715c5185, type: 2}
-  - {fileID: 11400000, guid: a78b7657442245e3932c9737aac15dfa, type: 2}
+  - {fileID: 11400000, guid: 4eb0b67771b64db6902287f09a710be8, type: 2}
+  - {fileID: 11400000, guid: f37d133a697746928ea2ae53d68ebd3f, type: 2}
+  - {fileID: 11400000, guid: c5d0692cb14044df81284312cb35b6e5, type: 2}
   - {fileID: 11400000, guid: f42a5c0e52294a42bbe2e8c9e94862ba, type: 2}
+  - {fileID: 11400000, guid: 010cde19e4e2483ea4d0d79eb25a2b71, type: 2}
+  - {fileID: 11400000, guid: 90e3be8a5f5e4f3392a6a23b7cee8051, type: 2}
+  - {fileID: 11400000, guid: fd4daf29441245809eabf63400f97cef, type: 2}
+  - {fileID: 11400000, guid: f2a5db4ba1b14730967acda4165db1db, type: 2}
   - {fileID: 11400000, guid: fe530116558c498e960f1265e2331f3f, type: 2}
-  - {fileID: 11400000, guid: 9d7ba9640ce74a9e97bc94c6cc82241b, type: 2}
+  - {fileID: 11400000, guid: ce985f00b8dd44378feecd42cd3ff0d0, type: 2}
+  - {fileID: 11400000, guid: 9957c51cd7d9459b974639668d404e31, type: 2}
+  - {fileID: 11400000, guid: b315b942da0e41a68530be726c6560c9, type: 2}
   - {fileID: 11400000, guid: e01d1cd3d28d484b882062bbcc0eda48, type: 2}
+  - {fileID: 11400000, guid: 968a0c53215f475699f463b638515252, type: 2}
+  - {fileID: 11400000, guid: 2c7c6e7c5fbb4b199566d2f86e71c394, type: 2}
+  - {fileID: 11400000, guid: ef2a612e6519d4240a405096dfee36a1, type: 2}
+  - {fileID: 11400000, guid: 83a61fca82685924084e78995ba3537b, type: 2}
+  - {fileID: 11400000, guid: 741399d4dd8d97a4e8748dd2934d2c27, type: 2}
+  - {fileID: 11400000, guid: dd511a90e607aa747b8057e6c800b531, type: 2}
+  - {fileID: 11400000, guid: bcc0c7b832df9614fb94c8ff86d10671, type: 2}
+  - {fileID: 11400000, guid: a78b7657442245e3932c9737aac15dfa, type: 2}
+  - {fileID: 11400000, guid: 2a1a5dcdbce04344948bb9f54a65f2b0, type: 2}
+  - {fileID: 11400000, guid: 413203e910e14a4888f27a6e9e1f8e3f, type: 2}
+  - {fileID: 11400000, guid: 1bf516dba55a4b55ab4ba983d8c79533, type: 2}
+  - {fileID: 11400000, guid: 9d7ba9640ce74a9e97bc94c6cc82241b, type: 2}
