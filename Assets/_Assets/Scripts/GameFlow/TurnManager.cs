@@ -395,20 +395,17 @@ namespace BaoZuPo.GameFlow
         ///    - 遍历所有合同
         ///    - 执行合同的 SettleEffect
         ///    - 合同耐久减少与销毁逻辑同房间卡牌
-        /// 5. 【等待超时】- ProcessWaitExpiry：
-        ///    - 遍历所有场上卡牌，检查 waitTurns 属性
-        ///    - CurrentWait--，当 <= 0 时移除卡牌
-        /// 6. 【卡牌销毁与清理】- DestroyAndCleanupCards：
+        /// 5. 【卡牌销毁与清理】- DestroyAndCleanupCards：
         ///    - 执行销毁卡牌的 DestroyEffect
         ///    - 发布 CardDestroyed 事件
-        ///    - 清理手牌中的等待和弃牌
-        /// 7. 【贷款支付】- ProcessLoanPayment：
+        ///    - 清理手牌中的等待卡
+        /// 6. 【贷款支付】- ProcessLoanPayment：
         ///    - 检查贷款周期（loanInterval）
         ///    - 如果当前回合 % loanInterval == 0，计算贷款（按指数增长）
         ///    - 尝试扣除金钱，失败则 GameOver
-        /// 8. 【奖励状态缓存】：
+        /// 7. 【奖励状态缓存】：
         ///    - 判断是否触发 boosted 奖励池（同贷款周期）
-        /// 9. 【提交结算批次】- FinalizeBatch：
+        /// 8. 【提交结算批次】- FinalizeBatch：
         ///    - 统计最终金钱变化
         ///    - 创建 UI 播放队列或直接进入奖励/完成
         ///
@@ -416,7 +413,7 @@ namespace BaoZuPo.GameFlow
         /// - 房间遍历顺序：BoardManager.GetAllRooms() 返回的顺序
         /// - 租户/装备遍历顺序：room.GetTenants() / room.GetEquipments() 返回的顺序
         /// - 耐久减少只在有租户的房间进行
-        /// - 等待卡牌与销毁卡牌是分开处理的（两种清除机制）
+        /// - waitTurns 只由手牌等待逻辑处理，不作用于场上卡牌
         /// - 结算动画与 UI 通过 batchId 同步完成状态
         ///
         /// 外部系统交互：
@@ -447,13 +444,11 @@ namespace BaoZuPo.GameFlow
                 DeferredMoneyStartValue = phaseStartMoney
             };
 
-            var toRemove = new List<CardInstance>();
             var toDestroy = new List<CardInstance>();
 
             ProcessRoomSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
             ProcessContractSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
-            ProcessWaitExpiry(toRemove);
-            DestroyAndCleanupCards(toDestroy, toRemove, sharedContext);
+            DestroyAndCleanupCards(toDestroy, sharedContext);
 
             ProcessLoanPayment();
 
@@ -607,42 +602,6 @@ namespace BaoZuPo.GameFlow
         }
 
         /// <summary>
-        /// 处理等待卡牌超时
-        ///
-        /// 等待卡牌（waitTurns > 0）在场上停留指定回合数后自动移除
-        /// 与耐久减少不同，等待超时不触发 DestroyEffect
-        ///
-        /// [伪代码流程]：
-        /// foreach card in GetAllFieldCards():
-        ///     if card.waitTurns <= 0: continue  // 无等待属性
-        ///     card.CurrentWait--
-        ///     if card.CurrentWait <= 0: mark for remove
-        ///
-        /// 关键细节：
-        /// - GetAllFieldCards() 返回所有在场的卡牌（房间卡 + 合同）
-        /// - CurrentWait 初始值等于 waitTurns（卡牌创建时）
-        /// - 移除卡牌在 DestroyAndCleanupCards 中处理（发布 CardDestroyed，TriggeredByDurability=false）
-        /// - 等待卡牌移除不调用 DestroyEffect
-        /// </summary>
-        private static void ProcessWaitExpiry(List<CardInstance> toRemove)
-        {
-            var fieldCards = BoardManager.Instance.GetAllFieldCards();
-            foreach (var card in fieldCards)
-            {
-                if (card == null || card.IsDestroyed || card.Data.waitTurns <= 0)
-                {
-                    continue;
-                }
-
-                card.CurrentWait--;
-                if (card.CurrentWait <= 0)
-                {
-                    toRemove.Add(card);
-                }
-            }
-        }
-
-        /// <summary>
         /// 销毁卡牌并进行全局清理
         ///
         /// [伪代码流程]：
@@ -652,23 +611,15 @@ namespace BaoZuPo.GameFlow
         ///     card.DestroyEffect?.Execute(card, sharedContext)
         ///     card.MarkDestroyed()
         ///     EventBus.Publish(CardDestroyed, TriggeredByDurability=true)
-        ///
-        /// // 等待超时导致的移除（不执行 DestroyEffect）
-        /// foreach card in toRemove:
-        ///     if card.IsDestroyed: continue
-        ///     card.MarkDestroyed()
-        ///     EventBus.Publish(CardDestroyed, TriggeredByDurability=false)
-        ///
         /// // 全局清理
         /// BoardManager.CleanupDestroyedCards()  // 从房间/合同列表移除已销毁的卡牌
-        /// DeckManager.ResolveHandWaitAndDiscardExpired()  // 处理手牌中的等待卡和弃牌
+        /// DeckManager.ResolveHandWaitAndDiscardExpired()  // 处理手牌中的等待卡
         ///
         /// 关键细节：
         /// - toDestroy：耐久归零的卡牌，执行 DestroyEffect（可能产生额外效果或触发）
-        /// - toRemove：等待超时的卡牌，不执行 DestroyEffect
         /// - TriggeredByDurability 标记用于区分销毁原因（可供其他系统判断）
         /// - CleanupDestroyedCards 从容器移除，并可能触发房间数据更新
-        /// - ResolveHandWaitAndDiscardExpired 处理手牌中的特殊卡牌
+        /// - ResolveHandWaitAndDiscardExpired 只处理手牌中的等待卡牌
         ///
         /// 外部系统：
         /// - BoardManager：CleanupDestroyedCards
@@ -677,7 +628,6 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         private static void DestroyAndCleanupCards(
             List<CardInstance> toDestroy,
-            List<CardInstance> toRemove,
             GameContext sharedContext)
         {
             foreach (var card in toDestroy)
@@ -690,17 +640,6 @@ namespace BaoZuPo.GameFlow
                 card.DestroyEffect?.Execute(card, sharedContext);
                 card.MarkDestroyed();
                 EventBus.Publish(new GameEvents.CardDestroyed { Card = card, TriggeredByDurability = true });
-            }
-
-            foreach (var card in toRemove)
-            {
-                if (card == null || card.IsDestroyed)
-                {
-                    continue;
-                }
-
-                card.MarkDestroyed();
-                EventBus.Publish(new GameEvents.CardDestroyed { Card = card, TriggeredByDurability = false });
             }
 
             BoardManager.Instance.CleanupDestroyedCards();

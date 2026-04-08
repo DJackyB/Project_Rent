@@ -11,7 +11,7 @@ namespace BaoZuPo.Deck
     /// 职责：
     /// 1. 手牌管理：维护玩家手中的卡牌列表，限制手牌大小（默认7张）
     /// 2. 抽卡池管理：从CardLibrary随机抽取卡牌并创建CardInstance
-    /// 3. 弃卡池管理：存储已使用的卡牌或过期的卡牌，等待洗牌
+    /// 3. 弃卡池管理：存储已使用的卡牌，等待洗牌
     /// 4. 卡牌生成：生成卡牌实例时使用工厂方法CreateCardInstance()
     /// 5. 过期卡管理：处理带等待回合数的卡牌（waitTurns > 0）
     /// 6. 清理机制：定期移除被摧毁的卡牌
@@ -23,7 +23,7 @@ namespace BaoZuPo.Deck
     /// [使用卡] → PlayCard(cardIndex) → RemoveFromHand()
     ///   └─ 卡牌效果处理由外部逻辑完成
     /// [过期卡] → ResolveHandWaitAndDiscardExpired() 每回合调用
-    ///   └─ CurrentWait-- → 倒数完 → 移到弃卡池
+    ///   └─ CurrentWait-- → 倒数完 → 从手牌清除
     /// [洗牌] → 当抽卡时库为空，将弃卡池作为新库重新抽（未在此实现，由外部调用）
     /// </summary>
     public class DeckManager : Core.Singleton<DeckManager>
@@ -210,19 +210,16 @@ namespace BaoZuPo.Deck
         ///    - 否则，CurrentWait--（倒数）
         ///    - 如果CurrentWait <= 0:
         ///      └─ 从手牌移除
-        ///      └─ 如果是Tenant卡：MarkDestroyed()（住户卡等待满后摧毁）
-        ///      └─ 如果是其他卡：添加到_discardPile（重复使用）
-        /// 3. 返回被移到弃卡池的卡牌数（不含被摧毁的）
+        /// 3. 返回本次从手牌清除的等待卡牌数
         ///
         /// 用途：
         /// - 处理需要等待N回合后才能使用的卡（如"禁用卡"）
-        /// - 处理住户卡的等待期（租期）
-        /// - 循环利用卡牌，为后续洗牌做准备
+        /// - 等待清零时仅从手牌清除，不触发销毁效果或弃牌逻辑
         /// </summary>
-        /// <returns>本次处理移到弃卡池的卡牌数量（不含被摧毁的）</returns>
+        /// <returns>本次从手牌清除的等待卡牌数量</returns>
         public int ResolveHandWaitAndDiscardExpired()
         {
-            int movedToDiscard = 0;
+            int removedFromHand = 0;
 
             // 反向遍历以安全移除
             for (int i = _hand.Count - 1; i >= 0; i--)
@@ -242,27 +239,17 @@ namespace BaoZuPo.Deck
                 if (card.CurrentWait <= 0)
                 {
                     _hand.RemoveAt(i);
-
-                    // 住户卡等待完后被摧毁（驱逐）；其他卡进入弃卡池供下轮使用
-                    if (card.Data.cardType == CardType.Tenant)
-                    {
-                        card.MarkDestroyed();
-                    }
-                    else
-                    {
-                        _discardPile.Add(card);
-                        movedToDiscard++;
-                    }
+                    removedFromHand++;
                 }
             }
 
-            if (movedToDiscard > 0)
+            if (removedFromHand > 0)
             {
-                Debug.Log($"[DeckManager] Moved {movedToDiscard} expired card(s) to discard.");
+                Debug.Log($"[DeckManager] Removed {removedFromHand} expired waiting card(s) from hand.");
             }
 
             UpdateDebugInfo();
-            return movedToDiscard;
+            return removedFromHand;
         }
 
         /// <summary>
