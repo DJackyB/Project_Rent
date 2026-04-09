@@ -66,7 +66,7 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
         }
 
-        private void OnApplicationQuit()
+        private new void OnApplicationQuit()
         {
             DOTween.KillAll(false);
         }
@@ -86,8 +86,9 @@ namespace BaoZuPo.UI
                 BeginDeferredMoneyDisplay(MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
             }
 
-            phasePanel?.UpdatePhase(string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName);
-            RefreshAll();
+            string phaseLabel = string.IsNullOrWhiteSpace(e.PhaseName) ? CurrentPhase.ToString() : e.PhaseName;
+            phasePanel?.UpdatePhase(phaseLabel);
+            RefreshHudAndHand();
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed e)
@@ -102,7 +103,7 @@ namespace BaoZuPo.UI
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
             topBar?.RefreshTurn(e.TurnNumber);
-            RefreshAll();
+            RefreshHudAndHand();
         }
 
         private void OnGameOver(GameEvents.GameOver e)
@@ -127,9 +128,15 @@ namespace BaoZuPo.UI
         {
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
-            topBar?.Refresh();
-            handPanel?.RefreshHand();
+            RefreshHudAndHand();
             boardPanel?.RefreshBoard();
+        }
+
+        private void RefreshHudAndHand()
+        {
+            topBar?.Refresh();
+            // 阶段切换/回合开始只更新 HUD 和手牌，避免无意义重建房间 UI 造成一帧叠影闪烁。
+            handPanel?.RefreshHand();
         }
 
         public void BeginDeferredMoneyDisplay(int startValue)

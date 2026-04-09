@@ -27,9 +27,12 @@ namespace BaoZuPo.UI
         [SerializeField] private GameObject slotPrefab;
 
         private readonly List<UIRoomSlotView> _slotViews = new();
+        private readonly List<CardInstance> _slotCards = new();
         private RoomSlot _room;
         private UIBoardPanel _boardPanel;
         private GameObject _cardPrefab;
+        private Coroutine _deferredSlotBindingRoutine;
+        private bool _slotsBound;
 
         public RoomSlot Room => _room;
         public RectTransform SettlementAnchor => dropAnchor != null ? dropAnchor : (cardListContainer as RectTransform) ?? transform as RectTransform;
@@ -45,7 +48,7 @@ namespace BaoZuPo.UI
             ConfigureDropZone();
             BuildSlots();
             RefreshTitle();
-            StartCoroutine(RefreshGridCellSize());
+            FinalizeSlotsOrScheduleFallback();
         }
 
         private void BuildSlots()
@@ -53,14 +56,16 @@ namespace BaoZuPo.UI
             var container = cardListContainer != null ? cardListContainer : transform;
             ClearContainer(container);
             _slotViews.Clear();
+            _slotCards.Clear();
+            _slotsBound = false;
 
             int tenantCapacity = _room != null ? Mathf.Max(0, _room.TenantSlotCapacity) : 0;
             for (int i = 0; i < tenantCapacity; i++)
             {
                 var tenantSlot = CreateSlot(container, $"TenantSlot_{i}", CardViewContext.RoomTenant);
                 if (tenantSlot == null) continue;
-                tenantSlot.Bind(_room != null ? _room.GetTenantAt(i) : null);
                 _slotViews.Add(tenantSlot);
+                _slotCards.Add(_room != null ? _room.GetTenantAt(i) : null);
             }
 
             int equipmentCapacity = _room != null ? Mathf.Max(0, _room.EquipmentSlotCapacity) : 0;
@@ -68,8 +73,8 @@ namespace BaoZuPo.UI
             {
                 var equipmentSlot = CreateSlot(container, $"EquipmentSlot_{i}", CardViewContext.RoomEquipment);
                 if (equipmentSlot == null) continue;
-                equipmentSlot.Bind(_room != null ? _room.GetEquipmentAt(i) : null);
                 _slotViews.Add(equipmentSlot);
+                _slotCards.Add(_room != null ? _room.GetEquipmentAt(i) : null);
             }
         }
 
@@ -123,29 +128,96 @@ namespace BaoZuPo.UI
             }
         }
 
-private IEnumerator RefreshGridCellSize()
+        private void FinalizeSlotsOrScheduleFallback()
         {
-            yield return null; // wait one frame for layout to settle
+            if (_deferredSlotBindingRoutine != null)
+            {
+                StopCoroutine(_deferredSlotBindingRoutine);
+                _deferredSlotBindingRoutine = null;
+            }
 
+            if (TryApplyGridCellSizeAndBind())
+            {
+                return;
+            }
+
+            _deferredSlotBindingRoutine = StartCoroutine(RefreshGridCellSize());
+        }
+
+        private IEnumerator RefreshGridCellSize()
+        {
+            const int MaxRetryFrames = 2;
+            for (int i = 0; i < MaxRetryFrames; i++)
+            {
+                yield return null; // wait a frame for layout to settle
+                if (TryApplyGridCellSizeAndBind())
+                {
+                    _deferredSlotBindingRoutine = null;
+                    yield break;
+                }
+            }
+
+            BindSlots();
+            _deferredSlotBindingRoutine = null;
+        }
+
+        private bool TryApplyGridCellSizeAndBind()
+        {
             var container = cardListContainer != null ? cardListContainer : transform;
             var grid = container.GetComponent<GridLayoutGroup>();
-            if (grid == null || _slotViews.Count == 0) yield break;
+            if (_slotViews.Count == 0)
+            {
+                _slotsBound = true;
+                return true;
+            }
 
             Canvas.ForceUpdateCanvases();
+            var roomRect = transform as RectTransform;
+            var parentRect = roomRect != null ? roomRect.parent as RectTransform : null;
+            if (parentRect != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+            }
+
+            if (roomRect != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(roomRect);
+            }
+
             var containerRect = container as RectTransform;
+            if (containerRect == null)
+            {
+                return false;
+            }
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
             float w = containerRect.rect.width;
             float h = containerRect.rect.height;
-            if (w <= 0f || h <= 0f) yield break;
+            if (w <= 0f || h <= 0f)
+            {
+                return false;
+            }
 
-            int count = _slotViews.Count;
+            if (grid != null)
+            {
+                ApplyBestGridCellSize(grid, w, h, _slotViews.Count);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+            }
+
+            BindSlots();
+            return true;
+        }
+
+        private static void ApplyBestGridCellSize(GridLayoutGroup grid, float width, float height, int count)
+        {
             int bestCols = 1;
             float bestCellArea = 0f;
 
             for (int cols = 1; cols <= count; cols++)
             {
                 int rows = Mathf.CeilToInt((float)count / cols);
-                float cellW = (w - grid.padding.left - grid.padding.right - grid.spacing.x * (cols - 1)) / cols;
-                float cellH = (h - grid.padding.top - grid.padding.bottom - grid.spacing.y * (rows - 1)) / rows;
+                float cellW = (width - grid.padding.left - grid.padding.right - grid.spacing.x * (cols - 1)) / cols;
+                float cellH = (height - grid.padding.top - grid.padding.bottom - grid.spacing.y * (rows - 1)) / rows;
                 if (cellW <= 0f || cellH <= 0f) continue;
                 float area = cellW * cellH;
                 if (area > bestCellArea)
@@ -156,14 +228,28 @@ private IEnumerator RefreshGridCellSize()
             }
 
             int bestRows = Mathf.CeilToInt((float)count / bestCols);
-            float finalCellW = (w - grid.padding.left - grid.padding.right - grid.spacing.x * (bestCols - 1)) / bestCols;
-            float finalCellH = (h - grid.padding.top - grid.padding.bottom - grid.spacing.y * (bestRows - 1)) / bestRows;
+            float finalCellW = (width - grid.padding.left - grid.padding.right - grid.spacing.x * (bestCols - 1)) / bestCols;
+            float finalCellH = (height - grid.padding.top - grid.padding.bottom - grid.spacing.y * (bestRows - 1)) / bestRows;
 
             grid.cellSize = new Vector2(finalCellW, finalCellH);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = bestCols;
+        }
 
-            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+        private void BindSlots()
+        {
+            if (_slotsBound)
+            {
+                return;
+            }
+
+            int count = Mathf.Min(_slotViews.Count, _slotCards.Count);
+            for (int i = 0; i < count; i++)
+            {
+                _slotViews[i].Bind(_slotCards[i]);
+            }
+
+            _slotsBound = true;
         }
 
         private void EnsureRuntimeReferences()
