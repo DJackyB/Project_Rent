@@ -1,5 +1,7 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace BaoZuPo.UI
 {
@@ -13,17 +15,38 @@ namespace BaoZuPo.UI
         public TextMeshProUGUI titleText;
         public TextMeshProUGUI infoText;
         public GameObject panel;
+        public Button playAgainButton;
+        public TextMeshProUGUI playAgainButtonText;
 
-        private void Start()
+        private bool _isShowing;
+
+        private void Awake()
+        {
+            RegisterPlayAgainButton();
+
+            if (!_isShowing)
+            {
+                Hide();
+            }
+        }
+
+        public void Hide()
         {
             if (panel != null)
             {
                 panel.SetActive(false);
             }
+
+            gameObject.SetActive(false);
         }
 
         public void Show(int totalTurns, int finalMoney)
         {
+            _isShowing = true;
+            gameObject.SetActive(true);
+            _isShowing = false;
+            RegisterPlayAgainButton();
+
             if (panel != null)
             {
                 panel.SetActive(true);
@@ -37,6 +60,29 @@ namespace BaoZuPo.UI
             if (infoText != null)
             {
                 infoText.text = GameText.GameOverInfo(totalTurns, finalMoney);
+            }
+
+            if (playAgainButtonText != null)
+            {
+                playAgainButtonText.text = GameText.GameOverPlayAgain;
+            }
+        }
+
+        public void PlayAgain()
+        {
+            var activeScene = SceneManager.GetActiveScene();
+            if (activeScene.IsValid())
+            {
+                SceneManager.LoadScene(activeScene.name);
+            }
+        }
+
+        private void RegisterPlayAgainButton()
+        {
+            if (playAgainButton != null)
+            {
+                playAgainButton.onClick.RemoveListener(PlayAgain);
+                playAgainButton.onClick.AddListener(PlayAgain);
             }
         }
     }

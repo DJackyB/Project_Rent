@@ -151,6 +151,10 @@ MonoBehaviour:
     m_Key: GameText.PhaseName.Settle
     m_Metadata:
       m_Items: []
+  - m_Id: 1891577940140032
+    m_Key: GameText.GameOverPlayAgain
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

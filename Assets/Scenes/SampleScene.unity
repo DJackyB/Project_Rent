@@ -387,6 +387,8 @@ MonoBehaviour:
   moneyText: {fileID: 616991567}
   deckText: {fileID: 772026244}
   moneyTargetAnchor: {fileID: 616991566}
+  playCostPopupVerticalGap: 18
+  settlementTotalPopupVerticalGap: 40
   useRuntimeGeneratedLayout: 0
 --- !u!1 &188570025
 GameObject:
@@ -1690,7 +1692,6 @@ MonoBehaviour:
   phasePanel: {fileID: 1301725120}
   gameOverPanel: {fileID: 960762405}
   cardDragController: {fileID: 554379329}
-  _feedbackBootstrap: {fileID: 800451236}
   _settlementSequenceController: {fileID: 1542138120}
   _cardRewardPanel: {fileID: 745084975}
 --- !u!114 &406429157
@@ -1770,8 +1771,8 @@ RectTransform:
   m_Children:
   - {fileID: 268654951}
   - {fileID: 2686549601}
-  - {fileID: 616991566}
   - {fileID: 83359800}
+  - {fileID: 616991566}
   - {fileID: 1760923138}
   - {fileID: 1301725119}
   - {fileID: 970503291}
@@ -3664,7 +3665,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 706.39886, y: 0}
   m_SizeDelta: {x: 131.54399, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &821995479
@@ -4262,7 +4263,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &960762404
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4451,7 +4452,6 @@ MonoBehaviour:
   transferScale: 1.02
   entryGapSeconds: 0.04
   stageGapSeconds: 0.1
-  usePopupSettlementFeedback: 1
 --- !u!224 &970503291
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5885,7 +5885,6 @@ MonoBehaviour:
   transferScale: 1.02
   entryGapSeconds: 0.04
   stageGapSeconds: 0.1
-  usePopupSettlementFeedback: 1
 --- !u!224 &1542138121
 RectTransform:
   m_ObjectHideFlags: 0

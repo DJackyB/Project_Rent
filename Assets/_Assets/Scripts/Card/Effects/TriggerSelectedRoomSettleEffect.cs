@@ -49,7 +49,10 @@ namespace BaoZuPo.Card.Effects
                     if (baseRent > 0)
                     {
                         context.MoneyManager.AddMoney(baseRent);
-                        context.SettlementCapture.RecordBase(baseRent, GameText.SettlementBase);
+                        if (context.SettlementCapture.IsCapturing)
+                        {
+                            context.SettlementCapture.RecordBase(baseRent, GameText.SettlementBase);
+                        }
                     }
 
                     // 若租客的 SettleEffect 中包含 TriggerSelectedRoomSettle，则跳过此租客的 SettleEffect，避免递归。

@@ -109,7 +109,8 @@ namespace BaoZuPo.UI
         {
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
-            gameOverPanel?.Show(e.TotalTurns, e.FinalMoney);
+            int totalEarnedMoney = e.FinalMoney + (MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
+            gameOverPanel?.Show(e.TotalTurns, totalEarnedMoney);
         }
 
         private void OnCardRewardOffered(GameEvents.CardRewardOffered e)

@@ -119,7 +119,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 677036053
-    m_Localized: 'You survived {0} turns\nFinal Money: {1}'
+    m_Localized: 'You survived {0} turns\nTotal Money: {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 677036054
@@ -152,6 +152,10 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 677036061
     m_Localized: Settle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140032
+    m_Localized: Play Again
     m_Metadata:
       m_Items: []
   references:

@@ -632,6 +632,126 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void PlayCard_RoomTenant_ResolvesInstantEffectAfterPlacement()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(153, "First")),
+                CreateLibrary("NormalPool", CreateCardData(154, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(155, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var room = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 1);
+            var tenantData = CreateCardData(156, "Instant Tenant");
+            tenantData.cardType = CardType.Tenant;
+            tenantData.targetKind = CardPlayTargetKind.Room;
+            tenantData.cost = 0;
+            tenantData.instantEffect = "AddMoney;60";
+
+            context.DeckManager.AddCardToHand(tenantData);
+            var card = context.DeckManager.Hand[0];
+
+            context.TurnManager.StartActionPhase();
+
+            bool played = context.TurnManager.PlayCard(card, room);
+
+            Assert.IsTrue(played);
+            Assert.AreEqual(1060, context.MoneyManager.CurrentMoney);
+            Assert.AreSame(room, card.PlacedRoom);
+            Assert.AreEqual(1, room.TenantCount);
+        }
+
+        [Test]
+        public void ExecuteSettlePhase_FieldCardWaitTurns_DoNotExpireOrTriggerDestroyEffect()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(157, "First")),
+                CreateLibrary("NormalPool", CreateCardData(158, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+            context.GameManager.gameConfig.loanInterval = 0;
+            SetPrivateField(context.TurnManager, "_currentTurn", 1);
+
+            var room = context.BoardManager.AddRoom(tenantSlots: 1, equipmentSlots: 1);
+            var tenantData = CreateCardData(159, "Lease End Bonus");
+            tenantData.cardType = CardType.Tenant;
+            tenantData.targetKind = CardPlayTargetKind.Room;
+            tenantData.waitTurns = 1;
+            tenantData.durability = 0;
+            tenantData.destroyEffect = "AddMoney;70";
+            var tenant = new CardInstance(tenantData);
+            Assert.IsTrue(room.PlaceCard(tenant));
+
+            GameEvents.CardDestroyed? destroyed = null;
+            void OnCardDestroyed(GameEvents.CardDestroyed e) => destroyed = e;
+            EventBus.Subscribe<GameEvents.CardDestroyed>(OnCardDestroyed);
+
+            try
+            {
+                context.TurnManager.ExecuteSettlePhase();
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.CardDestroyed>(OnCardDestroyed);
+            }
+
+            Assert.AreEqual(1000, context.MoneyManager.CurrentMoney);
+            Assert.IsFalse(tenant.IsDestroyed);
+            Assert.AreEqual(1, tenant.CurrentWait);
+            Assert.AreEqual(1, room.TenantCount);
+            Assert.IsFalse(destroyed.HasValue);
+        }
+
+        [Test]
+        public void ResolveHandWaitAndDiscardExpired_RemovesExpiredWaitingCardWithoutDestroyOrDiscard()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(160, "First")),
+                CreateLibrary("NormalPool", CreateCardData(161, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(162, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            var waitingCardData = CreateCardData(163, "Waiting Tenant");
+            waitingCardData.cardType = CardType.Tenant;
+            waitingCardData.waitTurns = 1;
+            waitingCardData.destroyEffect = "AddMoney;70";
+            var waitingCard = context.DeckManager.AddCardToHand(waitingCardData);
+
+            int removed = context.DeckManager.ResolveHandWaitAndDiscardExpired();
+
+            Assert.AreEqual(1, removed);
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+            Assert.AreEqual(0, context.DeckManager.DiscardPileCount);
+            Assert.IsFalse(waitingCard.IsDestroyed);
+            Assert.AreEqual(1000, context.MoneyManager.CurrentMoney);
+        }
+
+        [Test]
+        public void GameOverPanel_HidesRootOnAwake_AndShowsRootAndPanel()
+        {
+            var root = CreateGameObject("GameOverPanel");
+            var panel = CreateGameObject("Panel");
+            panel.transform.SetParent(root.transform);
+
+            var gameOverPanel = root.AddComponent<UIGameOverPanel>();
+            gameOverPanel.panel = panel;
+
+            gameOverPanel.Hide();
+            Assert.IsFalse(root.activeSelf);
+            Assert.IsFalse(panel.activeSelf);
+
+            gameOverPanel.Show(3, 20);
+
+            Assert.IsTrue(root.activeSelf);
+            Assert.IsTrue(panel.activeSelf);
+        }
+
+        [Test]
         public void InitializeSystems_ThrowsWhenBoardManagerIsMissing()
         {
             CreateComponent<MoneyManager>("MoneyManager");
