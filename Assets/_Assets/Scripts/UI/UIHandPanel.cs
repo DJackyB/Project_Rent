@@ -413,6 +413,7 @@ namespace BaoZuPo.UI
             {
                 var card = hand[i];
                 var cardView = FindView(card);
+                bool reusedExistingView = cardView != null;
                 if (cardView == null)
                 {
                     cardView = CreateCardView(container, card);
@@ -426,6 +427,11 @@ namespace BaoZuPo.UI
                 if (cardView.transform.parent != container)
                 {
                     cardView.transform.SetParent(container, false);
+                }
+
+                if (reusedExistingView)
+                {
+                    cardView.RefreshViewState();
                 }
 
                 cardView.transform.SetSiblingIndex(_orderedViewsBuffer.Count);
