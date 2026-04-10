@@ -404,10 +404,7 @@ namespace BaoZuPo.UI
                     _currentZone?.PlayRejectedFeedback();
                 }
 
-                if (validation.BlockReason == CardPlayBlockReason.InsufficientMoney)
-                {
-                    ShowInsufficientMoneyPopup();
-                }
+                ShowValidationFailurePopup(validation);
 
                 sequence.Append(_activeRect.DOShakeAnchorPos(invalidShakeDuration, invalidShakeStrength, 18, 90f, false, true));
             }
@@ -430,11 +427,13 @@ namespace BaoZuPo.UI
             }
 
             SetZoneHighlight(false);
+            DetachPlaceholderFromLayout();
 
             if (_originalParent != null)
             {
                 _activeRect.SetParent(_originalParent, true);
-                _activeRect.SetSiblingIndex(Mathf.Min(_originalSiblingIndex, _originalParent.childCount));
+                int maxSiblingIndex = Mathf.Max(0, _originalParent.childCount - 1);
+                _activeRect.SetSiblingIndex(Mathf.Min(_originalSiblingIndex, maxSiblingIndex));
                 _activeRect.anchorMin = _originalAnchorMin;
                 _activeRect.anchorMax = _originalAnchorMax;
                 _activeRect.pivot = _originalPivot;
@@ -529,6 +528,7 @@ namespace BaoZuPo.UI
         {
             if (destroyPlaceholder && _placeholderObject != null)
             {
+                DetachPlaceholderFromLayout();
                 Destroy(_placeholderObject);
             }
 
@@ -542,6 +542,17 @@ namespace BaoZuPo.UI
             _originalAnchorMin = Vector2.zero;
             _originalAnchorMax = Vector2.one;
             _originalPivot = new Vector2(0.5f, 0.5f);
+        }
+
+        private void DetachPlaceholderFromLayout()
+        {
+            if (_placeholderObject == null)
+            {
+                return;
+            }
+
+            _placeholderObject.SetActive(false);
+            _placeholderObject.transform.SetParent(null, false);
         }
 
         private void SetZoneHighlight(bool highlighted)
@@ -559,7 +570,7 @@ namespace BaoZuPo.UI
                 || validation.BlockReason == CardPlayBlockReason.TargetFull;
         }
 
-        private void ShowInsufficientMoneyPopup()
+        private void ShowValidationFailurePopup(CardPlayValidationResult validation)
         {
             var layer = UIFeedbackPopupLayer.GetOrCreate(_rootCanvas);
             if (layer == null)
@@ -568,10 +579,19 @@ namespace BaoZuPo.UI
             }
 
             RectTransform anchor = _activeHandler != null ? _activeHandler.RectTransform : null;
+            var cardData = _activeHandler != null && _activeHandler.CardView != null && _activeHandler.CardView.Card != null
+                ? _activeHandler.CardView.Card.Data
+                : null;
+            string message = GameText.CardPlayBlockReason(validation.BlockReason, cardData);
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
             layer.Show(new UIFeedbackPopupRequest
             {
                 Anchor = anchor,
-                Text = GameText.InsufficientMoney,
+                Text = message,
                 Category = UIFeedbackPopupCategory.Negative,
                 ScreenOffset = insufficientMoneyPopupOffset,
                 UseScreenCenterFallback = anchor == null

@@ -32,6 +32,9 @@ namespace BaoZuPo.UI
 
         [SerializeField] private UISettlementSequenceController _settlementSequenceController;
         [SerializeField] private UICardRewardPanel _cardRewardPanel;
+        private bool _isUiReady;
+        private bool _hasPendingTurnStarted;
+        private GameEvents.TurnStarted _pendingTurnStarted;
 
         private void OnEnable()
         {
@@ -55,6 +58,13 @@ namespace BaoZuPo.UI
             InitializeCardDragController();
             RefreshAll();
             phasePanel?.UpdatePhase(CurrentPhase.ToString());
+            _isUiReady = true;
+
+            if (_hasPendingTurnStarted)
+            {
+                HandleTurnStarted(_pendingTurnStarted);
+                _hasPendingTurnStarted = false;
+            }
         }
 
         private void OnDisable()
@@ -100,9 +110,32 @@ namespace BaoZuPo.UI
 
         private void OnTurnStarted(GameEvents.TurnStarted e)
         {
+            if (!_isUiReady)
+            {
+                _pendingTurnStarted = e;
+                _hasPendingTurnStarted = true;
+                return;
+            }
+
+            HandleTurnStarted(e);
+        }
+
+        private void HandleTurnStarted(GameEvents.TurnStarted e)
+        {
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
             topBar?.RefreshTurn(e.TurnNumber);
+
+            int turnsUntilLoanDue = 0;
+            bool isLoanDueToday = false;
+            if (TurnManager.Instance != null
+                && TurnManager.Instance.TryGetNextLoanPreview(out int dueTurn, out _))
+            {
+                turnsUntilLoanDue = Mathf.Max(0, dueTurn - e.TurnNumber);
+                isLoanDueToday = turnsUntilLoanDue == 0;
+            }
+
+            BaoZuPoFeedbackAdapter.PublishTurnStartReminders(e.TurnNumber, turnsUntilLoanDue, isLoanDueToday);
             RefreshHudAndHand();
         }
 
