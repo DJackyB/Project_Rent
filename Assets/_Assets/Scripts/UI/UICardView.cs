@@ -219,6 +219,11 @@ namespace BaoZuPo.UI
 
         }
 
+        public void RefreshDragLayoutBaseline(bool snapToIdle = true)
+        {
+            _dragHandler?.RefreshLayoutBaseline(snapToIdle);
+        }
+
         private void CacheReferences()
         {
             if (background == null)

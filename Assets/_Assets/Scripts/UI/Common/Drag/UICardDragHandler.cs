@@ -18,11 +18,17 @@ namespace BaoZuPo.UI.Common.Drag
     public class UICardDragHandler : MonoBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
     {
         [Header("Hand Motion")]
-        [SerializeField] private float hoverLift = 18f;
-        [SerializeField] private float hoverScale = 1.05f;
+        [SerializeField] private float hoverLift = 22f;
+        [SerializeField] private float hoverScale = 1.075f;
         [SerializeField] private float hoverDuration = 0.12f;
-        [SerializeField] private float dragScale = 1.08f;
+        [SerializeField] private float dragScale = 1.1f;
         [SerializeField] private float dragScaleDuration = 0.1f;
+
+        [Header("Idle Motion")]
+        [SerializeField] private bool idleMotionEnabled = true;
+        [SerializeField] private Vector2 idleMotionAmplitude = new(4f, 2.4f);
+        [SerializeField] private Vector2 idleMotionFrequency = new(0.38f, 0.54f);
+        [SerializeField] private float idleMotionSmoothing = 6f;
 
         private UICardView _cardView;
         private CanvasGroup _canvasGroup;
@@ -30,12 +36,17 @@ namespace BaoZuPo.UI.Common.Drag
         private RectTransform _rectTransform;
         private Tween _hoverMoveTween;
         private Tween _hoverScaleTween;
-        private Vector2 _idleAnchoredPosition;
+        private Vector2 _baseAnchoredPosition;
         private bool _isBound;
         private bool _loggedMissingCardView;
         private bool _loggedMissingCanvasGroup;
         private bool _loggedMissingLayoutElement;
         private bool _loggedMissingRectTransform;
+        private bool _isHovered;
+        private bool _hasLayoutBaseline;
+        private Vector2 _idleMotionOffset;
+        private float _idleMotionSeedX;
+        private float _idleMotionSeedY;
 
         public UICardView CardView => _cardView != null ? _cardView : GetComponent<UICardView>();
         public CanvasGroup CanvasGroup => _canvasGroup;
@@ -45,13 +56,22 @@ namespace BaoZuPo.UI.Common.Drag
         private void Awake()
         {
             CacheReferences();
+            InitializeIdleMotionSeeds();
             ResetToIdleVisual(false);
+        }
+
+        private void Update()
+        {
+            UpdateIdleMotion();
         }
 
         private void OnDisable()
         {
             StopTweens();
             _rectTransform?.DOKill(false);
+            _isHovered = false;
+            _hasLayoutBaseline = false;
+            _idleMotionOffset = Vector2.zero;
             if (UICardDragController.Instance != null)
             {
                 UICardDragController.Instance.NotifySourceDisabled(this);
@@ -70,12 +90,15 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
-            _idleAnchoredPosition = _rectTransform.anchoredPosition;
+            _baseAnchoredPosition = _rectTransform.anchoredPosition;
             _isBound = _cardView != null && _cardView.CurrentContext == CardViewContext.Hand && _cardView.Card != null;
             enabled = _isBound;
             _cardView?.SetDragging(false, true);
             _cardView?.SetSelected(false, true);
-            ResetToIdleVisual(false);
+            _isHovered = false;
+            _hasLayoutBaseline = false;
+            ResetIdleMotionOffset();
+            ApplyIdleVisualStateWithoutBaseline();
         }
 
         public void Unbind()
@@ -84,7 +107,10 @@ namespace BaoZuPo.UI.Common.Drag
             enabled = false;
             _cardView?.SetDragging(false, true);
             _cardView?.SetSelected(false, true);
-            ResetToIdleVisual(false);
+            _isHovered = false;
+            _hasLayoutBaseline = false;
+            ResetIdleMotionOffset();
+            ApplyIdleVisualStateWithoutBaseline();
         }
 
         public void OnInitializePotentialDrag(PointerEventData eventData)
@@ -132,6 +158,7 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
+            _isHovered = true;
             _cardView?.SetSelected(true);
             AnimateHover(true);
         }
@@ -143,6 +170,7 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
+            _isHovered = false;
             _cardView?.SetSelected(false);
             AnimateHover(false);
         }
@@ -157,6 +185,7 @@ namespace BaoZuPo.UI.Common.Drag
 
             if (dragging)
             {
+                ResetIdleMotionOffset();
                 _cardView?.SetDragging(true);
                 _cardView?.SetSelected(true);
                 _hoverMoveTween = _rectTransform.DOAnchorPos(_rectTransform.anchoredPosition, 0f).SetUpdate(true);
@@ -177,7 +206,15 @@ namespace BaoZuPo.UI.Common.Drag
             }
 
             StopTweens();
-            Vector2 targetPosition = _idleAnchoredPosition == default ? _rectTransform.anchoredPosition : _idleAnchoredPosition;
+            ResetIdleMotionOffset();
+
+            if (!_hasLayoutBaseline)
+            {
+                ApplyIdleVisualStateWithoutBaseline();
+                return;
+            }
+
+            Vector2 targetPosition = _baseAnchoredPosition;
 
             if (!animate)
             {
@@ -194,6 +231,34 @@ namespace BaoZuPo.UI.Common.Drag
             _cardView?.SetSelected(false);
         }
 
+        public void RefreshLayoutBaseline(bool snapToIdle = true)
+        {
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            CaptureLayoutBaseline();
+            _hasLayoutBaseline = true;
+            ResetIdleMotionOffset();
+
+            if (!snapToIdle || IsDragging())
+            {
+                return;
+            }
+
+            StopTweens();
+            if (_isHovered)
+            {
+                _rectTransform.anchoredPosition = _baseAnchoredPosition + new Vector2(0f, hoverLift);
+                _rectTransform.localScale = Vector3.one * hoverScale;
+                return;
+            }
+
+            _rectTransform.anchoredPosition = _baseAnchoredPosition;
+            _rectTransform.localScale = Vector3.one;
+        }
+
         private void AnimateHover(bool hovered)
         {
             if (_rectTransform == null)
@@ -201,15 +266,12 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
+            EnsureLayoutBaseline();
             StopTweens();
-            if (hovered)
-            {
-                RefreshIdlePositionFromLayout();
-            }
-
+            ResetIdleMotionOffset();
             Vector2 targetPosition = hovered
-                ? _idleAnchoredPosition + new Vector2(0f, hoverLift)
-                : _idleAnchoredPosition;
+                ? _baseAnchoredPosition + new Vector2(0f, hoverLift)
+                : _baseAnchoredPosition;
             Vector3 targetScale = hovered ? Vector3.one * hoverScale : Vector3.one;
 
             _hoverMoveTween = _rectTransform.DOAnchorPos(targetPosition, hoverDuration).SetEase(Ease.OutQuad).SetUpdate(true);
@@ -278,16 +340,85 @@ namespace BaoZuPo.UI.Common.Drag
             _hoverScaleTween = null;
         }
 
-        private void RefreshIdlePositionFromLayout()
+        private void InitializeIdleMotionSeeds()
         {
-            var parentRect = _rectTransform.parent as RectTransform;
-            if (parentRect != null)
+            int seed = Mathf.Abs(GetInstanceID());
+            _idleMotionSeedX = (seed * 0.173f) + 11.3f;
+            _idleMotionSeedY = (seed * 0.231f) + 47.9f;
+        }
+
+        private void UpdateIdleMotion()
+        {
+            if (_rectTransform == null)
             {
-                Canvas.ForceUpdateCanvases();
-                LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+                return;
             }
 
-            _idleAnchoredPosition = _rectTransform.anchoredPosition;
+            if (!_isBound || !idleMotionEnabled || _isHovered || IsDragging() || IsHoverTweenRunning())
+            {
+                return;
+            }
+
+            EnsureLayoutBaseline();
+            float time = Time.unscaledTime;
+            Vector2 targetOffset = new(
+                (Mathf.PerlinNoise(_idleMotionSeedX, time * idleMotionFrequency.x) - 0.5f) * 2f * idleMotionAmplitude.x,
+                (Mathf.PerlinNoise(_idleMotionSeedY, time * idleMotionFrequency.y) - 0.5f) * 2f * idleMotionAmplitude.y);
+
+            float smoothing = idleMotionSmoothing <= 0f
+                ? 1f
+                : 1f - Mathf.Exp(-idleMotionSmoothing * Time.unscaledDeltaTime);
+            _idleMotionOffset = Vector2.Lerp(_idleMotionOffset, targetOffset, smoothing);
+            _rectTransform.anchoredPosition = _baseAnchoredPosition + _idleMotionOffset;
+        }
+
+        private bool IsHoverTweenRunning()
+        {
+            return IsTweenRunning(_hoverMoveTween) || IsTweenRunning(_hoverScaleTween);
+        }
+
+        private static bool IsTweenRunning(Tween tween)
+        {
+            return tween != null && tween.IsActive() && tween.IsPlaying();
+        }
+
+        private void ResetIdleMotionOffset()
+        {
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            _idleMotionOffset = Vector2.zero;
+        }
+
+        private void EnsureLayoutBaseline()
+        {
+            if (_rectTransform == null || _hasLayoutBaseline)
+            {
+                return;
+            }
+
+            CaptureLayoutBaseline();
+            _hasLayoutBaseline = true;
+        }
+
+        private void CaptureLayoutBaseline()
+        {
+            _baseAnchoredPosition = _rectTransform.anchoredPosition;
+        }
+
+        private void ApplyIdleVisualStateWithoutBaseline()
+        {
+            if (_rectTransform == null)
+            {
+                return;
+            }
+
+            StopTweens();
+            _rectTransform.localScale = Vector3.one;
+            _cardView?.SetDragging(false, true);
+            _cardView?.SetSelected(false, true);
         }
     }
 }

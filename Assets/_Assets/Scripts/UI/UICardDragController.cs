@@ -455,6 +455,7 @@ namespace BaoZuPo.UI
 
             if (_activeHandler != null)
             {
+                _activeHandler.RefreshLayoutBaseline(true);
                 _activeHandler.ResetToIdleVisual(false);
             }
 

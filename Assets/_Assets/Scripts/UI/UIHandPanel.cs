@@ -48,6 +48,7 @@ namespace BaoZuPo.UI
         [SerializeField] private float targetPunchScale = 1.04f;
 
         private readonly List<UICardView> _cardViews = new();
+        private readonly List<UICardView> _orderedViewsBuffer = new();
         private Canvas _rootCanvas;
         private RectTransform _animationLayerRoot;
         private bool _runtimeAnimationLayerReady;
@@ -56,25 +57,13 @@ namespace BaoZuPo.UI
 
         public void RefreshHand()
         {
-            var container = EnsureContainer();
-            if (cardPrefab == null)
+            if (!TryResolveHandContext(out var container, out var hand))
             {
-                Debug.LogError("[UIHandPanel] Missing cardPrefab.");
                 return;
             }
 
-            ClearContainer(container);
-            _cardViews.Clear();
-
-            var hand = DeckManager.Instance.Hand;
-            for (int i = 0; i < hand.Count; i++)
-            {
-                var cardView = CreateCardView(container, hand[i]);
-                if (cardView != null)
-                {
-                    _cardViews.Add(cardView);
-                }
-            }
+            SyncHandViews(container, hand);
+            RefreshHandLayout(container as RectTransform, true);
         }
 
         public IEnumerator PlayIncomingCard(CardInstance card, UIHandIncomingAnimationKind kind, Vector3? sourceWorldPosition = null)
@@ -96,7 +85,7 @@ namespace BaoZuPo.UI
                 yield break;
             }
 
-            Canvas.ForceUpdateCanvases();
+            RefreshHandLayout(handContainer as RectTransform, true);
             var targetRect = targetView.transform as RectTransform;
             if (targetRect == null)
             {
@@ -205,51 +194,19 @@ namespace BaoZuPo.UI
                 return null;
             }
 
-            var container = EnsureContainer();
-            if (container == null || cardPrefab == null)
+            if (!TryResolveHandContext(out var container, out var hand))
             {
                 return null;
             }
 
-            if (!IsCardInHand(card))
+            if (!ContainsCard(hand, card))
             {
-                RefreshHand();
-                return FindView(card);
+                return null;
             }
 
-            int expectedCountBeforeAppend = Mathf.Max(0, DeckManager.Instance.HandCount - 1);
-            if (_cardViews.Count != expectedCountBeforeAppend)
-            {
-                RefreshHand();
-                return FindView(card);
-            }
-
-            var cardView = CreateCardView(container, card);
-            if (cardView != null)
-            {
-                _cardViews.Add(cardView);
-            }
-
-            return cardView;
-        }
-
-        private static bool IsCardInHand(CardInstance card)
-        {
-            if (card == null || DeckManager.Instance == null)
-            {
-                return false;
-            }
-
-            var hand = DeckManager.Instance.Hand;
-            for (int i = 0; i < hand.Count; i++)
-            {
-                if (ReferenceEquals(hand[i], card))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            SyncHandViews(container, hand);
+            RefreshHandLayout(container as RectTransform, true);
+            return FindView(card);
         }
 
         private UICardView CreateCardView(Transform parent, CardInstance card)
@@ -259,12 +216,37 @@ namespace BaoZuPo.UI
             if (cardView == null)
             {
                 Debug.LogError("[UIHandPanel] Card prefab requires UICardView.");
-                Destroy(cardObject);
+                DestroyCardObjectImmediately(cardObject);
                 return null;
             }
 
             cardView.Setup(card, CardViewContext.Hand, this);
             return cardView;
+        }
+
+        private bool TryResolveHandContext(out Transform container, out IReadOnlyList<CardInstance> hand)
+        {
+            container = EnsureContainer();
+            hand = null;
+
+            if (container == null)
+            {
+                return false;
+            }
+
+            if (cardPrefab == null)
+            {
+                Debug.LogError("[UIHandPanel] Missing cardPrefab.");
+                return false;
+            }
+
+            if (DeckManager.Instance == null)
+            {
+                return false;
+            }
+
+            hand = DeckManager.Instance.Hand;
+            return true;
         }
 
         private Transform EnsureContainer()
@@ -421,7 +403,61 @@ namespace BaoZuPo.UI
             }
         }
 
-        private static void ClearContainer(Transform container)
+        private void SyncHandViews(Transform container, IReadOnlyList<CardInstance> hand)
+        {
+            RemoveViewsMissingFromHand(hand);
+            RemoveUntrackedChildren(container);
+
+            _orderedViewsBuffer.Clear();
+            for (int i = 0; i < hand.Count; i++)
+            {
+                var card = hand[i];
+                var cardView = FindView(card);
+                if (cardView == null)
+                {
+                    cardView = CreateCardView(container, card);
+                }
+
+                if (cardView == null)
+                {
+                    continue;
+                }
+
+                if (cardView.transform.parent != container)
+                {
+                    cardView.transform.SetParent(container, false);
+                }
+
+                cardView.transform.SetSiblingIndex(_orderedViewsBuffer.Count);
+                _orderedViewsBuffer.Add(cardView);
+            }
+
+            _cardViews.Clear();
+            _cardViews.AddRange(_orderedViewsBuffer);
+        }
+
+        private void RemoveViewsMissingFromHand(IReadOnlyList<CardInstance> hand)
+        {
+            for (int i = _cardViews.Count - 1; i >= 0; i--)
+            {
+                var view = _cardViews[i];
+                if (view == null)
+                {
+                    _cardViews.RemoveAt(i);
+                    continue;
+                }
+
+                if (ContainsCard(hand, view.Card))
+                {
+                    continue;
+                }
+
+                DisposeView(view);
+                _cardViews.RemoveAt(i);
+            }
+        }
+
+        private void RemoveUntrackedChildren(Transform container)
         {
             if (container == null)
             {
@@ -431,18 +467,100 @@ namespace BaoZuPo.UI
             for (int i = container.childCount - 1; i >= 0; i--)
             {
                 var child = container.GetChild(i);
-                foreach (var rect in child.GetComponentsInChildren<RectTransform>(true))
+                var view = child.GetComponent<UICardView>();
+                if (view != null && _cardViews.Contains(view))
                 {
-                    rect.DOKill(false);
+                    continue;
                 }
 
-                foreach (var canvasGroup in child.GetComponentsInChildren<CanvasGroup>(true))
-                {
-                    canvasGroup.DOKill(false);
-                }
-
-                Destroy(child.gameObject);
+                DisposeCardObject(child.gameObject);
             }
+        }
+
+        private void RefreshHandLayout(RectTransform containerRect, bool snapToIdle)
+        {
+            if (containerRect == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            for (int i = 0; i < _cardViews.Count; i++)
+            {
+                if (_cardViews[i] != null)
+                {
+                    _cardViews[i].RefreshDragLayoutBaseline(snapToIdle);
+                }
+            }
+        }
+
+        private static bool ContainsCard(IReadOnlyList<CardInstance> hand, CardInstance card)
+        {
+            if (hand == null || card == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < hand.Count; i++)
+            {
+                if (ReferenceEquals(hand[i], card))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void DisposeView(UICardView view)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            DisposeCardObject(view.gameObject);
+        }
+
+        private static void DisposeCardObject(GameObject cardObject)
+        {
+            if (cardObject == null)
+            {
+                return;
+            }
+
+            foreach (var rect in cardObject.GetComponentsInChildren<RectTransform>(true))
+            {
+                rect.DOKill(false);
+            }
+
+            foreach (var canvasGroup in cardObject.GetComponentsInChildren<CanvasGroup>(true))
+            {
+                canvasGroup.DOKill(false);
+            }
+
+            // Detach before destroying so stale cards do not affect same-frame layout.
+            cardObject.SetActive(false);
+            cardObject.transform.SetParent(null, false);
+            DestroyCardObjectImmediately(cardObject);
+        }
+
+        private static void DestroyCardObjectImmediately(GameObject cardObject)
+        {
+            if (cardObject == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(cardObject);
+                return;
+            }
+
+            DestroyImmediate(cardObject);
         }
     }
 }
