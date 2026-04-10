@@ -107,6 +107,22 @@ MonoBehaviour:
     m_Key: GameText.FeedbackLoan
     m_Metadata:
       m_Items: []
+  - m_Id: 1891577940140033
+    m_Key: GameText.InsufficientMoney
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140034
+    m_Key: GameText.NextLoanDue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140035
+    m_Key: GameText.NextLoanAmount
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140036
+    m_Key: GameText.LoanPreviewUnavailable
+    m_Metadata:
+      m_Items: []
   - m_Id: 677036051
     m_Key: GameText.Wait
     m_Metadata:

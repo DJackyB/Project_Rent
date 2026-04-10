@@ -3,6 +3,7 @@ using BaoZuPo.Board;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Feel;
 using BaoZuPo.UI.Common.Drag;
+using BaoZuPo.UI.Common.FeedbackPopup;
 using DG.Tweening;
 using Martian.Tooltip;
 using UnityEngine;
@@ -33,6 +34,7 @@ namespace BaoZuPo.UI
         [SerializeField] private float successDuration = 0.22f;
         [SerializeField] private float invalidShakeDuration = 0.14f;
         [SerializeField] private float invalidShakeStrength = 18f;
+        [SerializeField] private Vector2 insufficientMoneyPopupOffset = new(0f, 96f);
 
         private readonly List<RaycastResult> _raycastResults = new();
 
@@ -172,7 +174,7 @@ namespace BaoZuPo.UI
                 return;
             }
 
-            ReturnToHand(true);
+            ReturnToHand(true, validation);
         }
 
         public void RequestDrop(UICardDropZone zone)
@@ -380,7 +382,7 @@ namespace BaoZuPo.UI
             return validation.IsValid;
         }
 
-        private void ReturnToHand(bool shakeFirst)
+        private void ReturnToHand(bool shakeFirst, CardPlayValidationResult validation = default)
         {
             if (_activeRect == null)
             {
@@ -396,7 +398,17 @@ namespace BaoZuPo.UI
             if (shakeFirst)
             {
                 _activeHandler?.CardView?.PlayRejectedInteractionFeedback();
-                _currentZone?.PlayRejectedFeedback();
+                // 金钱不足属于支付失败，不应该污染房间目标非法的红色反馈。
+                if (ShouldPlayRejectedZoneFeedback(validation))
+                {
+                    _currentZone?.PlayRejectedFeedback();
+                }
+
+                if (validation.BlockReason == CardPlayBlockReason.InsufficientMoney)
+                {
+                    ShowInsufficientMoneyPopup();
+                }
+
                 sequence.Append(_activeRect.DOShakeAnchorPos(invalidShakeDuration, invalidShakeStrength, 18, 90f, false, true));
             }
 
@@ -498,7 +510,7 @@ namespace BaoZuPo.UI
                     _activeCanvasGroup.blocksRaycasts = false;
                 }
 
-                ReturnToHand(true);
+                ReturnToHand(true, validation);
                 return;
             }
 
@@ -537,6 +549,32 @@ namespace BaoZuPo.UI
             {
                 _currentZone.SetHighlighted(highlighted);
             }
+        }
+
+        private bool ShouldPlayRejectedZoneFeedback(CardPlayValidationResult validation)
+        {
+            return validation.BlockReason == CardPlayBlockReason.MissingTarget
+                || validation.BlockReason == CardPlayBlockReason.InvalidTarget
+                || validation.BlockReason == CardPlayBlockReason.TargetFull;
+        }
+
+        private void ShowInsufficientMoneyPopup()
+        {
+            var layer = UIFeedbackPopupLayer.GetOrCreate(_rootCanvas);
+            if (layer == null)
+            {
+                return;
+            }
+
+            RectTransform anchor = _activeHandler != null ? _activeHandler.RectTransform : null;
+            layer.Show(new UIFeedbackPopupRequest
+            {
+                Anchor = anchor,
+                Text = GameText.InsufficientMoney,
+                Category = UIFeedbackPopupCategory.Negative,
+                ScreenOffset = insufficientMoneyPopupOffset,
+                UseScreenCenterFallback = anchor == null
+            });
         }
     }
 }

@@ -20,6 +20,10 @@ namespace BaoZuPo.UI
         public static string Cost(int cost) => Resolve("GameText.Cost", $"Cost {cost}", cost);
         public static string FeedbackCost(int cost) => Resolve("GameText.FeedbackCost", $"Cost -{cost}", cost);
         public static string FeedbackLoan(int amount) => Resolve("GameText.FeedbackLoan", $"Loan -{amount}", amount);
+        public static string InsufficientMoney => Resolve("GameText.InsufficientMoney", "Insufficient Money");
+        public static string NextLoanDue(int turn) => Resolve("GameText.NextLoanDue", $"Next Payment Day: Turn {turn}", turn);
+        public static string NextLoanAmount(int amount) => Resolve("GameText.NextLoanAmount", $"Next Mortgage: {amount}", amount);
+        public static string LoanPreviewUnavailable => Resolve("GameText.LoanPreviewUnavailable", "Next Mortgage: --");
         public static string Wait(int turns) => Resolve("GameText.Wait", $"Wait {turns}", turns);
         public static string Lease => Resolve("GameText.Lease", "Lease");
         public static string Durability => Resolve("GameText.Durability", "Durability");
