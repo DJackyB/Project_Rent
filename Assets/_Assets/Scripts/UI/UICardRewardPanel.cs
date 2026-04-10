@@ -38,6 +38,7 @@ namespace BaoZuPo.UI
         [SerializeField] private BaoZuPoFeelFeedbackInstaller _feelFeedbackInstaller;
 
         [Header("Reward Motion")]
+        [SerializeField] private float _rewardCardScale = 2f;
         [SerializeField] private float _revealDuration = 0.2f;
         [SerializeField] private float _revealStagger = 0.06f;
         [SerializeField] private float _revealYOffset = 24f;
@@ -215,9 +216,12 @@ namespace BaoZuPo.UI
 
             if (cardRect != null)
             {
-                cardRect.localScale = Vector3.one * 0.92f;
+                cardRect.localScale = Vector3.one * (_rewardCardScale * 0.92f);
                 cardRect.anchoredPosition += new Vector2(0f, -_revealYOffset);
             }
+
+            var hoverScale = cardObject.GetComponent<UICardHoverScale>();
+            hoverScale?.RefreshBaseline();
         }
 
         private void PlayRevealSequence()
@@ -261,7 +265,7 @@ namespace BaoZuPo.UI
                             .SetEase(Ease.OutBack)
                             .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
                     _revealSequence.Join(
-                        cardRect.DOScale(Vector3.one, _revealDuration)
+                        cardRect.DOScale(Vector3.one * _rewardCardScale, _revealDuration)
                             .SetEase(Ease.OutBack)
                             .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
                 }
@@ -301,7 +305,8 @@ namespace BaoZuPo.UI
 
                 if (cardRect != null)
                 {
-                    _selectionSequence.Join(cardRect.DOScale(Vector3.one * (isSelected ? 1.08f : 0.94f), _selectedDuration)
+                    float targetScale = _rewardCardScale * (isSelected ? 1.08f : 0.94f);
+                    _selectionSequence.Join(cardRect.DOScale(Vector3.one * targetScale, _selectedDuration)
                         .SetEase(isSelected ? Ease.OutBack : Ease.OutQuad)
                         .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
                     if (!isSelected)

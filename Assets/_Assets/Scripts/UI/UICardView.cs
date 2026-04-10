@@ -139,6 +139,11 @@ namespace BaoZuPo.UI
 
             CacheReferences();
             ValidateVisualConfiguration();
+            RefreshViewState();
+        }
+
+        public void RefreshViewState()
+        {
             RefreshPresentation();
             UpdateTooltipTrigger();
             UpdateButtonState();
@@ -582,7 +587,9 @@ namespace BaoZuPo.UI
 
         private void UpdateTooltipTrigger()
         {
-            bool allowTooltip = Card != null && CurrentContext != CardViewContext.TooltipPreview;
+            bool allowTooltip = Card != null
+                && CurrentContext != CardViewContext.TooltipPreview
+                && CurrentContext != CardViewContext.RewardPick;
             if (!allowTooltip)
             {
                 DisableTooltipTrigger();

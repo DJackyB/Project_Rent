@@ -58,6 +58,20 @@ namespace BaoZuPo.UI
             }
         }
 
+        public void RefreshBaseline()
+        {
+            _originalScale = transform.localScale;
+            if (_rectTransform == null)
+            {
+                _rectTransform = transform as RectTransform;
+            }
+
+            if (_rectTransform != null)
+            {
+                _originalAnchoredPosition = _rectTransform.anchoredPosition;
+            }
+        }
+
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (_dragHandler != null && _dragHandler.isActiveAndEnabled)
