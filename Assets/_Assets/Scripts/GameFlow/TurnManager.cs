@@ -85,6 +85,31 @@ namespace BaoZuPo.GameFlow
         /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
+        public bool TryGetNextLoanPreview(out int dueTurn, out int amount)
+        {
+            dueTurn = 0;
+            amount = 0;
+
+            var gameManager = GameManager.Instance;
+            if (gameManager == null || gameManager.gameConfig == null)
+            {
+                return false;
+            }
+
+            var config = gameManager.gameConfig;
+            if (config.loanInterval <= 0)
+            {
+                return false;
+            }
+
+            // 顶栏展示“下一次会发生的扣款”，当前回合若正好命中贷款周期，仍显示当前回合。
+            dueTurn = _currentTurn <= 0
+                ? config.loanInterval
+                : ((_currentTurn - 1) / config.loanInterval + 1) * config.loanInterval;
+            amount = CalculateCurrentLoanPayment(config.loanAmount, config.loanGrowthFactor);
+            return true;
+        }
+
         private void OnEnable()
         {
             EnsureEventSubscriptions();

@@ -110,6 +110,22 @@ MonoBehaviour:
     m_Localized: Loan -{0}
     m_Metadata:
       m_Items: []
+  - m_Id: 1891577940140033
+    m_Localized: Insufficient Money
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140034
+    m_Localized: 'Next Payment Day: Turn {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140035
+    m_Localized: 'Next Mortgage: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140036
+    m_Localized: 'Next Mortgage: --'
+    m_Metadata:
+      m_Items: []
   - m_Id: 677036051
     m_Localized: Wait {0}
     m_Metadata:

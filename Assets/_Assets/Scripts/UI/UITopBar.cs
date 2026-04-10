@@ -18,7 +18,9 @@ namespace BaoZuPo.UI
         [Header("Optional Scene References")]
         public TextMeshProUGUI turnText;
         public TextMeshProUGUI moneyText;
-        public TextMeshProUGUI deckText;
+        public TextMeshProUGUI totalSpent;
+        public TextMeshProUGUI nextLoanDueText;
+        public TextMeshProUGUI nextLoanAmountText;
         [SerializeField] private RectTransform moneyTargetAnchor;
         [SerializeField] private float playCostPopupVerticalGap = 18f;
         [SerializeField] private float settlementTotalPopupVerticalGap = 40f;
@@ -38,6 +40,7 @@ namespace BaoZuPo.UI
         {
             EventBus.Subscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
+            EventBus.Subscribe<GameEvents.LoanPayment>(OnLoanPayment);
         }
 
         private void Start()
@@ -50,6 +53,7 @@ namespace BaoZuPo.UI
         {
             EventBus.Unsubscribe<GameEvents.MoneyChanged>(OnMoneyChanged);
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
+            EventBus.Unsubscribe<GameEvents.LoanPayment>(OnLoanPayment);
         }
 
         public void Refresh()
@@ -60,6 +64,7 @@ namespace BaoZuPo.UI
             RefreshTurn(turnManager != null ? turnManager.CurrentTurn : 0);
             RefreshMoney(moneyManager != null ? moneyManager.CurrentMoney : _authoritativeMoney);
             RefreshSummary();
+            RefreshLoanPreview();
         }
 
         public void RefreshTurn(int turn)
@@ -124,9 +129,32 @@ namespace BaoZuPo.UI
 
         public void RefreshSummary()
         {
-            if (deckText != null)
+            if (totalSpent != null)
             {
-                deckText.text = GameText.Spent(MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
+                totalSpent.text = GameText.Spent(MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
+            }
+        }
+
+        public void RefreshLoanPreview()
+        {
+            string dueLabel = GameText.LoanPreviewUnavailable;
+            string amountLabel = GameText.LoanPreviewUnavailable;
+
+            if (TurnManager.Instance != null
+                && TurnManager.Instance.TryGetNextLoanPreview(out int dueTurn, out int amount))
+            {
+                dueLabel = GameText.NextLoanDue(dueTurn);
+                amountLabel = GameText.NextLoanAmount(amount);
+            }
+
+            if (nextLoanDueText != null)
+            {
+                nextLoanDueText.text = dueLabel;
+            }
+
+            if (nextLoanAmountText != null)
+            {
+                nextLoanAmountText.text = amountLabel;
             }
         }
 
@@ -145,6 +173,12 @@ namespace BaoZuPo.UI
         private void OnTurnStarted(GameEvents.TurnStarted e)
         {
             RefreshTurn(e.TurnNumber);
+            RefreshLoanPreview();
+        }
+
+        private void OnLoanPayment(GameEvents.LoanPayment e)
+        {
+            RefreshLoanPreview();
         }
 
         private void EnsureHudLayout()
@@ -165,9 +199,9 @@ namespace BaoZuPo.UI
                 createdTurnText = true;
             }
 
-            if (deckText == null)
+            if (totalSpent == null)
             {
-                deckText = CreateRuntimeLabel(rootCanvas.transform, "SpendSummary");
+                totalSpent = CreateRuntimeLabel(rootCanvas.transform, "SpendSummary");
                 createdDeckText = true;
             }
 
@@ -185,8 +219,8 @@ namespace BaoZuPo.UI
 
             if (useRuntimeGeneratedLayout || createdDeckText)
             {
-                deckText.transform.SetParent(rootCanvas.transform, false);
-                ApplyTopLayout(deckText.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
+                totalSpent.transform.SetParent(rootCanvas.transform, false);
+                ApplyTopLayout(totalSpent.rectTransform, new Vector2(120f, -20f), TextAlignmentOptions.MidlineRight);
             }
 
             if (useRuntimeGeneratedLayout || createdMoneyText)

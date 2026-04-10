@@ -137,7 +137,11 @@ namespace BaoZuPo.UI
 
         private void RefreshContracts(GameObject cardPrefab)
         {
-            EnsureContractPanel();
+            if (!EnsureContractPanel())
+            {
+                return;
+            }
+
             ClearContainer(_contractContainer);
             _contractViews.Clear();
             _contractLookup.Clear();
@@ -171,100 +175,40 @@ namespace BaoZuPo.UI
             return roomCardEntryPrefab;
         }
 
-        private void EnsureContractPanel()
+        private bool EnsureContractPanel()
         {
             if (_contractContainer != null)
             {
                 RefreshContractPanelText();
-                return;
-            }
-
-            if (contractContainer != null)
-            {
-                _contractContainer = contractContainer;
-                EnsureContractContainerLayout(_contractContainer);
-                RefreshContractPanelText();
-                return;
+                return true;
             }
 
             if (contractPanelRoot == null)
             {
-                var existingRoot = transform.Find("ContractPanel");
-                if (existingRoot != null)
-                {
-                    contractPanelRoot = existingRoot as RectTransform;
-                }
+                Debug.LogError("[UIBoardPanel] contractPanelRoot is not assigned. Please wire the ContractPanel RectTransform in the scene.", this);
+                return false;
             }
 
-            if (contractPanelRoot != null)
+            if (contractTitleText == null)
             {
-                if (contractTitleText == null)
-                {
-                    contractTitleText = contractPanelRoot.Find("Title")?.GetComponent<TextMeshProUGUI>();
-                }
-
-                if (contractContainer == null)
-                {
-                    contractContainer = contractPanelRoot.Find("ContractContainer");
-                }
-
-                if (contractContainer != null)
-                {
-                    _contractContainer = contractContainer;
-                    EnsureContractContainerLayout(_contractContainer);
-                    RefreshContractPanelText();
-                    return;
-                }
+                Debug.LogError("[UIBoardPanel] contractTitleText is not assigned. Please wire the ContractPanel title text in the scene.", contractPanelRoot);
+                return false;
             }
 
-            var panelRoot = new GameObject("ContractPanel", typeof(RectTransform), typeof(Image));
-            panelRoot.transform.SetParent(transform, false);
-            contractPanelRoot = panelRoot.GetComponent<RectTransform>();
+            if (contractContainer == null)
+            {
+                Debug.LogError("[UIBoardPanel] contractContainer is not assigned. Please wire the ContractContainer transform in the scene.", contractPanelRoot);
+                return false;
+            }
 
-            var panelRect = panelRoot.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(1f, 1f);
-            panelRect.anchorMax = new Vector2(1f, 1f);
-            panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.anchoredPosition = new Vector2(-24f, -72f);
-            panelRect.sizeDelta = new Vector2(240f, 420f);
+            if (!EnsureContractContainerLayout(contractContainer))
+            {
+                return false;
+            }
 
-            var panelImage = panelRoot.GetComponent<Image>();
-            panelImage.color = new Color(0.10f, 0.12f, 0.15f, 0.72f);
-            panelImage.raycastTarget = false;
-
-            var titleObject = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            titleObject.transform.SetParent(panelRoot.transform, false);
-
-            var titleRect = titleObject.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0f, 1f);
-            titleRect.anchorMax = new Vector2(1f, 1f);
-            titleRect.pivot = new Vector2(0.5f, 1f);
-            titleRect.offsetMin = new Vector2(12f, -40f);
-            titleRect.offsetMax = new Vector2(-12f, -12f);
-
-            var titleText = titleObject.GetComponent<TextMeshProUGUI>();
-            titleText.text = GameText.Contracts;
-            titleText.fontSize = 22f;
-            titleText.alignment = TextAlignmentOptions.Center;
-            titleText.color = Color.white;
-            titleText.raycastTarget = false;
-            contractTitleText = titleText;
-
-            var listObject = new GameObject("ContractContainer", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-            listObject.transform.SetParent(panelRoot.transform, false);
-            _contractContainer = listObject.transform;
-            contractContainer = _contractContainer;
-
-            var listRect = listObject.GetComponent<RectTransform>();
-            listRect.anchorMin = new Vector2(0f, 0f);
-            listRect.anchorMax = new Vector2(1f, 1f);
-            listRect.pivot = new Vector2(0.5f, 1f);
-            listRect.offsetMin = new Vector2(12f, 12f);
-            listRect.offsetMax = new Vector2(-12f, -48f);
-
-            var layout = listObject.GetComponent<VerticalLayoutGroup>();
-            EnsureContractContainerLayout(listObject.transform);
-
+            _contractContainer = contractContainer;
+            RefreshContractPanelText();
+            return true;
         }
 
         private void RefreshContractPanelText()
@@ -297,34 +241,31 @@ namespace BaoZuPo.UI
             }
         }
 
-        private static void EnsureContractContainerLayout(Transform container)
+        private static bool EnsureContractContainerLayout(Transform container)
         {
             if (container == null)
             {
-                return;
+                return false;
             }
 
-            var layout = container.GetComponent<VerticalLayoutGroup>();
+            var layout = container.GetComponent<LayoutGroup>();
             if (layout == null)
             {
-                layout = container.gameObject.AddComponent<VerticalLayoutGroup>();
+                Debug.LogError(
+                    $"[UIBoardPanel] ContractContainer '{container.name}' is missing a layout component. Add a HorizontalLayoutGroup or VerticalLayoutGroup in the scene.",
+                    container);
+                return false;
             }
 
-            layout.spacing = 12f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-
-            var fitter = container.GetComponent<ContentSizeFitter>();
-            if (fitter == null)
+            if (container.GetComponent<ContentSizeFitter>() == null)
             {
-                fitter = container.gameObject.AddComponent<ContentSizeFitter>();
+                Debug.LogError(
+                    $"[UIBoardPanel] ContractContainer '{container.name}' is missing ContentSizeFitter. Add and configure it in the scene.",
+                    container);
+                return false;
             }
 
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return true;
         }
     }
 }
