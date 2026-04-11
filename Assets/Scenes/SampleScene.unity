@@ -811,9 +811,9 @@ MonoBehaviour:
   dragScale: 1.1
   dragScaleDuration: 0.1
   idleMotionEnabled: 1
-  idleMotionAmplitude: {x: 1.6, y: 1.1}
-  idleMotionFrequency: {x: 0.32, y: 0.45}
-  idleMotionSmoothing: 8
+  idleMotionAmplitude: {x: 4, y: 2.4}
+  idleMotionFrequency: {x: 0.38, y: 0.54}
+  idleMotionSmoothing: 6
 --- !u!114 &235104562
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1100,6 +1100,9 @@ MonoBehaviour:
   contractPanelRoot: {fileID: 2686549601}
   contractContainer: {fileID: 2686549609}
   contractTitleText: {fileID: 2686549607}
+  destroyFlashSeconds: 0.08
+  destroyMoveSeconds: 0.28
+  destroyExitYOffset: 60
 --- !u!114 &268654953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3544,6 +3547,7 @@ MonoBehaviour:
   _skipButton: {fileID: 1758846441}
   _skipButtonText: {fileID: 1367862519}
   _feelFeedbackInstaller: {fileID: 1169507777}
+  _rewardCardScale: 2
   _revealDuration: 0.2
   _revealStagger: 0.06
   _revealYOffset: 24
@@ -3948,7 +3952,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 706.39886, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 131.54399, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &821995479
@@ -4024,9 +4028,9 @@ MonoBehaviour:
   dragScale: 1.1
   dragScaleDuration: 0.1
   idleMotionEnabled: 1
-  idleMotionAmplitude: {x: 1.6, y: 1.1}
-  idleMotionFrequency: {x: 0.32, y: 0.45}
-  idleMotionSmoothing: 8
+  idleMotionAmplitude: {x: 4, y: 2.4}
+  idleMotionFrequency: {x: 0.38, y: 0.54}
+  idleMotionSmoothing: 6
 --- !u!114 &821995484
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8014,6 +8018,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff2fb6ded2a0ce44b950afae61ac2ae6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.GameFlow.TurnManager
+  shufflePauseBeforeSeconds: 0.35
+  shufflePauseAfterSeconds: 0.35
   _currentTurn: 0
   _isGameOver: 0
   _loanPaymentCount: 0
@@ -8039,6 +8045,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2050853278}
   - component: {fileID: 2050853279}
+  - component: {fileID: 2050853280}
   m_Layer: 5
   m_Name: 'UIFeedbackPopupLayer '
   m_TagString: Untagged
@@ -8101,6 +8108,29 @@ MonoBehaviour:
     SettleOffset: {x: 0, y: 0}
     ExitOffset: {x: 0, y: 18}
   popupPrefab: {fileID: 0}
+--- !u!223 &2050853280
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050853277}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 1000
+  m_TargetDisplay: 0
 --- !u!1 &2058529224
 GameObject:
   m_ObjectHideFlags: 0
@@ -8719,6 +8749,18 @@ PrefabInstance:
     - target: {fileID: 8437351133603453310, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -5.399994
+      objectReference: {fileID: 0}
+    - target: {fileID: 8606280637259481637, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.7000122
+      objectReference: {fileID: 0}
+    - target: {fileID: 8606280637259481637, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -29.044708
+      objectReference: {fileID: 0}
+    - target: {fileID: 9204572917878383521, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 6.899994
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
