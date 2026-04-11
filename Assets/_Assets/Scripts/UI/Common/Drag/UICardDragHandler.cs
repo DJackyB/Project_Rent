@@ -83,6 +83,18 @@ namespace BaoZuPo.UI.Common.Drag
             _cardView = cardView;
             CacheReferences();
 
+            bool shouldBind = _cardView != null
+                && _canvasGroup != null
+                && _layoutElement != null
+                && _rectTransform != null
+                && _cardView.CurrentContext == CardViewContext.Hand
+                && _cardView.Card != null;
+
+            if (shouldBind && _isBound && enabled && ReferenceEquals(_cardView, cardView))
+            {
+                return;
+            }
+
             if (_cardView == null || _canvasGroup == null || _layoutElement == null || _rectTransform == null)
             {
                 _isBound = false;
@@ -231,16 +243,17 @@ namespace BaoZuPo.UI.Common.Drag
             _cardView?.SetSelected(false);
         }
 
-        public void RefreshLayoutBaseline(bool snapToIdle = true)
+        public void RefreshLayoutBaseline(bool snapToIdle = true, bool preserveIdleMotion = false)
         {
             if (_rectTransform == null)
             {
                 return;
             }
 
+            Vector2 preservedIdleOffset = preserveIdleMotion ? _idleMotionOffset : Vector2.zero;
             CaptureLayoutBaseline();
             _hasLayoutBaseline = true;
-            ResetIdleMotionOffset();
+            _idleMotionOffset = preserveIdleMotion ? preservedIdleOffset : Vector2.zero;
 
             if (!snapToIdle || IsDragging())
             {
@@ -255,7 +268,7 @@ namespace BaoZuPo.UI.Common.Drag
                 return;
             }
 
-            _rectTransform.anchoredPosition = _baseAnchoredPosition;
+            _rectTransform.anchoredPosition = _baseAnchoredPosition + _idleMotionOffset;
             _rectTransform.localScale = Vector3.one;
         }
 

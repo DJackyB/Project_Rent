@@ -94,7 +94,6 @@ namespace BaoZuPo.UI
         private Tween _descColorTween;
         private Tween _invalidFramePunchTween;
         private Tween _invalidBackgroundPunchTween;
-
         public CardInstance Card { get; private set; }
         public CardViewContext CurrentContext { get; private set; } = CardViewContext.Hand;
         public RectTransform HoverAnchor => transform as RectTransform;
@@ -224,9 +223,9 @@ namespace BaoZuPo.UI
 
         }
 
-        public void RefreshDragLayoutBaseline(bool snapToIdle = true)
+        public void RefreshDragLayoutBaseline(bool snapToIdle = true, bool preserveIdleMotion = false)
         {
-            _dragHandler?.RefreshLayoutBaseline(snapToIdle);
+            _dragHandler?.RefreshLayoutBaseline(snapToIdle, preserveIdleMotion);
         }
 
         private void CacheReferences()

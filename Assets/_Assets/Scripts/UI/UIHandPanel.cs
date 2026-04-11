@@ -497,7 +497,7 @@ namespace BaoZuPo.UI
             {
                 if (_cardViews[i] != null)
                 {
-                    _cardViews[i].RefreshDragLayoutBaseline(snapToIdle);
+                    _cardViews[i].RefreshDragLayoutBaseline(snapToIdle, preserveIdleMotion: true);
                 }
             }
         }
