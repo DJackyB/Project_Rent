@@ -51,6 +51,27 @@ namespace BaoZuPo.UI
             FinalizeSlotsOrScheduleFallback();
         }
 
+        /// <summary>
+        /// 若此房间视图持有指定卡牌，偷走其卡牌对象并返回；否则返回 null。
+        /// </summary>
+        public GameObject TryStealCardObjectForAnimation(CardInstance card)
+        {
+            if (card == null)
+            {
+                return null;
+            }
+
+            foreach (var slot in _slotViews)
+            {
+                if (slot != null && ReferenceEquals(slot.BoundCard, card))
+                {
+                    return slot.StealCardObject();
+                }
+            }
+
+            return null;
+        }
+
         private void BuildSlots()
         {
             var container = cardListContainer != null ? cardListContainer : transform;

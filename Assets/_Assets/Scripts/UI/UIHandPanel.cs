@@ -49,6 +49,7 @@ namespace BaoZuPo.UI
 
         private readonly List<UICardView> _cardViews = new();
         private readonly List<UICardView> _orderedViewsBuffer = new();
+        private readonly HashSet<UICardView> _exitingViews = new();
         private Canvas _rootCanvas;
         private RectTransform _animationLayerRoot;
         private bool _runtimeAnimationLayerReady;
@@ -166,6 +167,66 @@ namespace BaoZuPo.UI
             if (betweenCardsPauseSeconds > 0f)
             {
                 yield return new WaitForSeconds(betweenCardsPauseSeconds);
+            }
+        }
+
+        /// <summary>
+        /// 即发卡打出后的弃牌出场动画（抽卡的反向动作：上移 + 缩小 + 淡出）。
+        /// 立即从 _cardViews 摘除并加入 _exitingViews，防止 RefreshHand 提前销毁视图。
+        /// 动画结束后自动销毁卡牌对象。
+        /// </summary>
+        public void PlayDiscardAnimation(CardInstance card)
+        {
+            var view = FindView(card);
+            if (view == null)
+            {
+                return;
+            }
+
+            _cardViews.Remove(view);
+            _exitingViews.Add(view);
+
+            EnsureAnimationLayer();
+            if (_animationLayerRoot != null)
+            {
+                view.transform.SetParent(_animationLayerRoot, true);
+            }
+
+            StartCoroutine(PlayOutgoingSequence(view));
+        }
+
+        private IEnumerator PlayOutgoingSequence(UICardView view)
+        {
+            if (view == null)
+            {
+                yield break;
+            }
+
+            var rect = view.transform as RectTransform;
+            var canvasGroup = EnsureCanvasGroup(view.gameObject);
+
+            float moveSeconds = drawMoveSeconds * 1.1f;
+            Vector3 exitOffset = new Vector3(0f, drawStartYOffset, 0f);
+
+            var seq = DOTween.Sequence().SetUpdate(true).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy);
+
+            if (rect != null)
+            {
+                seq.Join(rect.DOMove(rect.position + exitOffset, moveSeconds).SetEase(Ease.InCubic).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(rect.DOScale(Vector3.one * drawStartScale, moveSeconds).SetEase(Ease.InBack).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
+            }
+
+            if (canvasGroup != null)
+            {
+                seq.Join(canvasGroup.DOFade(0f, moveSeconds * 0.75f).SetEase(Ease.InQuad).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
+            }
+
+            yield return seq.WaitForCompletion();
+
+            _exitingViews.Remove(view);
+            if (view != null)
+            {
+                DisposeCardObject(view.gameObject);
             }
         }
 
@@ -455,6 +516,12 @@ namespace BaoZuPo.UI
 
                 if (ContainsCard(hand, view.Card))
                 {
+                    continue;
+                }
+
+                if (_exitingViews.Contains(view))
+                {
+                    _cardViews.RemoveAt(i);
                     continue;
                 }
 

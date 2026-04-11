@@ -1,8 +1,12 @@
+using System.Collections;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
+using BaoZuPo.Core;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Drag;
+using DG.Tweening;
+using Martian.EventBus;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,12 +29,28 @@ namespace BaoZuPo.UI
         [SerializeField] private Transform contractContainer;
         [SerializeField] private TextMeshProUGUI contractTitleText;
 
+        [Header("Destroy Animation")]
+        [SerializeField] private float destroyFlashSeconds = 0.08f;
+        [SerializeField] private float destroyMoveSeconds = 0.28f;
+        [SerializeField] private float destroyExitYOffset = 60f;
+
         private readonly List<UIRoomView> _roomViews = new();
         private readonly List<UICardView> _contractViews = new();
         private readonly Dictionary<RoomSlot, UIRoomView> _roomLookup = new();
         private readonly Dictionary<CardInstance, UICardView> _contractLookup = new();
 
         private Transform _contractContainer;
+        private RectTransform _destroyAnimationLayer;
+
+        private void OnEnable()
+        {
+            EventBus.Subscribe<GameEvents.CardDestroyed>(OnCardDestroyed);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Unsubscribe<GameEvents.CardDestroyed>(OnCardDestroyed);
+        }
 
         public void RefreshBoard()
         {
@@ -71,6 +91,122 @@ namespace BaoZuPo.UI
         public RectTransform ResolvePlayAreaAnchor()
         {
             return playAreaDropZone != null ? playAreaDropZone.DropAnchor : transform as RectTransform;
+        }
+
+        private void OnCardDestroyed(GameEvents.CardDestroyed evt)
+        {
+            if (evt.Card == null)
+            {
+                return;
+            }
+
+            // 先在房间里找
+            foreach (var roomView in _roomViews)
+            {
+                var stolen = roomView.TryStealCardObjectForAnimation(evt.Card);
+                if (stolen != null)
+                {
+                    StartCoroutine(PlayDestroyAnimation(stolen));
+                    return;
+                }
+            }
+
+            // 再在合同区找
+            if (_contractLookup.TryGetValue(evt.Card, out var contractView) && contractView != null)
+            {
+                var obj = contractView.gameObject;
+                _contractLookup.Remove(evt.Card);
+                _contractViews.Remove(contractView);
+                obj.transform.SetParent(null, true);
+                StartCoroutine(PlayDestroyAnimation(obj));
+            }
+        }
+
+        private IEnumerator PlayDestroyAnimation(GameObject cardObject)
+        {
+            if (cardObject == null)
+            {
+                yield break;
+            }
+
+            EnsureDestroyAnimationLayer();
+            if (_destroyAnimationLayer != null)
+            {
+                cardObject.transform.SetParent(_destroyAnimationLayer, true);
+            }
+
+            var rect = cardObject.transform as RectTransform;
+            var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = cardObject.AddComponent<CanvasGroup>();
+            }
+
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+
+            // 红闪 + 下沉 + 缩小 + 淡出
+            var graphics = cardObject.GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+            var originalColors = new Color[graphics.Length];
+            for (int i = 0; i < graphics.Length; i++)
+            {
+                originalColors[i] = graphics[i].color;
+            }
+
+            var seq = DOTween.Sequence().SetUpdate(true).SetLink(cardObject, LinkBehaviour.KillOnDestroy);
+
+            // 红闪
+            foreach (var g in graphics)
+            {
+                seq.Join(g.DOColor(new Color(1f, 0.2f, 0.2f, g.color.a), destroyFlashSeconds)
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+            }
+
+            seq.AppendInterval(destroyFlashSeconds * 0.5f);
+
+            // 缩小 + 下沉 + 淡出
+            if (rect != null)
+            {
+                seq.Join(rect.DOScale(Vector3.zero, destroyMoveSeconds).SetEase(Ease.InBack).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(rect.DOMove(rect.position + new Vector3(0f, -destroyExitYOffset, 0f), destroyMoveSeconds).SetEase(Ease.InCubic).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+            }
+
+            seq.Join(canvasGroup.DOFade(0f, destroyMoveSeconds * 0.6f).SetEase(Ease.InQuad).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+
+            yield return seq.WaitForCompletion();
+
+            if (cardObject != null)
+            {
+                Destroy(cardObject);
+            }
+        }
+
+        private void EnsureDestroyAnimationLayer()
+        {
+            if (_destroyAnimationLayer != null)
+            {
+                return;
+            }
+
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var layerObject = new GameObject("BoardDestroyAnimationLayer", typeof(RectTransform), typeof(CanvasGroup));
+            layerObject.transform.SetParent(canvas.transform, false);
+
+            _destroyAnimationLayer = layerObject.GetComponent<RectTransform>();
+            _destroyAnimationLayer.anchorMin = Vector2.zero;
+            _destroyAnimationLayer.anchorMax = Vector2.one;
+            _destroyAnimationLayer.offsetMin = Vector2.zero;
+            _destroyAnimationLayer.offsetMax = Vector2.zero;
+
+            var cg = layerObject.GetComponent<CanvasGroup>();
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
         }
 
         private void EnsurePlayAreaDropZone()

@@ -122,10 +122,29 @@ namespace BaoZuPo.UI
                 Debug.LogError("[UIRoomSlotView] Card prefab is missing AspectRatioFitter. Add it to Card.prefab.", rect.gameObject);
                 return;
             }
-
+            
             Vector2 designSize = slotContext == CardViewContext.RoomEquipment ? equipmentSlotSize : tenantSlotSize;
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = designSize.x / designSize.y;
+        }
+
+        /// <summary>
+        /// 将当前卡牌对象从插槽中取出并返回，同时立即显示占位符。
+        /// 调用方负责对取出的对象播放动画并最终销毁。
+        /// 若插槽为空则返回 null。
+        /// </summary>
+        public GameObject StealCardObject()
+        {
+            var obj = _currentCardObject;
+            if (obj == null)
+            {
+                return null;
+            }
+
+            _currentCardObject = null;
+            obj.transform.SetParent(null, true);
+            ShowPlaceholder();
+            return obj;
         }
 
         private void ClearCurrentCard()

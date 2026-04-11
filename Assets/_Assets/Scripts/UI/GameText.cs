@@ -58,6 +58,7 @@ namespace BaoZuPo.UI
         public static string RewardTitle => Resolve("GameText.RewardTitle", "Choose a Reward");
         public static string RewardBoostedTitle => Resolve("GameText.RewardBoostedTitle", "Rare Reward!");
         public static string RewardSkip => Resolve("GameText.RewardSkip", "Skip");
+        public static string DeckShuffled => Resolve("GameText.DeckShuffled", "牌堆循环");
 
         public static string RoomSummary(int roomNumber, int tenantCount, int tenantCapacity, int equipmentCount, int equipmentCapacity)
             => Resolve(
