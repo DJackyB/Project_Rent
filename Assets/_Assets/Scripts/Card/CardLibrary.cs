@@ -10,23 +10,19 @@ namespace BaoZuPo.Card
     /// 每个库有唯一的 libraryId，可在效果字符串中按名称引用。
     ///
     /// 用途示例：
-    /// - "Main" 库：基础卡池
-    /// - "EventPool" 库：事件卡专用池
-    /// - "Reward" 库：奖励阶段卡池
+    /// - "0" 库（FirstTurnPool）：第一回合抽卡池
+    /// - "1" 库（NormalTurnPool）：主抽卡池，游戏开始时据此初始化牌堆
+    /// - "2" 库（RewardPool）：奖励阶段卡池
     ///
     /// 配置方式：
-    /// 1. 在 Inspector 中创建新 CardLibrary.asset
-    /// 2. 设置 libraryId（如 "EventPool"）
-    /// 3. 拖拽卡牌到 cards 列表
-    /// 4. 重复卡牌表示权重（同一卡重复 3 次表示 3x 权重）
+    /// 在 Excel 的 CardLibrary sheet 中维护（libraryId | cardId | quantity），
+    /// 手动运行 CardDataImporter 同步卡库。
     /// </summary>
     [CreateAssetMenu(fileName = "NewCardLibrary", menuName = "BaoZuPo/Card Library")]
     public class CardLibrary : ScriptableObject
     {
         /// <summary>
         /// 库标识符。必须唯一，用于效果字符串和代码查询。
-        /// 格式建议：英文、下划线、无空格（如 "MainPool"、"Event_Deck"）。
-        /// 用于 DrawCard;N;libraryId 格式的效果字符串。
         /// </summary>
         [Tooltip("Stable id used by effect strings such as DrawCard;2;EventPool.")]
         public string libraryId;
@@ -39,12 +35,11 @@ namespace BaoZuPo.Card
         public string displayName;
 
         /// <summary>
-        /// 卡牌列表。明确指定库中的卡牌及其权重。
-        /// 相同卡牌出现多次表示权重加倍（用于调整稀有度）。
-        /// 示例：[A, B, B, C] 表示 A:25%, B:50%, C:25%。
+        /// 卡牌条目列表。每条记录包含一张卡牌及其在初始牌堆中的份数。
+        /// 数据由 CardDataImporter 从 Excel 的 CardLibrary sheet 同步生成，勿手动修改。
         /// </summary>
-        [Tooltip("Explicit card list. Repeated entries count as extra copies/weight.")]
-        public List<CardData> cards = new();
+        [Tooltip("Card entries with quantity. Synced from Excel CardLibrary sheet.")]
+        public List<CardLibraryEntry> entries = new();
 
         /// <summary>返回该库的显示名称。优先使用 displayName，否则使用资源名。</summary>
         public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;

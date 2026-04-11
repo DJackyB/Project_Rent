@@ -58,7 +58,7 @@ namespace BaoZuPo.Tests.Card
             var library = CardLibraryDatabase.GetById("AllCards");
 
             Assert.NotNull(library);
-            Assert.AreEqual(50, library.cards.Count);
+            Assert.AreEqual(50, library.entries.Count);
         }
 
         [Test]
@@ -875,7 +875,7 @@ namespace BaoZuPo.Tests.Card
             var library = CreateScriptableObject<CardLibrary>();
             library.libraryId = libraryId;
             library.displayName = libraryId;
-            library.cards = new List<CardData>(cards);
+            library.entries = cards.Select(c => new CardLibraryEntry { card = c, quantity = 1 }).ToList();
             return library;
         }
 

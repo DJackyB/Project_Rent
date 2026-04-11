@@ -134,6 +134,7 @@ namespace BaoZuPo.Core
                 gameConfig.defaultEquipmentSlots
             );
             deckManager.Initialize(gameConfig.maxHandSize);
+            deckManager.InitializeDeck(gameConfig.normalTurnDrawLibrary);
 
             // Step 6: 构建游戏上下文（统一接口）
             GameContext = new GameContext

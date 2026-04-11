@@ -51,6 +51,10 @@ namespace BaoZuPo.GameFlow
         private const float PreparePhaseOutroSeconds = 0.08f;
         private const float RewardPickOutroSeconds = 0.1f;
 
+        [Header("洗牌提示")]
+        [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
+        [SerializeField] private float shufflePauseAfterSeconds = 0.35f;
+
         [Header("Debug")]
         [SerializeField] private int _currentTurn;
         [SerializeField] private bool _isGameOver;
@@ -176,11 +180,10 @@ namespace BaoZuPo.GameFlow
 
             var config = GameManager.Instance.gameConfig;
             int drawCount = _currentTurn == 1 ? config.firstTurnDrawCount : config.normalTurnDrawCount;
-            var drawLibrary = _currentTurn == 1 ? config.firstTurnDrawLibrary : config.normalTurnDrawLibrary;
-            BeginPrepareDrawPresentation(drawLibrary, drawCount);
+            BeginPrepareDrawPresentation(drawCount);
         }
 
-        private void BeginPrepareDrawPresentation(CardLibrary drawLibrary, int drawCount)
+        private void BeginPrepareDrawPresentation(int drawCount)
         {
             _isPreparePresentationPending = false;
 
@@ -191,23 +194,22 @@ namespace BaoZuPo.GameFlow
 
             if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
-                Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
+                Deck.DeckManager.Instance.Draw(drawCount);
                 UIManager.Instance?.RefreshAll();
                 return;
             }
 
             _isPreparePresentationPending = true;
             StartCoroutine(PlayPrepareDrawSequence(
-                drawLibrary,
                 drawCount,
                 _currentTurn == 1 ? UIHandIncomingAnimationKind.FirstTurnDraw : UIHandIncomingAnimationKind.TurnDraw));
         }
 
-        private IEnumerator PlayPrepareDrawSequence(CardLibrary drawLibrary, int drawCount, UIHandIncomingAnimationKind animationKind)
+        private IEnumerator PlayPrepareDrawSequence(int drawCount, UIHandIncomingAnimationKind animationKind)
         {
             if (UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
-                Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
+                Deck.DeckManager.Instance.Draw(drawCount);
                 _isPreparePresentationPending = false;
                 yield break;
             }
@@ -216,7 +218,17 @@ namespace BaoZuPo.GameFlow
 
             for (int i = 0; i < drawCount; i++)
             {
-                var drawn = Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, 1);
+                // 抽前检查：牌堆耗尽且有弃牌可循环，先停顿再洗牌
+                if (Deck.DeckManager.Instance.DrawPileCount == 0
+                    && Deck.DeckManager.Instance.DiscardPileCount > 0)
+                {
+                    yield return new WaitForSeconds(shufflePauseBeforeSeconds);
+                    ShowShufflePopup();
+                    Deck.DeckManager.Instance.ShuffleDiscardIntoDraw();
+                    yield return new WaitForSeconds(shufflePauseAfterSeconds);
+                }
+
+                var drawn = Deck.DeckManager.Instance.Draw(1);
                 if (drawn == null || drawn.Count == 0)
                 {
                     break;
@@ -833,6 +845,13 @@ namespace BaoZuPo.GameFlow
             afterInstant?.Invoke(card);
             Deck.DeckManager.Instance.RemoveFromHand(card);
 
+            // 即发卡（不上场的卡）打出后进弃卡池参与循环，并播放出场动画
+            if (!CardTargeting.PersistsInRoom(card.Data) && !CardTargeting.PersistsAsContract(card.Data))
+            {
+                Deck.DeckManager.Instance.SendToDiscard(card);
+                UIManager.Instance?.handPanel?.PlayDiscardAnimation(card);
+            }
+
             EventBus.Publish(new GameEvents.CardPlayed { Card = card });
             BaoZuPoFeedbackAdapter.PublishPlayCost(card, targetRoom ?? card.PlacedRoom, card.Data.cost);
             PublishPlaySequence(card, targetRoom ?? card.PlacedRoom, instantMoneyDelta);
@@ -847,6 +866,27 @@ namespace BaoZuPo.GameFlow
             }
 
             BaoZuPoFeedbackAdapter.PublishInstantMoneyDelta(card, targetRoom, moneyDelta);
+        }
+
+        private static void ShowShufflePopup()
+        {
+            var layer = UI.Common.FeedbackPopup.UIFeedbackPopupLayer.GetOrCreate(null);
+            if (layer == null)
+            {
+                return;
+            }
+
+            var style = layer.DefaultStyle.Clone();
+            style.HoldSeconds = 0.6f;
+
+            layer.Show(new UI.Common.FeedbackPopup.UIFeedbackPopupRequest
+            {
+                Text = UI.GameText.DeckShuffled,
+                Category = UI.Common.FeedbackPopup.UIFeedbackPopupCategory.Default,
+                ScreenOffset = Vector2.zero,
+                UseScreenCenterFallback = true,
+                Style = style,
+            });
         }
 
         private void PublishPhaseChanged(GamePhase phase)
@@ -1241,20 +1281,20 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
-            var allCards = rewardLibrary.cards;
+            var allCards = rewardLibrary.entries;
             List<CardData> source;
             if (boosted)
             {
-                source = allCards.Where(c => c.rarity >= CardRarity.Rare).ToList();
+                source = allCards.ConvertAll(e => e.card).FindAll(c => c.rarity >= CardRarity.Rare);
                 if (source.Count == 0)
                 {
                     Debug.LogWarning("[TurnManager] Boosted reward requested but reward library has no Rare+ cards. Falling back to full reward library.");
-                    source = allCards.ToList();
+                    source = allCards.ConvertAll(e => e.card);
                 }
             }
             else
             {
-                source = allCards.ToList();
+                source = allCards.ConvertAll(e => e.card);
             }
 
             if (source.Count == 0)
