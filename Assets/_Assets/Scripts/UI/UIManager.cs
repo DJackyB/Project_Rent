@@ -32,6 +32,7 @@ namespace BaoZuPo.UI
 
         [SerializeField] private UISettlementSequenceController _settlementSequenceController;
         [SerializeField] private UICardRewardPanel _cardRewardPanel;
+        [SerializeField] private UICardShopPanel _cardShopPanel;
         private bool _isUiReady;
         private bool _hasPendingTurnStarted;
         private GameEvents.TurnStarted _pendingTurnStarted;
@@ -43,6 +44,8 @@ namespace BaoZuPo.UI
             EventBus.Subscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Subscribe<GameEvents.GameOver>(OnGameOver);
             EventBus.Subscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
+            EventBus.Subscribe<GameEvents.ShopOpened>(OnShopOpened);
+            EventBus.Subscribe<GameEvents.ShopClosed>(OnShopClosed);
         }
 
         private void Start()
@@ -74,6 +77,8 @@ namespace BaoZuPo.UI
             EventBus.Unsubscribe<GameEvents.TurnStarted>(OnTurnStarted);
             EventBus.Unsubscribe<GameEvents.GameOver>(OnGameOver);
             EventBus.Unsubscribe<GameEvents.CardRewardOffered>(OnCardRewardOffered);
+            EventBus.Unsubscribe<GameEvents.ShopOpened>(OnShopOpened);
+            EventBus.Unsubscribe<GameEvents.ShopClosed>(OnShopClosed);
         }
 
         private new void OnApplicationQuit()
@@ -157,6 +162,21 @@ namespace BaoZuPo.UI
             _cardRewardPanel.Show(e.Options, e.Boosted);
         }
 
+        private void OnShopOpened(GameEvents.ShopOpened e)
+        {
+            if (_cardShopPanel == null)
+            {
+                throw new InvalidOperationException("[UIManager] _cardShopPanel is not assigned in the Inspector. Shop flow is required for the main gameplay flow.");
+            }
+
+            _cardShopPanel.Show(e.Options);
+        }
+
+        private void OnShopClosed(GameEvents.ShopClosed _)
+        {
+            _cardShopPanel?.Hide();
+        }
+
         public void RefreshAll()
         {
             cardDragController?.CancelCurrentDrag(true);
@@ -225,6 +245,11 @@ namespace BaoZuPo.UI
             if (_cardRewardPanel == null)
             {
                 throw new InvalidOperationException("[UIManager] _cardRewardPanel is not assigned in the Inspector. Reward selection is required for the main gameplay flow.");
+            }
+
+            if (_cardShopPanel == null)
+            {
+                throw new InvalidOperationException("[UIManager] _cardShopPanel is not assigned in the Inspector. Shop flow is required for the main gameplay flow.");
             }
         }
 

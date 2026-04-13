@@ -80,6 +80,24 @@ namespace BaoZuPo.Core
         [Tooltip("Card library used for reward selection.")]
         public CardLibrary rewardLibrary;
 
+        /// <summary>
+        /// 商店候选卡牌库。打开商店时从这里抽取展示卡。
+        /// </summary>
+        [Tooltip("Card library used for shop offers.")]
+        public CardLibrary shopLibrary;
+
+        /// <summary>
+        /// 每回合固定注入手牌的商店卡。
+        /// </summary>
+        [Tooltip("Card injected into hand every turn to open the shop.")]
+        public CardData shopCard;
+
+        /// <summary>
+        /// 商店默认展示的唯一候选数量。
+        /// </summary>
+        [Tooltip("Number of unique cards shown in the shop.")]
+        public int shopOfferCount = 3;
+
         [Header("Rooms")]
         /// <summary>
         /// 游戏开始时已有的房间数。

@@ -68,8 +68,8 @@ namespace BaoZuPo.Tests.Card
 
             var libraries = CardLibraryDatabase.GetAll();
 
-            CollectionAssert.IsSupersetOf(libraries.Keys, new[] { "AllCards", "0", "1", "2" });
-            Assert.AreEqual(4, libraries.Count);
+            CollectionAssert.IsSupersetOf(libraries.Keys, new[] { "AllCards", "0", "1", "2", "3" });
+            Assert.AreEqual(5, libraries.Count);
         }
 
         [Test]
@@ -104,7 +104,7 @@ namespace BaoZuPo.Tests.Card
             var library = CreateLibrary("NullEntryPool", new CardData[] { null });
 
             var exception = Assert.Throws<InvalidOperationException>(() => CardLibraryDatabase.Register(library));
-            StringAssert.Contains("null card entry", exception.Message);
+            StringAssert.Contains("has a null card", exception.Message);
         }
 
         [Test]
@@ -132,6 +132,7 @@ namespace BaoZuPo.Tests.Card
             Assert.IsTrue(
                 CardEffectFactory.TryValidate("AddMoneyBySelectedRoomTenantCount;30", out var selectedRoomMoneyError),
                 selectedRoomMoneyError);
+            Assert.IsTrue(CardEffectFactory.TryValidate("OpenShop", out var openShopError), openShopError);
         }
 
         [Test]
@@ -165,11 +166,10 @@ namespace BaoZuPo.Tests.Card
         [Test]
         public void ExecutePreparePhase_UsesFirstTurnThenNormalTurnLibraries()
         {
-            var firstCard = CreateCardData(30, "First Turn");
             var normalCard = CreateCardData(31, "Normal Turn");
 
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", firstCard),
+                CreateLibrary("FirstPool", CreateCardData(30, "First Turn")),
                 CreateLibrary("NormalPool", normalCard),
                 CreateLibrary("RewardPool", CreateCardData(32, "Reward")),
                 firstTurnDrawCount: 1,
@@ -177,12 +177,223 @@ namespace BaoZuPo.Tests.Card
                 maxHandSize: 5);
 
             context.TurnManager.ExecutePreparePhase();
-            Assert.AreEqual(1, context.DeckManager.HandCount);
-            Assert.AreSame(firstCard, context.DeckManager.Hand[0].Data);
+            Assert.AreEqual(2, context.DeckManager.HandCount);
+            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
+            Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
+            Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
 
             context.TurnManager.ExecutePreparePhase();
             Assert.AreEqual(2, context.DeckManager.HandCount);
-            Assert.AreSame(normalCard, context.DeckManager.Hand[1].Data);
+            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
+            Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
+            Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
+        }
+
+        [Test]
+        public void ExecutePreparePhase_InjectsShopCardEvenWhenHandIsFull()
+        {
+            var normalCard = CreateCardData(33, "Normal Turn");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(34, "First Turn")),
+                CreateLibrary("NormalPool", normalCard),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 1,
+                normalTurnDrawCount: 0,
+                maxHandSize: 1);
+
+            context.TurnManager.ExecutePreparePhase();
+
+            Assert.AreEqual(2, context.DeckManager.HandCount);
+            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
+            Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
+            Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
+        }
+
+        [Test]
+        public void ExecuteSettlePhase_RemovesUnplayedTemporaryShopCardWithoutDiscard()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(35, "First")),
+                CreateLibrary("NormalPool", CreateCardData(36, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            context.GameManager.gameConfig.loanInterval = 0;
+            context.TurnManager.ExecutePreparePhase();
+
+            Assert.AreEqual(1, context.DeckManager.HandCount);
+            var shopCard = context.DeckManager.Hand[0];
+            Assert.IsTrue(shopCard.IsTemporaryHandCard);
+
+            context.TurnManager.ExecuteSettlePhase();
+
+            Assert.AreEqual(0, context.DeckManager.HandCount);
+            Assert.AreEqual(0, context.DeckManager.DiscardPileCount);
+            Assert.IsTrue(shopCard.IsDestroyed);
+        }
+
+        [Test]
+        public void PlayCard_ShopCard_OpensShop_AndRemovesCardWithoutDiscard()
+        {
+            var offerA = CreateCardData(37, "Offer A");
+            var offerB = CreateCardData(38, "Offer B");
+            var offerC = CreateCardData(39, "Offer C");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(320, "First")),
+                CreateLibrary("NormalPool", CreateCardData(321, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5,
+                shopLibrary: CreateLibrary("ShopPool", offerA, offerB, offerC));
+
+            GameEvents.ShopOpened? opened = null;
+            void OnShopOpened(GameEvents.ShopOpened e) => opened = e;
+            EventBus.Subscribe<GameEvents.ShopOpened>(OnShopOpened);
+
+            try
+            {
+                context.TurnManager.ExecutePreparePhase();
+                var shopCard = context.DeckManager.Hand[0];
+                context.TurnManager.StartActionPhase();
+
+                bool played = context.TurnManager.PlayCard(shopCard);
+
+                Assert.IsTrue(played);
+                Assert.IsTrue(opened.HasValue);
+                Assert.AreEqual(3, opened.Value.Options.Length);
+                Assert.AreEqual(0, context.DeckManager.HandCount);
+                Assert.AreEqual(0, context.DeckManager.DiscardPileCount);
+                Assert.IsTrue(shopCard.IsDestroyed);
+                Assert.IsTrue(context.TurnManager.IsShopOpen);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.ShopOpened>(OnShopOpened);
+            }
+        }
+
+        [Test]
+        public void ShopOpen_DeduplicatesOffers_AndAllowsMultiplePurchasesWithoutRefill()
+        {
+            var offerA = CreateCardData(401, "Offer A");
+            offerA.cost = 50;
+            var offerB = CreateCardData(402, "Offer B");
+            offerB.cost = 75;
+            var offerC = CreateCardData(403, "Offer C");
+            offerC.cost = 125;
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(404, "First")),
+                CreateLibrary("NormalPool", CreateCardData(405, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5,
+                shopLibrary: CreateLibrary("ShopPool", offerA, offerA, offerB, offerB, offerC));
+
+            GameEvents.ShopOpened? opened = null;
+            void OnShopOpened(GameEvents.ShopOpened e) => opened = e;
+            EventBus.Subscribe<GameEvents.ShopOpened>(OnShopOpened);
+
+            try
+            {
+                context.TurnManager.ExecutePreparePhase();
+                context.TurnManager.StartActionPhase();
+                Assert.IsTrue(context.TurnManager.PlayCard(context.DeckManager.Hand[0]));
+
+                Assert.IsTrue(opened.HasValue);
+                Assert.AreEqual(3, opened.Value.Options.Length);
+                CollectionAssert.AreEquivalent(new[] { offerA, offerB, offerC }, opened.Value.Options);
+
+                int moneyBeforeFirstPurchase = context.MoneyManager.CurrentMoney;
+                int drawPileBeforePurchase = context.DeckManager.DrawPileCount;
+                var firstPurchasedCard = opened.Value.Options[0];
+                var secondPurchasedCard = opened.Value.Options[1];
+
+                Assert.IsTrue(context.TurnManager.TryPurchaseShopOffer(0));
+                Assert.AreEqual(moneyBeforeFirstPurchase - firstPurchasedCard.cost, context.MoneyManager.CurrentMoney);
+                Assert.AreEqual(drawPileBeforePurchase + 1, context.DeckManager.DrawPileCount);
+                Assert.IsTrue(context.DeckManager.DrawPile.Any(card => card.Data == firstPurchasedCard));
+
+                Assert.IsTrue(context.TurnManager.TryPurchaseShopOffer(1));
+                Assert.AreEqual(
+                    moneyBeforeFirstPurchase - firstPurchasedCard.cost - secondPurchasedCard.cost,
+                    context.MoneyManager.CurrentMoney);
+                Assert.AreEqual(drawPileBeforePurchase + 2, context.DeckManager.DrawPileCount);
+                Assert.IsTrue(context.DeckManager.DrawPile.Any(card => card.Data == secondPurchasedCard));
+
+                Assert.IsFalse(context.TurnManager.TryPurchaseShopOffer(0));
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.ShopOpened>(OnShopOpened);
+            }
+        }
+
+        [Test]
+        public void ShopPurchase_FailsWhenMoneyIsInsufficient()
+        {
+            var expensiveOffer = CreateCardData(406, "Expensive Offer");
+            expensiveOffer.cost = 5000;
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(407, "First")),
+                CreateLibrary("NormalPool", CreateCardData(408, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5,
+                shopLibrary: CreateLibrary("ShopPool", expensiveOffer),
+                shopOfferCount: 1);
+
+            context.TurnManager.ExecutePreparePhase();
+            context.TurnManager.StartActionPhase();
+            Assert.IsTrue(context.TurnManager.PlayCard(context.DeckManager.Hand[0]));
+
+            int drawPileBeforePurchase = context.DeckManager.DrawPileCount;
+            int moneyBeforePurchase = context.MoneyManager.CurrentMoney;
+
+            Assert.IsFalse(context.TurnManager.TryPurchaseShopOffer(0));
+            Assert.AreEqual(drawPileBeforePurchase, context.DeckManager.DrawPileCount);
+            Assert.AreEqual(moneyBeforePurchase, context.MoneyManager.CurrentMoney);
+            Assert.IsTrue(context.TurnManager.IsShopOpen);
+        }
+
+        [Test]
+        public void CloseCurrentShop_PreventsReopeningInSameTurn()
+        {
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(409, "First")),
+                CreateLibrary("NormalPool", CreateCardData(410, "Normal")),
+                CreateLibrary("RewardPool"),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+
+            int openCount = 0;
+            void OnShopOpened(GameEvents.ShopOpened _) => openCount++;
+            EventBus.Subscribe<GameEvents.ShopOpened>(OnShopOpened);
+
+            try
+            {
+                context.TurnManager.ExecutePreparePhase();
+                var shopCard = context.DeckManager.Hand[0];
+                context.TurnManager.StartActionPhase();
+
+                Assert.IsTrue(context.TurnManager.PlayCard(shopCard));
+                Assert.AreEqual(1, openCount);
+
+                context.TurnManager.CloseCurrentShop();
+                context.TurnManager.OpenShop(shopCard);
+
+                Assert.AreEqual(1, openCount);
+                Assert.IsFalse(context.TurnManager.IsShopOpen);
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.ShopOpened>(OnShopOpened);
+            }
         }
 
         [Test]
@@ -774,6 +985,56 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void InitializeSystems_ThrowsWhenShopLibraryIsMissing()
+        {
+            var roomsRoot = CreateGameObject("RoomsRoot").transform;
+            var boardManager = CreateComponent<BoardManager>("BoardManager");
+            SetPrivateField(boardManager, "_roomRoot", roomsRoot);
+            CreateComponent<MoneyManager>("MoneyManager");
+            CreateComponent<DeckManager>("DeckManager");
+
+            var gameConfig = CreateGameConfig(
+                CreateLibrary("FirstPool", CreateCardData(83, "First")),
+                CreateLibrary("NormalPool", CreateCardData(84, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(85, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+            gameConfig.shopLibrary = null;
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
+            StringAssert.Contains("GameConfig.shopLibrary is not assigned.", exception.Message);
+        }
+
+        [Test]
+        public void InitializeSystems_ThrowsWhenShopCardIsMissing()
+        {
+            var roomsRoot = CreateGameObject("RoomsRoot").transform;
+            var boardManager = CreateComponent<BoardManager>("BoardManager");
+            SetPrivateField(boardManager, "_roomRoot", roomsRoot);
+            CreateComponent<MoneyManager>("MoneyManager");
+            CreateComponent<DeckManager>("DeckManager");
+
+            var gameConfig = CreateGameConfig(
+                CreateLibrary("FirstPool", CreateCardData(86, "First")),
+                CreateLibrary("NormalPool", CreateCardData(87, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(88, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5);
+            gameConfig.shopCard = null;
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
+            StringAssert.Contains("GameConfig.shopCard is not assigned.", exception.Message);
+        }
+
+        [Test]
         public void InitializeSystems_ThrowsWhenDeckManagerIsMissing()
         {
             var roomsRoot = CreateGameObject("RoomsRoot").transform;
@@ -803,7 +1064,10 @@ namespace BaoZuPo.Tests.Card
             CardLibrary rewardLibrary,
             int firstTurnDrawCount,
             int normalTurnDrawCount,
-            int maxHandSize)
+            int maxHandSize,
+            CardLibrary shopLibrary = null,
+            CardData shopCard = null,
+            int shopOfferCount = 3)
         {
             var roomsRoot = CreateGameObject("RoomsRoot").transform;
             var boardManager = CreateComponent<BoardManager>("BoardManager");
@@ -820,7 +1084,10 @@ namespace BaoZuPo.Tests.Card
                 rewardLibrary,
                 firstTurnDrawCount,
                 normalTurnDrawCount,
-                maxHandSize);
+                maxHandSize,
+                shopLibrary,
+                shopCard,
+                shopOfferCount);
 
             var gameManager = CreateComponent<GameManager>("GameManager");
             gameManager.gameConfig = gameConfig;
@@ -835,9 +1102,22 @@ namespace BaoZuPo.Tests.Card
             CardLibrary rewardLibrary,
             int firstTurnDrawCount,
             int normalTurnDrawCount,
-            int maxHandSize)
+            int maxHandSize,
+            CardLibrary shopLibrary = null,
+            CardData shopCard = null,
+            int shopOfferCount = 3)
         {
             var gameConfig = CreateScriptableObject<GameConfig>();
+            gameConfig.firstTurnDrawLibrary = firstTurnLibrary;
+            gameConfig.normalTurnDrawLibrary = normalTurnLibrary;
+            gameConfig.rewardLibrary = rewardLibrary;
+            gameConfig.shopLibrary = shopLibrary ?? CreateLibrary(
+                "ShopPool",
+                CreateCardData(9002, "Shop Offer A"),
+                CreateCardData(9003, "Shop Offer B"),
+                CreateCardData(9004, "Shop Offer C"));
+            gameConfig.shopCard = shopCard ?? CreateShopCardData();
+            gameConfig.shopOfferCount = shopOfferCount;
             gameConfig.startingMoney = 1000;
             gameConfig.firstTurnDrawCount = firstTurnDrawCount;
             gameConfig.normalTurnDrawCount = normalTurnDrawCount;
@@ -845,9 +1125,6 @@ namespace BaoZuPo.Tests.Card
             gameConfig.initialRoomCount = 0;
             gameConfig.defaultTenantSlots = 1;
             gameConfig.defaultEquipmentSlots = 1;
-            gameConfig.firstTurnDrawLibrary = firstTurnLibrary;
-            gameConfig.normalTurnDrawLibrary = normalTurnLibrary;
-            gameConfig.rewardLibrary = rewardLibrary;
             return gameConfig;
         }
 
@@ -890,6 +1167,16 @@ namespace BaoZuPo.Tests.Card
             card.baseRent = 0;
             card.waitTurns = 0;
             card.durability = 0;
+            return card;
+        }
+
+        private CardData CreateShopCardData(int cardId = 9001, string cardName = "Shop")
+        {
+            var card = CreateCardData(cardId, cardName);
+            card.cardType = CardType.Event;
+            card.targetKind = CardPlayTargetKind.PlayArea;
+            card.instantEffect = "OpenShop";
+            card.cost = 0;
             return card;
         }
 

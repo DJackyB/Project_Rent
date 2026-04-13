@@ -17,6 +17,7 @@ namespace BaoZuPo.Editor
         internal const string FirstTurnLibraryId = "0";
         internal const string NormalTurnLibraryId = "1";
         internal const string RewardLibraryId = "2";
+        internal const string ShopLibraryId = "3";
 
         internal sealed class LibraryRow
         {
@@ -32,6 +33,7 @@ namespace BaoZuPo.Editor
             L("FirstTurnPool", FirstTurnLibraryId,  "First Turn Pool"),
             L("NormalTurnPool",NormalTurnLibraryId, "Normal Turn Pool"),
             L("RewardPool",    RewardLibraryId,     "Reward Pool"),
+            L("ShopPool",      ShopLibraryId,       "Shop Pool"),
         };
 
         private static LibraryRow L(string assetName, string libraryId, string displayName, bool includeAllCards = false)

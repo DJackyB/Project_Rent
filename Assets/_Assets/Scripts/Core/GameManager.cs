@@ -154,6 +154,13 @@ namespace BaoZuPo.Core
             ValidateConfiguredLibrary(nameof(gameConfig.firstTurnDrawLibrary), gameConfig.firstTurnDrawLibrary, errors);
             ValidateConfiguredLibrary(nameof(gameConfig.normalTurnDrawLibrary), gameConfig.normalTurnDrawLibrary, errors);
             ValidateConfiguredLibrary(nameof(gameConfig.rewardLibrary), gameConfig.rewardLibrary, errors);
+            ValidateConfiguredLibrary(nameof(gameConfig.shopLibrary), gameConfig.shopLibrary, errors);
+            ValidateConfiguredCard(nameof(gameConfig.shopCard), gameConfig.shopCard, errors);
+
+            if (gameConfig.shopOfferCount <= 0)
+            {
+                errors.Add("GameConfig.shopOfferCount must be greater than 0.");
+            }
 
             if (errors.Count > 0)
             {
@@ -223,6 +230,21 @@ namespace BaoZuPo.Core
             {
                 errors.Add(exception.Message);
             }
+        }
+
+        private static void ValidateConfiguredCard(string fieldName, CardData card, List<string> errors)
+        {
+            if (card == null)
+            {
+                errors.Add($"GameConfig.{fieldName} is not assigned.");
+                return;
+            }
+
+            ValidateEffectString(card, $"{fieldName}.preEffect", card.preEffect, errors);
+            ValidateEffectString(card, $"{fieldName}.instantEffect", card.instantEffect, errors);
+            ValidateEffectString(card, $"{fieldName}.settleEffect", card.settleEffect, errors);
+            ValidateEffectString(card, $"{fieldName}.destroyEffect", card.destroyEffect, errors);
+            ValidateTargetKind(card, errors);
         }
 
         /// <summary>

@@ -74,6 +74,11 @@ namespace BaoZuPo.GameFlow
 
         /// <summary>缓存当前回合的 boosted 奖励状态，供结算动画完成后使用（贷款周期到达时触发高稀有度池）</summary>
         private bool _pendingRewardBoosted;
+        private CardData[] _shopOptions = Array.Empty<CardData>();
+        private bool[] _shopPurchased = Array.Empty<bool>();
+        private bool _shopOpenedThisTurn;
+        private bool _shopClosedThisTurn;
+        private bool _isShopOpen;
 
         public int CurrentTurn => _currentTurn;
         public bool IsGameOver => _isGameOver;
@@ -86,6 +91,7 @@ namespace BaoZuPo.GameFlow
         /// <summary>是否等待玩家从奖励池选择</summary>
         public bool IsRewardSelectionPending => _isRewardSelectionPending;
         public bool IsPreparePresentationPending => _isPreparePresentationPending;
+        public bool IsShopOpen => _isShopOpen;
         /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
@@ -161,6 +167,7 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
+            ResetShopStateForNewTurn();
             _currentTurn++;
             EventBus.Publish(new GameEvents.TurnStarted { TurnNumber = _currentTurn });
             PublishPhaseChanged(GamePhase.Prepare);
@@ -189,12 +196,15 @@ namespace BaoZuPo.GameFlow
 
             if (drawCount <= 0)
             {
+                InjectTurnShopCard();
+                UIManager.Instance?.RefreshAll();
                 return;
             }
 
             if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
                 Deck.DeckManager.Instance.Draw(drawCount);
+                InjectTurnShopCard();
                 UIManager.Instance?.RefreshAll();
                 return;
             }
@@ -240,6 +250,12 @@ namespace BaoZuPo.GameFlow
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
             {
                 yield return new WaitForSeconds(PreparePhaseOutroSeconds);
+            }
+
+            var shopCard = InjectTurnShopCard();
+            if (shopCard != null)
+            {
+                yield return UIManager.Instance.handPanel.PlayIncomingCard(shopCard, animationKind);
             }
 
             _isPreparePresentationPending = false;
@@ -469,6 +485,8 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
+            CloseCurrentShop();
+            CleanupTemporaryHandCards();
             PublishPhaseChanged(GamePhase.Settle);
 
             var sharedContext = GameManager.Instance.GameContext;
@@ -845,9 +863,14 @@ namespace BaoZuPo.GameFlow
             afterInstant?.Invoke(card);
             Deck.DeckManager.Instance.RemoveFromHand(card);
 
-            // 即发卡（不上场的卡）打出后进弃卡池参与循环，并播放出场动画
-            if (!CardTargeting.PersistsInRoom(card.Data) && !CardTargeting.PersistsAsContract(card.Data))
+            if (card.RemoveFromGameAfterPlay)
             {
+                card.MarkDestroyed();
+            }
+            else if (!CardTargeting.PersistsInRoom(card.Data) && !CardTargeting.PersistsAsContract(card.Data))
+            {
+
+            // 即发卡（不上场的卡）打出后进弃卡池参与循环，并播放出场动画
                 Deck.DeckManager.Instance.SendToDiscard(card);
                 UIManager.Instance?.handPanel?.PlayDiscardAnimation(card);
             }
@@ -886,6 +909,147 @@ namespace BaoZuPo.GameFlow
                 ScreenOffset = Vector2.zero,
                 UseScreenCenterFallback = true,
                 Style = style,
+            });
+        }
+
+        private void ResetShopStateForNewTurn()
+        {
+            CloseCurrentShop();
+            CleanupTemporaryHandCards();
+
+            _shopOptions = Array.Empty<CardData>();
+            _shopPurchased = Array.Empty<bool>();
+            _shopOpenedThisTurn = false;
+            _shopClosedThisTurn = false;
+            _isShopOpen = false;
+        }
+
+        private CardInstance InjectTurnShopCard()
+        {
+            var config = GameManager.Instance != null ? GameManager.Instance.gameConfig : null;
+            if (config == null || config.shopCard == null)
+            {
+                return null;
+            }
+
+            CleanupTemporaryHandCards();
+            return Deck.DeckManager.Instance.ForceAddCardToHand(config.shopCard, card => card.ConfigureAsTemporaryHandCard());
+        }
+
+        private void CleanupTemporaryHandCards()
+        {
+            if (Deck.DeckManager.Instance == null || Deck.DeckManager.Instance.HandCount <= 0)
+            {
+                return;
+            }
+
+            var temporaryCards = Deck.DeckManager.Instance.Hand
+                .Where(card => card != null && card.RemoveFromHandAtTurnEnd)
+                .ToArray();
+
+            for (int i = 0; i < temporaryCards.Length; i++)
+            {
+                Deck.DeckManager.Instance.RemoveFromHand(temporaryCards[i]);
+                temporaryCards[i].MarkDestroyed();
+            }
+        }
+
+        public void OpenShop(CardInstance source)
+        {
+            EnsureGameManagerInitialized();
+
+            if (_isGameOver || CurrentPhase != GamePhase.Action || ActionPhaseEnded)
+            {
+                return;
+            }
+
+            if (_shopOpenedThisTurn || _shopClosedThisTurn || _isShopOpen)
+            {
+                return;
+            }
+
+            var config = GameManager.Instance != null ? GameManager.Instance.gameConfig : null;
+            if (config == null || config.shopLibrary == null)
+            {
+                throw new InvalidOperationException("[TurnManager] Shop opening requires GameConfig.shopLibrary.");
+            }
+
+            if (UIManager.Instance == null)
+            {
+                throw new InvalidOperationException("[TurnManager] Shop opening requires UIManager in scene.");
+            }
+
+            var sourceCards = config.shopLibrary.entries != null
+                ? config.shopLibrary.entries.Select(entry => entry != null ? entry.card : null).Where(card => card != null).ToList()
+                : new List<CardData>();
+            if (sourceCards.Count == 0)
+            {
+                Debug.LogWarning("[TurnManager] No shop cards available.");
+                return;
+            }
+
+            int desiredCount = Mathf.Max(1, config.shopOfferCount);
+            _shopOptions = BuildUniqueCardOptions(sourceCards, desiredCount);
+            if (_shopOptions.Length == 0)
+            {
+                Debug.LogWarning("[TurnManager] No unique shop cards available.");
+                return;
+            }
+
+            if (_shopOptions.Length < desiredCount)
+            {
+                Debug.LogWarning($"[TurnManager] Shop library only has {_shopOptions.Length} unique shop card(s) available. Offering {_shopOptions.Length} unique option(s).");
+            }
+
+            _shopPurchased = new bool[_shopOptions.Length];
+            _shopOpenedThisTurn = true;
+            _isShopOpen = true;
+            EventBus.Publish(new GameEvents.ShopOpened
+            {
+                Options = _shopOptions
+            });
+        }
+
+        public bool TryPurchaseShopOffer(int offerIndex)
+        {
+            if (!_isShopOpen || offerIndex < 0 || offerIndex >= _shopOptions.Length)
+            {
+                return false;
+            }
+
+            if (_shopPurchased[offerIndex])
+            {
+                return false;
+            }
+
+            var chosen = _shopOptions[offerIndex];
+            if (chosen == null)
+            {
+                return false;
+            }
+
+            if (chosen.cost > 0 && !MoneyManager.Instance.ReduceMoney(chosen.cost))
+            {
+                return false;
+            }
+
+            Deck.DeckManager.Instance.AddCardToDrawPile(chosen);
+            _shopPurchased[offerIndex] = true;
+            return true;
+        }
+
+        public void CloseCurrentShop()
+        {
+            if (!_isShopOpen)
+            {
+                return;
+            }
+
+            _isShopOpen = false;
+            _shopClosedThisTurn = true;
+            EventBus.Publish(new GameEvents.ShopClosed
+            {
+                TurnNumber = _currentTurn
             });
         }
 
@@ -1308,7 +1472,7 @@ namespace BaoZuPo.GameFlow
                 throw new InvalidOperationException("[TurnManager] Reward selection requires UIManager in scene.");
             }
 
-            var options = BuildUniqueRewardOptions(source, 3);
+            var options = BuildUniqueCardOptions(source, 3);
             if (options.Length == 0)
             {
                 Debug.LogWarning("[TurnManager] No unique reward cards available.");
@@ -1341,7 +1505,7 @@ namespace BaoZuPo.GameFlow
             _eventsSubscribed = true;
         }
 
-        private static CardData[] BuildUniqueRewardOptions(List<CardData> source, int desiredCount)
+        private static CardData[] BuildUniqueCardOptions(List<CardData> source, int desiredCount)
         {
             var remaining = source != null
                 ? source.Where(card => card != null).ToList()
