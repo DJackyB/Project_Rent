@@ -140,6 +140,12 @@ namespace BaoZuPo.Card
                     throw new InvalidOperationException(
                         $"[CardLibraryDatabase] {sourceLabel}: library '{library.libraryId}' entry at index {i} has a null card.");
                 }
+
+                if (entry.quantity <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"[CardLibraryDatabase] {sourceLabel}: library '{library.libraryId}' entry at index {i} has non-positive quantity {entry.quantity}.");
+                }
             }
         }
 

@@ -108,6 +108,26 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void Register_RejectsNonPositiveQuantityEntries()
+        {
+            var zeroQuantityLibrary = CreateLibraryWithEntries(
+                "ZeroQuantityPool",
+                CreateLibraryEntry(CreateCardData(2001, "Zero Quantity"), 0));
+
+            var zeroQuantityException = Assert.Throws<InvalidOperationException>(
+                () => CardLibraryDatabase.Register(zeroQuantityLibrary));
+            StringAssert.Contains("non-positive quantity 0", zeroQuantityException.Message);
+
+            var negativeQuantityLibrary = CreateLibraryWithEntries(
+                "NegativeQuantityPool",
+                CreateLibraryEntry(CreateCardData(2002, "Negative Quantity"), -2));
+
+            var negativeQuantityException = Assert.Throws<InvalidOperationException>(
+                () => CardLibraryDatabase.Register(negativeQuantityLibrary));
+            StringAssert.Contains("non-positive quantity -2", negativeQuantityException.Message);
+        }
+
+        [Test]
         public void DrawCardValidation_SupportsOptionalLibraryArgument()
         {
             CardLibraryDatabase.Register(CreateLibrary("EventPool", CreateCardData(10)));
@@ -166,10 +186,11 @@ namespace BaoZuPo.Tests.Card
         [Test]
         public void ExecutePreparePhase_UsesFirstTurnThenNormalTurnLibraries()
         {
+            var firstTurnCard = CreateCardData(30, "First Turn");
             var normalCard = CreateCardData(31, "Normal Turn");
 
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(30, "First Turn")),
+                CreateLibrary("FirstPool", firstTurnCard),
                 CreateLibrary("NormalPool", normalCard),
                 CreateLibrary("RewardPool", CreateCardData(32, "Reward")),
                 firstTurnDrawCount: 1,
@@ -178,24 +199,25 @@ namespace BaoZuPo.Tests.Card
 
             context.TurnManager.ExecutePreparePhase();
             Assert.AreEqual(2, context.DeckManager.HandCount);
-            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
+            Assert.AreSame(firstTurnCard, context.DeckManager.Hand[0].Data);
             Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
             Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
 
             context.TurnManager.ExecutePreparePhase();
-            Assert.AreEqual(2, context.DeckManager.HandCount);
-            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
-            Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
-            Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
+            Assert.AreEqual(3, context.DeckManager.HandCount);
+            Assert.AreSame(firstTurnCard, context.DeckManager.Hand[0].Data);
+            Assert.AreSame(normalCard, context.DeckManager.Hand[1].Data);
+            Assert.IsTrue(context.DeckManager.Hand[2].IsTemporaryHandCard);
+            Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[2].Data);
         }
 
         [Test]
         public void ExecutePreparePhase_InjectsShopCardEvenWhenHandIsFull()
         {
-            var normalCard = CreateCardData(33, "Normal Turn");
+            var firstTurnCard = CreateCardData(34, "First Turn");
             var context = CreateGameplayContext(
-                CreateLibrary("FirstPool", CreateCardData(34, "First Turn")),
-                CreateLibrary("NormalPool", normalCard),
+                CreateLibrary("FirstPool", firstTurnCard),
+                CreateLibrary("NormalPool", CreateCardData(33, "Normal Turn")),
                 CreateLibrary("RewardPool"),
                 firstTurnDrawCount: 1,
                 normalTurnDrawCount: 0,
@@ -204,9 +226,49 @@ namespace BaoZuPo.Tests.Card
             context.TurnManager.ExecutePreparePhase();
 
             Assert.AreEqual(2, context.DeckManager.HandCount);
-            Assert.AreSame(normalCard, context.DeckManager.Hand[0].Data);
+            Assert.AreSame(firstTurnCard, context.DeckManager.Hand[0].Data);
             Assert.IsTrue(context.DeckManager.Hand[1].IsTemporaryHandCard);
             Assert.AreSame(context.GameManager.gameConfig.shopCard, context.DeckManager.Hand[1].Data);
+        }
+
+        [Test]
+        public void OpenShop_ClampsOfferCountToUiCapacity_WhenRuntimeConfigExceedsLimit()
+        {
+            var offerA = CreateCardData(2031, "Offer A");
+            var offerB = CreateCardData(2032, "Offer B");
+            var offerC = CreateCardData(2033, "Offer C");
+            var offerD = CreateCardData(2034, "Offer D");
+            var context = CreateGameplayContext(
+                CreateLibrary("FirstPool", CreateCardData(2035, "First Turn")),
+                CreateLibrary("NormalPool", CreateCardData(2036, "Normal Turn")),
+                CreateLibrary("RewardPool", CreateCardData(2037, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5,
+                shopLibrary: CreateLibrary("ShopPool", offerA, offerB, offerC, offerD));
+
+            context.GameManager.gameConfig.shopOfferCount = GameConfig.MaxShopOfferCount + 5;
+
+            GameEvents.ShopOpened? opened = null;
+            void OnShopOpened(GameEvents.ShopOpened e) => opened = e;
+            EventBus.Subscribe<GameEvents.ShopOpened>(OnShopOpened);
+
+            try
+            {
+                context.TurnManager.ExecutePreparePhase();
+                context.TurnManager.StartActionPhase();
+                Assert.IsTrue(context.TurnManager.PlayCard(context.DeckManager.Hand[0]));
+            }
+            finally
+            {
+                EventBus.Unsubscribe<GameEvents.ShopOpened>(OnShopOpened);
+            }
+
+            Assert.IsTrue(opened.HasValue);
+            Assert.AreEqual(GameConfig.MaxShopOfferCount, opened.Value.Options.Length);
+            Assert.AreEqual(
+                GameConfig.MaxShopOfferCount,
+                opened.Value.Options.Select(card => card.cardId).Distinct().Count());
         }
 
         [Test]
@@ -1010,6 +1072,33 @@ namespace BaoZuPo.Tests.Card
         }
 
         [Test]
+        public void InitializeSystems_ThrowsWhenShopOfferCountExceedsUiCapacity()
+        {
+            var roomsRoot = CreateGameObject("RoomsRoot").transform;
+            var boardManager = CreateComponent<BoardManager>("BoardManager");
+            SetPrivateField(boardManager, "_roomRoot", roomsRoot);
+            CreateComponent<MoneyManager>("MoneyManager");
+            CreateComponent<DeckManager>("DeckManager");
+
+            var gameConfig = CreateGameConfig(
+                CreateLibrary("FirstPool", CreateCardData(2038, "First")),
+                CreateLibrary("NormalPool", CreateCardData(2039, "Normal")),
+                CreateLibrary("RewardPool", CreateCardData(2040, "Reward")),
+                firstTurnDrawCount: 0,
+                normalTurnDrawCount: 0,
+                maxHandSize: 5,
+                shopOfferCount: GameConfig.MaxShopOfferCount + 1);
+
+            var gameManager = CreateComponent<GameManager>("GameManager");
+            gameManager.gameConfig = gameConfig;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => InvokePrivateMethod(gameManager, "InitializeSystems"));
+            StringAssert.Contains(
+                $"GameConfig.shopOfferCount must be between 1 and {GameConfig.MaxShopOfferCount}.",
+                exception.Message);
+        }
+
+        [Test]
         public void InitializeSystems_ThrowsWhenShopCardIsMissing()
         {
             var roomsRoot = CreateGameObject("RoomsRoot").transform;
@@ -1067,7 +1156,7 @@ namespace BaoZuPo.Tests.Card
             int maxHandSize,
             CardLibrary shopLibrary = null,
             CardData shopCard = null,
-            int shopOfferCount = 3)
+            int shopOfferCount = GameConfig.MaxShopOfferCount)
         {
             var roomsRoot = CreateGameObject("RoomsRoot").transform;
             var boardManager = CreateComponent<BoardManager>("BoardManager");
@@ -1105,7 +1194,7 @@ namespace BaoZuPo.Tests.Card
             int maxHandSize,
             CardLibrary shopLibrary = null,
             CardData shopCard = null,
-            int shopOfferCount = 3)
+            int shopOfferCount = GameConfig.MaxShopOfferCount)
         {
             var gameConfig = CreateScriptableObject<GameConfig>();
             gameConfig.firstTurnDrawLibrary = firstTurnLibrary;
@@ -1149,11 +1238,23 @@ namespace BaoZuPo.Tests.Card
 
         private CardLibrary CreateLibrary(string libraryId, params CardData[] cards)
         {
+            return CreateLibraryWithEntries(
+                libraryId,
+                cards.Select(card => CreateLibraryEntry(card, 1)).ToArray());
+        }
+
+        private CardLibrary CreateLibraryWithEntries(string libraryId, params CardLibraryEntry[] entries)
+        {
             var library = CreateScriptableObject<CardLibrary>();
             library.libraryId = libraryId;
             library.displayName = libraryId;
-            library.entries = cards.Select(c => new CardLibraryEntry { card = c, quantity = 1 }).ToList();
+            library.entries = entries.ToList();
             return library;
+        }
+
+        private static CardLibraryEntry CreateLibraryEntry(CardData card, int quantity)
+        {
+            return new CardLibraryEntry { card = card, quantity = quantity };
         }
 
         private CardData CreateCardData(int cardId, string cardName = null)

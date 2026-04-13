@@ -17,6 +17,8 @@ namespace BaoZuPo.Core
     [CreateAssetMenu(fileName = "GameConfig", menuName = "BaoZuPo/GameConfig")]
     public class GameConfig : ScriptableObject
     {
+        public const int MaxShopOfferCount = 3;
+
         [Header("Economy")]
         /// <summary>
         /// 游戏起始金额。
@@ -96,7 +98,7 @@ namespace BaoZuPo.Core
         /// 商店默认展示的唯一候选数量。
         /// </summary>
         [Tooltip("Number of unique cards shown in the shop.")]
-        public int shopOfferCount = 3;
+        public int shopOfferCount = MaxShopOfferCount;
 
         [Header("Rooms")]
         /// <summary>

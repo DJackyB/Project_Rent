@@ -300,6 +300,11 @@ namespace BaoZuPo.Editor
 
                 int cardId = GetRequiredIntValue(row, columnMap, Col_CardId, rowIndex);
                 int quantity = GetRequiredIntValue(row, columnMap, Col_Quantity, rowIndex);
+                if (quantity <= 0)
+                {
+                    throw new InvalidDataException(
+                        $"[CardDataImporter] Row {rowIndex + 1}: libraryId '{libraryIdStr}' cardId {cardId} has invalid quantity {quantity}. Quantity must be greater than 0.");
+                }
 
                 if (!cardsById.TryGetValue(cardId, out var cardData))
                 {

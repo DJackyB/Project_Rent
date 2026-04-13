@@ -158,9 +158,9 @@ namespace BaoZuPo.Core
             ValidateConfiguredLibrary(nameof(gameConfig.shopLibrary), gameConfig.shopLibrary, errors);
             ValidateConfiguredCard(nameof(gameConfig.shopCard), gameConfig.shopCard, errors);
 
-            if (gameConfig.shopOfferCount <= 0)
+            if (gameConfig.shopOfferCount <= 0 || gameConfig.shopOfferCount > GameConfig.MaxShopOfferCount)
             {
-                errors.Add("GameConfig.shopOfferCount must be greater than 0.");
+                errors.Add($"GameConfig.shopOfferCount must be between 1 and {GameConfig.MaxShopOfferCount}.");
             }
 
             if (errors.Count > 0)
