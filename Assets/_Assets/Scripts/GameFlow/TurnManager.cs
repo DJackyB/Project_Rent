@@ -51,6 +51,10 @@ namespace BaoZuPo.GameFlow
         private const float PreparePhaseOutroSeconds = 0.08f;
         private const float RewardPickOutroSeconds = 0.1f;
 
+        [Header("随机事件卡")]
+        [SerializeField] private Card.CardData _eventCardData;
+        [SerializeField] [Range(0f, 1f)] private float _eventCardSpawnChance = 0.1f;
+
         [Header("Debug")]
         [SerializeField] private int _currentTurn;
         [SerializeField] private bool _isGameOver;
@@ -192,6 +196,7 @@ namespace BaoZuPo.GameFlow
             if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
                 Deck.DeckManager.Instance.DrawFromLibrary(drawLibrary, drawCount);
+                TrySpawnEventCard();
                 UIManager.Instance?.RefreshAll();
                 return;
             }
@@ -224,6 +229,8 @@ namespace BaoZuPo.GameFlow
 
                 yield return UIManager.Instance.handPanel.PlayIncomingCard(drawn[0], animationKind);
             }
+
+            TrySpawnEventCard();
 
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
             {
@@ -847,6 +854,17 @@ namespace BaoZuPo.GameFlow
             }
 
             BaoZuPoFeedbackAdapter.PublishInstantMoneyDelta(card, targetRoom, moneyDelta);
+        }
+
+        /// <summary>
+        /// 抽卡结束后，按概率向手牌插入一张事件卡（不占抽牌数）。
+        /// 事件卡 waitTurns=1，若本回合未打出，结算阶段将自动销毁。
+        /// </summary>
+        private void TrySpawnEventCard()
+        {
+            if (_eventCardData == null) return;
+            if (UnityEngine.Random.value >= _eventCardSpawnChance) return;
+            Deck.DeckManager.Instance.AddCardToHand(_eventCardData);
         }
 
         private void PublishPhaseChanged(GamePhase phase)

@@ -124,15 +124,36 @@ namespace Martian.RandomEvent
             var library = RandomEventDatabase.GetLibraryById(libraryId);
             if (library == null) return;
 
-            if (library.events == null || library.events.Count == 0)
+            if (library.entries == null || library.entries.Count == 0)
             {
                 Debug.LogWarning(
-                    $"[RandomEventManager] Library '{libraryId}' has no events.");
+                    $"[RandomEventManager] Library '{libraryId}' has no entries.");
                 return;
             }
 
-            // 重复条目 = 权重，直接随机索引
-            var picked = library.events[UnityEngine.Random.Range(0, library.events.Count)];
+            // 加权随机：累加权重，随机落点
+            int totalWeight = 0;
+            foreach (var entry in library.entries)
+                totalWeight += entry.weight;
+
+            int roll = UnityEngine.Random.Range(0, totalWeight);
+            RandomEventData picked = null;
+            int accumulated = 0;
+            foreach (var entry in library.entries)
+            {
+                accumulated += entry.weight;
+                if (roll < accumulated)
+                {
+                    picked = entry.data;
+                    break;
+                }
+            }
+
+            if (picked == null)
+            {
+                Debug.LogWarning($"[RandomEventManager] Weighted pick failed for library '{libraryId}'.");
+                return;
+            }
 
             TriggerEvent(new RandomEventRequest
             {

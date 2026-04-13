@@ -1,8 +1,24 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Martian.RandomEvent
 {
+    /// <summary>
+    /// 随机事件库条目。一个事件及其权重。
+    /// weight 越大，被随机选中的概率越高（绝对权重，非相对倍数）。
+    /// </summary>
+    [Serializable]
+    public class RandomEventEntry
+    {
+        [Tooltip("The event definition.")]
+        public RandomEventData data;
+
+        [Tooltip("Relative weight. Higher = more likely to be picked.")]
+        [Min(1)]
+        public int weight = 1;
+    }
+
     /// <summary>
     /// 随机事件库。将多个事件分组，支持加权随机选取。
     ///
@@ -11,16 +27,14 @@ namespace Martian.RandomEvent
     /// - RandomEventManager.TriggerRandomFromLibrary() 从库中随机选取事件
     ///
     /// 权重机制：
-    /// - 列表中重复的事件表示权重
-    /// - 例如：[EventA, EventA, EventB] 则 EventA 被选取的概率是 EventB 的 2 倍
-    /// - RandomEventManager 直接随机索引：Random.Range(0, events.Count)
+    /// - 每条 entry 有独立的 weight 字段（整数，≥1）
+    /// - 例如：EventA(weight=2) + EventB(weight=1)，EventA 被选中概率约 66%
     ///
     /// 创建方法：
     /// 1. 右键 Project > Create > Martian > Random Event Library
     /// 2. 设置 libraryId（如 "act1_events"）
-    /// 3. 将 RandomEventData 资产拖入 events 列表
-    /// 4. 根据需要重复某些事件以调整权重
-    /// 5. 保存到 Resources/RandomEventLibraries/ 目录
+    /// 3. 将 RandomEventData 资产拖入 entries 列表，设置各自 weight
+    /// 4. 保存到 Resources/RandomEventLibraries/ 目录
     /// </summary>
     [CreateAssetMenu(fileName = "NewRandomEventLibrary", menuName = "Martian/Random Event Library")]
     public class RandomEventLibrary : ScriptableObject
@@ -40,12 +54,10 @@ namespace Martian.RandomEvent
         public string displayName;
 
         /// <summary>
-        /// 事件列表。支持重复以表示权重。
-        /// 例如：[EventA, EventA, EventB] 表示 EventA 权重为 2。
-        /// RandomEventManager 会随机选取一个（UnityEngine.Random.Range(0, events.Count)）。
+        /// 事件条目列表。每条含事件引用和权重。
         /// </summary>
-        [Tooltip("Event entries. Repeated entries count as extra weight.")]
-        public List<RandomEventData> events = new();
+        [Tooltip("Event entries with individual weights.")]
+        public List<RandomEventEntry> entries = new();
 
         /// <summary>
         /// 显示名称属性。若 displayName 未设置，返回资产文件名。
