@@ -101,6 +101,7 @@ namespace BaoZuPo.Core
             // Step 2: 加载卡牌数据库和卡牌库
             CardDatabase.LoadAll();
             CardLibraryDatabase.LoadAll();
+            Martian.RandomEvent.RandomEventDatabase.LoadAll();
 
             // Step 3: 验证配置和数据完整性（快速失败）
             ValidateConfiguredLibraries();

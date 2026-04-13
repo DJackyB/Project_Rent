@@ -54,6 +54,9 @@ namespace BaoZuPo.GameFlow
         [Header("洗牌提示")]
         [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
         [SerializeField] private float shufflePauseAfterSeconds = 0.35f;
+        [Header("随机事件卡")]
+        [SerializeField] private Card.CardData _eventCardData;
+        [SerializeField] [Range(0f, 1f)] private float _eventCardSpawnChance = 0.1f;
 
         [Header("Debug")]
         [SerializeField] private int _currentTurn;
@@ -204,6 +207,7 @@ namespace BaoZuPo.GameFlow
             if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
                 Deck.DeckManager.Instance.Draw(drawCount);
+                TrySpawnEventCard();
                 InjectTurnShopCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -220,6 +224,8 @@ namespace BaoZuPo.GameFlow
             if (UIManager.Instance == null || UIManager.Instance.handPanel == null)
             {
                 Deck.DeckManager.Instance.Draw(drawCount);
+                TrySpawnEventCard();
+                InjectTurnShopCard();
                 _isPreparePresentationPending = false;
                 yield break;
             }
@@ -246,6 +252,8 @@ namespace BaoZuPo.GameFlow
 
                 yield return UIManager.Instance.handPanel.PlayIncomingCard(drawn[0], animationKind);
             }
+
+            TrySpawnEventCard();
 
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
             {
@@ -752,6 +760,7 @@ namespace BaoZuPo.GameFlow
                 Amount = requiredPayment,
                 RemainingMoney = MoneyManager.Instance.CurrentMoney
             });
+        }
 
             if (!paid)
             {
@@ -1051,6 +1060,25 @@ namespace BaoZuPo.GameFlow
             {
                 TurnNumber = _currentTurn
             });
+        }
+
+        /// <summary>
+        /// 抽卡结束后，按概率向手牌插入一张事件卡（不占抽牌数）。
+        /// 事件卡 waitTurns=1，若本回合未打出，结算阶段将自动销毁。
+        /// </summary>
+        private void TrySpawnEventCard()
+        {
+            if (_eventCardData == null)
+            {
+                return;
+            }
+
+            if (UnityEngine.Random.value >= _eventCardSpawnChance)
+            {
+                return;
+            }
+
+            Deck.DeckManager.Instance.AddCardToHand(_eventCardData);
         }
 
         private void PublishPhaseChanged(GamePhase phase)

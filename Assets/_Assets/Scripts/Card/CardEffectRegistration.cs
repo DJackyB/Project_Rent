@@ -32,6 +32,10 @@ namespace BaoZuPo.Card
             CardEffectFactory.Register("TriggerSelectedRoomSettle", _ => new TriggerSelectedRoomSettleEffect());
             CardEffectFactory.Register("SpawnRandomTenantInSelectedRoom", _ => new SpawnRandomTenantInSelectedRoomEffect());
 
+            // ===== 随机事件效果 =====
+            // TriggerRandomEvent;act1_events - 从指定库中加权随机触发一个随机事件
+            CardEffectFactory.Register("TriggerRandomEvent", 1, args => new TriggerRandomEventEffect(args[0]));
+
             IsRegistered = true;
         }
 
