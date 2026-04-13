@@ -517,7 +517,10 @@ namespace BaoZuPo.UI
             SetZoneHighlight(false);
             ClearActiveState(true);
 
-            if (draggedObject != null)
+            // 即发卡打出时，PlayDiscardAnimation 已将此对象移入动画层并启动 DOTween；
+            // 若此时强行 DOKill + Destroy 会杀掉动画，交由动画层自行销毁。
+            bool isExitingViaAnimation = UIManager.Instance?.handPanel?.IsCardExiting(card) == true;
+            if (draggedObject != null && !isExitingViaAnimation)
             {
                 draggedObject.transform.DOKill(false);
                 Destroy(draggedObject);

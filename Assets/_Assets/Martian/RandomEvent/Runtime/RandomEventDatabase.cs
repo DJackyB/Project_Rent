@@ -148,13 +148,13 @@ namespace Martian.RandomEvent
                 throw new InvalidOperationException(
                     $"[RandomEventDatabase] {sourceLabel}: libraryId is empty on asset '{library.name}'.");
 
-            if (library.events == null)
+            if (library.entries == null)
                 throw new InvalidOperationException(
-                    $"[RandomEventDatabase] {sourceLabel}: events list is null on library '{library.libraryId}'.");
+                    $"[RandomEventDatabase] {sourceLabel}: entries list is null on library '{library.libraryId}'.");
 
-            for (int i = 0; i < library.events.Count; i++)
+            for (int i = 0; i < library.entries.Count; i++)
             {
-                if (library.events[i] == null)
+                if (library.entries[i] == null)
                     throw new InvalidOperationException(
                         $"[RandomEventDatabase] {sourceLabel}: library '{library.libraryId}' has null entry at index {i}.");
             }

@@ -1,4 +1,5 @@
-using Martian.RandomEvent;
+using System;
+using UnityEngine;
 
 namespace BaoZuPo.Card.Effects
 {
@@ -22,7 +23,28 @@ namespace BaoZuPo.Card.Effects
 
         public void Execute(CardInstance source, GameContext context)
         {
-            RandomEventManager.Instance?.TriggerRandomFromLibrary(_libraryId);
+            var managerType = Type.GetType("Martian.RandomEvent.RandomEventManager, Assembly-CSharp");
+            if (managerType == null)
+            {
+                Debug.LogWarning("[TriggerRandomEventEffect] RandomEventManager type not found. Skipping random event trigger.");
+                return;
+            }
+
+            var instanceProperty = managerType.GetProperty("Instance");
+            var manager = instanceProperty?.GetValue(null);
+            if (manager == null)
+            {
+                return;
+            }
+
+            var triggerMethod = managerType.GetMethod("TriggerRandomFromLibrary", new[] { typeof(string) });
+            if (triggerMethod == null)
+            {
+                Debug.LogWarning("[TriggerRandomEventEffect] TriggerRandomFromLibrary(string) was not found on RandomEventManager.");
+                return;
+            }
+
+            triggerMethod.Invoke(manager, new object[] { _libraryId });
         }
     }
 }

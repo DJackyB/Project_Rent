@@ -143,7 +143,14 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
             }
             catch
             {
-                // Keep the generic popup API usable even if project localization is not ready.
+                // Martian.Localization 未接线时走此兜底：直接从 Resources 加载中文字体。
+                // 接线后 try 块成功，catch 不再执行。
+                var font = UnityEngine.Resources.Load<TMPro.TMP_FontAsset>(
+                    "Fonts/SourceHanSansSC/SourceHanSansSC-Regular SDF");
+                if (font != null)
+                {
+                    text.font = font;
+                }
             }
         }
 

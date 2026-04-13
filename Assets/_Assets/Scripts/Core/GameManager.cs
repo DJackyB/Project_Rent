@@ -9,28 +9,28 @@ using UnityEngine;
 namespace BaoZuPo.Core
 {
     /// <summary>
-    /// 游戏生命周期与系统初始化管理器。
+    /// 游戏生命周期与系统初始化管理器�?
     ///
-    /// 责任：
+    /// 责任�?
     /// 1. Awake 阶段：初始化所有核心系统（卡牌库、经济系统、棋盘、卡组）
-    /// 2. 配置加载与验证：从 GameConfig asset 读取各项参数，并校验卡牌库和卡牌效果
-    /// 3. FSM 驱动：持有 turnFlowFsm 并在游戏结束时停止 FSM
-    /// 4. 事件监听：订阅 GameOver 事件，清理游戏状态
+    /// 2. 配置加载与验证：�?GameConfig asset 读取各项参数，并校验卡牌库和卡牌效果
+    /// 3. FSM 驱动：持�?turnFlowFsm 并在游戏结束时停�?FSM
+    /// 4. 事件监听：订�?GameOver 事件，清理游戏状�?
     ///
     /// 初始化顺序（关键）：
     ///   1. CardEffectRegistration.EnsureRegistered() - 注册所有卡牌效果类
-    ///   2. CardDatabase.LoadAll() - 加载所有卡牌资产
-    ///   3. CardLibraryDatabase.LoadAll() - 加载卡牌库
+    ///   2. CardDatabase.LoadAll() - 加载所有卡牌资�?
+    ///   3. CardLibraryDatabase.LoadAll() - 加载卡牌�?
     ///   4. 验证：库配置、库中卡牌、卡牌效果字符串
-    ///   5. 获取场景中各大系统单例（MoneyManager、BoardManager、DeckManager）- 必须存在
+    ///   5. 获取场景中各大系统单例（MoneyManager、BoardManager、DeckManager�? 必须存在
     ///   6. 各系统初始化（传入起始参数）
-    ///   7. 构建 GameContext（统一外部接口）
+    ///   7. 构建 GameContext（统一外部接口�?
     ///
-    /// 为什么这个顺序很重要：
-    ///   - 卡牌效果必须先注册，否则后续验证会失败
+    /// 为什么这个顺序很重要�?
+    ///   - 卡牌效果必须先注册，否则后续验证会失�?
     ///   - 库和卡牌必须加载，然后再去验证（快速失败）
     ///   - 各系统单例必须存在，Awake 阶段获取，否则后续逻辑崩溃
-    ///   - GameContext 必须最后才能构建（所有系统都就位）
+    ///   - GameContext 必须最后才能构建（所有系统都就位�?
     /// </summary>
     public class GameManager : Singleton<GameManager>
     {
@@ -38,12 +38,12 @@ namespace BaoZuPo.Core
         public GameConfig gameConfig;
 
         /// <summary>
-        /// FSM 驱动器，持有转法 FSM（准备→行动→结算→奖励→下一回合）
+        /// FSM 驱动器，持有转法 FSM（准备→行动→结算→奖励→下一回合�?
         /// </summary>
         private FSMOwner _turnFlowFsm;
 
         /// <summary>
-        /// 游戏上下文：统一暴露 MoneyManager、BoardManager、DeckManager 等系统入口
+        /// 游戏上下文：统一暴露 MoneyManager、BoardManager、DeckManager 等系统入�?
         /// </summary>
         public GameContext GameContext { get; private set; }
 
@@ -89,25 +89,25 @@ namespace BaoZuPo.Core
         }
 
         /// <summary>
-        /// 初始化所有核心系统。
-        /// 流程：卡牌库加载 → 验证 → 获取系统单例 → 各系统初始化 → 构建 GameContext
-        /// 任何一步失败都会抛异常，中断游戏启动（快速失败原则）。
+        /// 初始化所有核心系统�?
+        /// 流程：卡牌库加载 �?验证 �?获取系统单例 �?各系统初始化 �?构建 GameContext
+        /// 任何一步失败都会抛异常，中断游戏启动（快速失败原则）�?
         /// </summary>
         private void InitializeSystems()
         {
-            // Step 1: 注册所有卡牌效果类（必须最先做）
+            // Step 1: 注册所有卡牌效果类（必须最先做�?
             CardEffectRegistration.EnsureRegistered();
 
-            // Step 2: 加载卡牌数据库和卡牌库
+            // Step 2: 加载卡牌数据库和卡牌�?
             CardDatabase.LoadAll();
             CardLibraryDatabase.LoadAll();
-            Martian.RandomEvent.RandomEventDatabase.LoadAll();
+            LoadRandomEventDatabaseIfPresent();
 
             // Step 3: 验证配置和数据完整性（快速失败）
             ValidateConfiguredLibraries();
             ValidateLoadedCardEffects();
 
-            // Step 4: 获取场景中各大系统单例（都是 Singleton）
+            // Step 4: 获取场景中各大系统单例（都是 Singleton�?
             var moneyManager = Economy.MoneyManager.Instance;
             if (moneyManager == null)
             {
@@ -126,7 +126,7 @@ namespace BaoZuPo.Core
                 throw new InvalidOperationException("[GameManager] DeckManager is required in scene.");
             }
 
-            // Step 5: 各系统初始化（传入 GameConfig 参数）
+            // Step 5: 各系统初始化（传�?GameConfig 参数�?
             Debug.Log($"[GameManager] Config loaded. Money={gameConfig.startingMoney}, Rooms={gameConfig.initialRoomCount}, LoanGrowth={gameConfig.loanGrowthFactor}");
             moneyManager.Initialize(gameConfig.startingMoney);
             boardManager.Initialize(
@@ -137,7 +137,7 @@ namespace BaoZuPo.Core
             deckManager.Initialize(gameConfig.maxHandSize);
             deckManager.InitializeDeck(gameConfig.normalTurnDrawLibrary);
 
-            // Step 6: 构建游戏上下文（统一接口）
+            // Step 6: 构建游戏上下文（统一接口�?
             GameContext = new GameContext
             {
                 MoneyManager = moneyManager,
@@ -249,8 +249,27 @@ namespace BaoZuPo.Core
         }
 
         /// <summary>
-        /// 游戏结束事件处理：停止 FSM
+        /// 游戏结束事件处理：停�?FSM
         /// </summary>
+        private static void LoadRandomEventDatabaseIfPresent()
+        {
+            var databaseType = Type.GetType("Martian.RandomEvent.RandomEventDatabase, Assembly-CSharp");
+            if (databaseType == null)
+            {
+                Debug.Log("[GameManager] RandomEventDatabase type not found. Skipping random event database load.");
+                return;
+            }
+
+            var loadAllMethod = databaseType.GetMethod("LoadAll", Type.EmptyTypes);
+            if (loadAllMethod == null)
+            {
+                Debug.LogWarning("[GameManager] RandomEventDatabase.LoadAll() was not found. Skipping random event database load.");
+                return;
+            }
+
+            loadAllMethod.Invoke(null, null);
+        }
+
         private void OnGameOver(GameEvents.GameOver e)
         {
             if (_turnFlowFsm != null && _turnFlowFsm.isRunning)
@@ -260,3 +279,4 @@ namespace BaoZuPo.Core
         }
     }
 }
+

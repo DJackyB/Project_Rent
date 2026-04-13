@@ -55,6 +55,8 @@ namespace BaoZuPo.UI
         private bool _runtimeAnimationLayerReady;
 
         public float BetweenCardsPauseSeconds => betweenCardsPauseSeconds;
+        public int CardViewsCount => _cardViews.Count;
+        public bool IsAnimationLayerReady => _runtimeAnimationLayerReady && _animationLayerRoot != null;
 
         public void RefreshHand()
         {
@@ -246,6 +248,28 @@ namespace BaoZuPo.UI
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 判断某张牌是否正在播放弃牌出场动画。
+        /// 供 UICardDragController 在 CommitPlay 时跳过对动画对象的 Destroy。
+        /// </summary>
+        public bool IsCardExiting(CardInstance card)
+        {
+            if (card == null)
+            {
+                return false;
+            }
+
+            foreach (var view in _exitingViews)
+            {
+                if (view != null && ReferenceEquals(view.Card, card))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private UICardView EnsureCardViewForAppend(CardInstance card)

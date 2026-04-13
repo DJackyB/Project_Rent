@@ -54,7 +54,7 @@ namespace BaoZuPo.GameFlow
         [Header("æ´—ç‰Œæç¤º")]
         [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
         [SerializeField] private float shufflePauseAfterSeconds = 0.35f;
-        [Header("éšæœºäº‹ä»¶å?)]
+        [Header("Ëæ»úÊÂ¼ş¿¨")]
         [SerializeField] private Card.CardData _eventCardData;
         [SerializeField] [Range(0f, 1f)] private float _eventCardSpawnChance = 0.1f;
 
@@ -201,6 +201,7 @@ namespace BaoZuPo.GameFlow
 
             if (drawCount <= 0)
             {
+                TrySpawnEventCard();
                 InjectTurnShopCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -787,7 +788,6 @@ namespace BaoZuPo.GameFlow
                 Amount = requiredPayment,
                 RemainingMoney = MoneyManager.Instance.CurrentMoney
             });
-        }
 
             if (!paid)
             {
