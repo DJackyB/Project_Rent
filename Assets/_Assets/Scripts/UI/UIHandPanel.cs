@@ -53,10 +53,12 @@ namespace BaoZuPo.UI
         private Canvas _rootCanvas;
         private RectTransform _animationLayerRoot;
         private bool _runtimeAnimationLayerReady;
+        private int _pendingDiscardGhostCount;
 
         public float BetweenCardsPauseSeconds => betweenCardsPauseSeconds;
         public int CardViewsCount => _cardViews.Count;
         public bool IsAnimationLayerReady => _runtimeAnimationLayerReady && _animationLayerRoot != null;
+        public bool HasExitingAnimations => _exitingViews.Count > 0 || _pendingDiscardGhostCount > 0;
 
         public void RefreshHand()
         {
@@ -173,9 +175,9 @@ namespace BaoZuPo.UI
         }
 
         /// <summary>
-        /// 即发卡打出后的弃牌出场动画（抽卡的反向动作：上移 + 缩小 + 淡出）。
-        /// 立即从 _cardViews 摘除并加入 _exitingViews，防止 RefreshHand 提前销毁视图。
-        /// 动画结束后自动销毁卡牌对象。
+        /// 等待牌到期弃牌动画（上移 + 缩小 + 淡出）。
+        /// 立即销毁真实视图让手牌重排，再在 AnimationLayer 生成 Ghost 播放出场动画。
+        /// 动画期间 _pendingDiscardGhostCount > 0，阻止 NodeCanvas 推进到奖励阶段。
         /// </summary>
         public void PlayDiscardAnimation(CardInstance card)
         {
@@ -185,50 +187,77 @@ namespace BaoZuPo.UI
                 return;
             }
 
+            var realRect = view.transform as RectTransform;
+            Vector2 capturedSize = realRect != null
+                ? new Vector2(realRect.rect.width, realRect.rect.height)
+                : new Vector2(190f, 260f);
+            Vector3 capturedWorldCenter = Vector3.zero;
+            if (realRect != null)
+            {
+                var corners = new Vector3[4];
+                realRect.GetWorldCorners(corners);
+                capturedWorldCenter = (corners[0] + corners[2]) * 0.5f;
+            }
+
             _cardViews.Remove(view);
-            _exitingViews.Add(view);
+            DisposeView(view);
 
             EnsureAnimationLayer();
-            if (_animationLayerRoot != null)
+            if (_animationLayerRoot == null || capturedSize.sqrMagnitude <= 0f)
             {
-                view.transform.SetParent(_animationLayerRoot, true);
+                return;
             }
 
-            StartCoroutine(PlayOutgoingSequence(view));
+            _pendingDiscardGhostCount++;
+            StartCoroutine(PlayOutgoingGhost(card, capturedWorldCenter, capturedSize));
         }
 
-        private IEnumerator PlayOutgoingSequence(UICardView view)
+        private IEnumerator PlayOutgoingGhost(CardInstance card, Vector3 worldCenter, Vector2 size)
         {
-            if (view == null)
+            var ghostObject = Instantiate(cardPrefab, _animationLayerRoot);
+            ghostObject.name = $"{(card != null ? card.Data.cardName : "Card")}_DiscardGhost";
+            var ghostView = ghostObject.GetComponent<UICardView>();
+            if (ghostView != null)
             {
-                yield break;
+                ghostView.Setup(card, CardViewContext.Hand, this);
             }
 
-            var rect = view.transform as RectTransform;
-            var canvasGroup = EnsureCanvasGroup(view.gameObject);
+            DisableGhostInteraction(ghostObject);
+
+            var ghostRect = ghostObject.transform as RectTransform;
+            if (ghostRect != null)
+            {
+                ghostRect.anchorMin = new Vector2(0.5f, 0.5f);
+                ghostRect.anchorMax = new Vector2(0.5f, 0.5f);
+                ghostRect.pivot = new Vector2(0.5f, 0.5f);
+                ghostRect.sizeDelta = size;
+                ghostRect.position = worldCenter;
+                ghostRect.localScale = Vector3.one;
+            }
+
+            var ghostCanvasGroup = EnsureCanvasGroup(ghostObject);
 
             float moveSeconds = drawMoveSeconds * 1.1f;
-            Vector3 exitOffset = new Vector3(0f, drawStartYOffset, 0f);
 
-            var seq = DOTween.Sequence().SetUpdate(true).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy);
+            var seq = DOTween.Sequence().SetUpdate(true).SetLink(ghostObject, LinkBehaviour.KillOnDestroy);
 
-            if (rect != null)
+            if (ghostRect != null)
             {
-                seq.Join(rect.DOMove(rect.position + exitOffset, moveSeconds).SetEase(Ease.InCubic).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
-                seq.Join(rect.DOScale(Vector3.one * drawStartScale, moveSeconds).SetEase(Ease.InBack).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(ghostRect.DOMove(ghostRect.position + new Vector3(0f, drawStartYOffset, 0f), moveSeconds).SetEase(Ease.InCubic).SetLink(ghostObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(ghostRect.DOScale(Vector3.one * drawStartScale, moveSeconds).SetEase(Ease.InBack).SetLink(ghostObject, LinkBehaviour.KillOnDestroy));
             }
 
-            if (canvasGroup != null)
+            if (ghostCanvasGroup != null)
             {
-                seq.Join(canvasGroup.DOFade(0f, moveSeconds * 0.75f).SetEase(Ease.InQuad).SetLink(view.gameObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(ghostCanvasGroup.DOFade(0f, moveSeconds * 0.75f).SetEase(Ease.InQuad).SetLink(ghostObject, LinkBehaviour.KillOnDestroy));
             }
 
             yield return seq.WaitForCompletion();
 
-            _exitingViews.Remove(view);
-            if (view != null)
+            _pendingDiscardGhostCount--;
+            if (ghostObject != null)
             {
-                DisposeCardObject(view.gameObject);
+                Destroy(ghostObject);
             }
         }
 

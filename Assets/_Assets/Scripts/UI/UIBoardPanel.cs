@@ -41,6 +41,9 @@ namespace BaoZuPo.UI
 
         private Transform _contractContainer;
         private RectTransform _destroyAnimationLayer;
+        private int _pendingDestroyAnimations;
+
+        public bool HasDestroyAnimations => _pendingDestroyAnimations > 0;
 
         private void OnEnable()
         {
@@ -129,6 +132,7 @@ namespace BaoZuPo.UI
                 yield break;
             }
 
+            _pendingDestroyAnimations++;
             EnsureDestroyAnimationLayer();
             if (_destroyAnimationLayer != null)
             {
@@ -176,6 +180,7 @@ namespace BaoZuPo.UI
 
             yield return seq.WaitForCompletion();
 
+            _pendingDestroyAnimations--;
             if (cardObject != null)
             {
                 Destroy(cardObject);

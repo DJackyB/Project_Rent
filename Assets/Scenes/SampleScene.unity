@@ -4295,8 +4295,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 180}
+  m_AnchoredPosition: {x: 706.39886, y: 0}
+  m_SizeDelta: {x: 131.54399, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &821995479
 MonoBehaviour:
@@ -7016,7 +7016,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1605538934
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8040,7 +8040,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1857837017
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8053,14 +8053,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fa5bf814a0e42ceac48fbadb57dca0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BaoZuPo::BaoZuPo.UI.UICardShopPanel
-  _panelRoot: {fileID: 0}
-  _titleText: {fileID: 0}
-  _cardSlot0: {fileID: 0}
-  _cardSlot1: {fileID: 0}
-  _cardSlot2: {fileID: 0}
+  _panelRoot: {fileID: 1605538933}
+  _titleText: {fileID: 682813749}
+  _cardSlot0: {fileID: 1326493807}
+  _cardSlot1: {fileID: 281276810}
+  _cardSlot2: {fileID: 474834768}
   _cardPrefab: {fileID: 2246620783366798838, guid: b86cb4e6a2ab6f14c888bfcab0ee2988, type: 3}
-  _closeButton: {fileID: 0}
-  _closeButtonText: {fileID: 0}
+  _closeButton: {fileID: 627590572}
+  _closeButtonText: {fileID: 1441882018}
   _cardScale: 2
   _revealDuration: 0.2
   _revealStagger: 0.06
@@ -8678,6 +8678,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.GameFlow.TurnManager
   shufflePauseBeforeSeconds: 0.35
   shufflePauseAfterSeconds: 0.35
+  _eventCardData: {fileID: 0}
+  _eventCardSpawnChance: 0.1
   _currentTurn: 0
   _isGameOver: 0
   _loanPaymentCount: 0
