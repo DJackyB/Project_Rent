@@ -202,7 +202,6 @@ namespace BaoZuPo.GameFlow
             if (drawCount <= 0)
             {
                 TrySpawnEventCard();
-                InjectTurnShopCard();
                 UIManager.Instance?.RefreshAll();
                 return;
             }
@@ -219,7 +218,6 @@ namespace BaoZuPo.GameFlow
                 }
 
                 TrySpawnEventCard();
-                InjectTurnShopCard();
                 UIManager.Instance?.RefreshAll();
                 return;
             }
@@ -250,7 +248,6 @@ namespace BaoZuPo.GameFlow
                 }
 
                 TrySpawnEventCard();
-                InjectTurnShopCard();
                 _isPreparePresentationPending = false;
                 yield break;
             }
@@ -286,12 +283,6 @@ namespace BaoZuPo.GameFlow
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
             {
                 yield return new WaitForSeconds(PreparePhaseOutroSeconds);
-            }
-
-            var shopCard = InjectTurnShopCard();
-            if (shopCard != null)
-            {
-                yield return UIManager.Instance.handPanel.PlayIncomingCard(shopCard, animationKind);
             }
 
             _isPreparePresentationPending = false;
@@ -975,18 +966,6 @@ namespace BaoZuPo.GameFlow
             _shopOpenedThisTurn = false;
             _shopClosedThisTurn = false;
             _isShopOpen = false;
-        }
-
-        private CardInstance InjectTurnShopCard()
-        {
-            var config = GameManager.Instance != null ? GameManager.Instance.gameConfig : null;
-            if (config == null || config.shopCard == null)
-            {
-                return null;
-            }
-
-            CleanupTemporaryHandCards();
-            return Deck.DeckManager.Instance.ForceAddCardToHand(config.shopCard, card => card.ConfigureAsTemporaryHandCard());
         }
 
         private void CleanupTemporaryHandCards()
