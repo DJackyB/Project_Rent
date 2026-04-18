@@ -1,0 +1,10 @@
+{
+  "name": "Martian.RandomEvent",
+  "references": [
+    "Martian.EventBus"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

@@ -1,7 +1,8 @@
 {
   "name": "BaoZuPo.Tests.EditMode.Card",
   "references": [
-    "BaoZuPo"
+    "BaoZuPo",
+    "Martian.EventBus"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

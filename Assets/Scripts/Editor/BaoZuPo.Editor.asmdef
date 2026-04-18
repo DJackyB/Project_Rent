@@ -2,6 +2,7 @@
   "name": "BaoZuPo.Editor",
   "references": [
     "BaoZuPo",
+    "Martian.RandomEvent",
     "Martian.Audio",
     "Unity.Localization",
     "Unity.Localization.Editor"
