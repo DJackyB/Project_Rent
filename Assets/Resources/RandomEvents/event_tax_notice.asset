@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f63a2cd64def145af3cced0b3f8909, type: 3}
+  m_Name: event_tax_notice
+  m_EditorClassIdentifier: Martian.RandomEvent::Martian.RandomEvent.RandomEventData
+  eventId: event_tax_notice
+  tags:
+  - financial
+  titleKey: "\u623F\u4EA7\u7A0E\u5355"
+  descriptionKey: "\u5E74\u5EA6\u623F\u4EA7\u7A0E\u901A\u77E5\u5230\u4E86\uFF0C\u5FC5\u987B\u7F34\u7EB3\u3002"
+  artwork: {fileID: 0}
+  options:
+  - optionId: option_pay
+    displayTextKey: "\u4E56\u4E56\u7F34\u7A0E\uFF08-150\u91D1\uFF09"
+    tooltipKey: "\u6309\u65F6\u7F34\u6E05"
+    effect: ReduceMoney;150
+    nextEventId: 
+  - optionId: option_appeal
+    displayTextKey: "\u7533\u8BF7\u51CF\u514D\uFF08-50\u91D1\uFF09"
+    tooltipKey: "\u51CF\u514D\u90E8\u5206\u7A0E\u6B3E"
+    effect: ReduceMoney;50
+    nextEventId: 

@@ -2,8 +2,10 @@ using BaoZuPo.Board;
 using BaoZuPo.Deck;
 using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
+using Martian.RandomEvent;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 namespace BaoZuPo.Core
 {
@@ -20,6 +22,14 @@ namespace BaoZuPo.Core
     /// </summary>
     public class GameDebugController : MonoBehaviour
     {
+        [SerializeField] private string _debugEventId = "event_tenant_complaint";
+
+        [ContextMenu("触发随机事件")]
+        public void TriggerDebugRandomEvent()
+        {
+            RandomEventManager.Instance?.TriggerEvent(_debugEventId);
+        }
+
         private void Update()
         {
             var keyboard = Keyboard.current;
