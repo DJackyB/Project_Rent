@@ -79,6 +79,7 @@ namespace BaoZuPo.UI
                 return;
             }
 
+            RefreshBaseline();
             _tween?.Kill();
             _moveTween?.Kill();
             _cardView?.SetSelected(true);

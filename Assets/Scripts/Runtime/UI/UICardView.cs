@@ -455,12 +455,9 @@ namespace BaoZuPo.UI
             bool showDescription = CurrentContext == CardViewContext.Hand
                 || CurrentContext == CardViewContext.TooltipPreview
                 || CurrentContext == CardViewContext.Contract
+                || CurrentContext == CardViewContext.RoomTenant
+                || CurrentContext == CardViewContext.RoomEquipment
                 || CurrentContext == CardViewContext.RewardPick;
-
-            if (CurrentContext == CardViewContext.RoomTenant || CurrentContext == CardViewContext.RoomEquipment)
-            {
-                showDescription = false;
-            }
 
             if (descText != null)
             {
