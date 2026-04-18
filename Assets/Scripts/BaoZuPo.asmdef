@@ -1,6 +1,8 @@
 {
   "name": "BaoZuPo",
   "references": [
+    "Martian.EventBus",
+    "Martian.RandomEvent",
     "Martian.Audio",
     "Martian.Feedback",
     "Martian.Feedback.Runtime",

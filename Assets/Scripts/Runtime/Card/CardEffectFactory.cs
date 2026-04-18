@@ -204,6 +204,15 @@ namespace BaoZuPo.Card
             return TryCreateSingle(effectString.Trim(), false, out _, out error);
         }
 
+        /// <summary>
+        /// 直接执行效果字符串，不需要 CardInstance（用于随机事件等非卡牌来源的效果）。
+        /// </summary>
+        public static void Execute(string effectString, GameContext context)
+        {
+            var effect = Create(effectString);
+            effect?.Execute(null, context);
+        }
+
         /// <summary>清空所有已注册的效果。通常在测试中使用。</summary>
         public static void ClearAll()
         {

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f63a2cd64def145af3cced0b3f8909, type: 3}
+  m_Name: event_water_leak
+  m_EditorClassIdentifier: Martian.RandomEvent::Martian.RandomEvent.RandomEventData
+  eventId: event_water_leak
+  tags:
+  - urgent
+  titleKey: "\u6C34\u7BA1\u6F0F\u6C34"
+  descriptionKey: "\u4E94\u697C\u8D70\u5ECA\u6C34\u7BA1\u7A81\u7136\u7206\u88C2\uFF0C\u5730\u677F\u5F00\u59CB\u79EF\u6C34\u3002"
+  artwork: {fileID: 0}
+  options:
+  - optionId: option_repair
+    displayTextKey: "\u7ACB\u5373\u4FEE\u7406\uFF08-50\u91D1\uFF09"
+    tooltipKey: "\u5F7B\u5E95\u89E3\u51B3"
+    effect: ReduceMoney;50
+    nextEventId: 
+  - optionId: option_delay
+    displayTextKey: "\u5148\u62D6\u7740"
+    tooltipKey: "\u7701\u94B1\u4F46\u9690\u60A3\u4ECD\u5728"
+    effect: 
+    nextEventId: 
