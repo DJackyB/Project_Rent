@@ -14,24 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardLibrary
   libraryId: 3
   displayName: Shop Pool
-  entries:
-  - card: {fileID: 11400000, guid: 8799955b45e323a4d8bc928991d3ad0e, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 894a739afb24abe4a9be53553f55d422, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: c4b20efc348b4c04cb89d811109e0750, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 4d8f8adcde798b843b109ce4722166b6, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: fc981157ae902c1468cae8305b2ec640, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 3389150f5d4c41b7af33ff434094ebf3, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: aac7fdeaeacc492aa11952e76555473a, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 10cf36a25cee4af1b2bfdca16ba95472, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 846d684dd7c14f2c8a3ddefb715c5185, type: 2}
-    quantity: 1
-  - card: {fileID: 11400000, guid: 44a19d3246044446b19cca37cb4b875f, type: 2}
-    quantity: 1
+  entries: []
