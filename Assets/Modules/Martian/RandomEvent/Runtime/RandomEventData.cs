@@ -104,5 +104,18 @@ namespace Martian.RandomEvent
         /// </summary>
         [Tooltip("Optional tooltip explaining consequences.")]
         public string tooltipKey;
+
+        /// <summary>
+        /// 选项效果字符串，格式与卡牌效果一致（支持 | 多效果）。
+        /// 示例："AddMoney;-200" 或 "ReduceMoney;50|DrawCard;1"
+        /// </summary>
+        [Tooltip("Effect string executed when this option is selected. Same format as card effects.")]
+        public string effect;
+
+        /// <summary>
+        /// 选项选完后立即触发的后续事件 ID（事件链）。留空=无后续。
+        /// </summary>
+        [Tooltip("Event ID to trigger immediately after this option is selected. Leave empty for no chain.")]
+        public string nextEventId;
     }
 }
