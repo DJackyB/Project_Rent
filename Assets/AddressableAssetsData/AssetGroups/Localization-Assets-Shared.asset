@@ -16,22 +16,22 @@ MonoBehaviour:
   m_GUID: 7e9b0ac586291284d9b0681600d6dc8c
   m_SerializeEntries:
   - m_GUID: 1391e98021888564ebc3e4b62e102ed6
-    m_Address: Assets/_Assets/Martian/Localization/Project/Tables/Card Shared Data.asset
+    m_Address: Assets/Modules/Martian/Localization/Project/Tables/Card Shared Data.asset
     m_ReadOnly: 1
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 49aff1ba04d6b4345a7fbd00e9de56ca
-    m_Address: Assets/_Assets/Martian/Localization/Project/Tables/UI Shared Data.asset
+    m_Address: Assets/Modules/Martian/Localization/Project/Tables/UI Shared Data.asset
     m_ReadOnly: 1
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bafab716397b6194996bfdc7ad7f2cf7
-    m_Address: Assets/_Assets/Data/Localization/GameText Shared Data.asset
+    m_Address: Assets/Data/Localization/GameText Shared Data.asset
     m_ReadOnly: 1
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e70d6bb80c4967c46825696ed05d4f5b
-    m_Address: Assets/_Assets/Martian/Localization/Project/Tables/Common Shared Data.asset
+    m_Address: Assets/Modules/Martian/Localization/Project/Tables/Common Shared Data.asset
     m_ReadOnly: 1
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
