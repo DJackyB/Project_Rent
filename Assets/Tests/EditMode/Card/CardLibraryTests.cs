@@ -58,7 +58,7 @@ namespace BaoZuPo.Tests.Card
             var library = CardLibraryDatabase.GetById("AllCards");
 
             Assert.NotNull(library);
-            Assert.AreEqual(50, library.entries.Count);
+            Assert.AreEqual(51, library.entries.Count);
         }
 
         [Test]
@@ -79,10 +79,10 @@ namespace BaoZuPo.Tests.Card
 
             var allCards = CardDatabase.GetAll().Values.ToArray();
 
-            Assert.AreEqual(50, allCards.Length);
+            Assert.AreEqual(51, allCards.Length);
             Assert.AreEqual(20, allCards.Count(card => card.cardType == CardType.Tenant));
             Assert.AreEqual(13, allCards.Count(card => card.cardType == CardType.Equipment));
-            Assert.AreEqual(13, allCards.Count(card => card.cardType == CardType.Event));
+            Assert.AreEqual(14, allCards.Count(card => card.cardType == CardType.Event));
             Assert.AreEqual(4, allCards.Count(card => card.cardType == CardType.Contract));
         }
 

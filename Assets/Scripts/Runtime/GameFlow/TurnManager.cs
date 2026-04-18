@@ -201,6 +201,7 @@ namespace BaoZuPo.GameFlow
 
             if (drawCount <= 0)
             {
+                TryInjectShopCard();
                 TrySpawnEventCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -217,6 +218,7 @@ namespace BaoZuPo.GameFlow
                     Deck.DeckManager.Instance.Draw(drawCount);
                 }
 
+                TryInjectShopCard();
                 TrySpawnEventCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -278,6 +280,7 @@ namespace BaoZuPo.GameFlow
                 yield return UIManager.Instance.handPanel.PlayIncomingCard(drawn[0], animationKind);
             }
 
+            TryInjectShopCard();
             TrySpawnEventCard();
 
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
@@ -1105,6 +1108,20 @@ namespace BaoZuPo.GameFlow
             }
 
             Deck.DeckManager.Instance.AddCardToHand(_eventCardData);
+        }
+
+        private void TryInjectShopCard()
+        {
+            var gameManager = GameManager.Instance;
+            var config = gameManager != null ? gameManager.gameConfig : null;
+            if (config == null || config.shopCard == null || Deck.DeckManager.Instance == null)
+            {
+                return;
+            }
+
+            Deck.DeckManager.Instance.ForceAddCardToHand(
+                config.shopCard,
+                card => card.ConfigureAsTemporaryHandCard());
         }
 
         private void PublishPhaseChanged(GamePhase phase)
