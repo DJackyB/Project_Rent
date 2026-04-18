@@ -14,6 +14,10 @@ namespace BaoZuPo.Core
     /// </summary>
     public class DeckAnimationTestDriver : MonoBehaviour
     {
+        [Header("Debug Add Card")]
+        [SerializeField] private int debugCardId;
+        [SerializeField] private bool debugIgnoreHandLimit = true;
+
         // ── 随机弃一张手牌（触发弃牌动画）─────────��──────────────────────
         [ContextMenu("Test / 随机弃一张手牌")]
         private void DiscardRandomHandCard()
@@ -78,6 +82,48 @@ namespace BaoZuPo.Core
         private void DrawOneCardWithAnimation()
         {
             StartCoroutine(DrawOneCoroutine());
+        }
+
+        [ContextMenu("Test / 发指定ID卡到手牌")]
+        private void AddConfiguredCardToHand()
+        {
+            var deck = DeckManager.Instance;
+            if (deck == null)
+            {
+                Debug.LogWarning("[TestDriver] DeckManager 未就绪。");
+                return;
+            }
+
+            CardData data;
+            try
+            {
+                data = CardDatabase.GetById(debugCardId);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[TestDriver] 读取卡牌失败，cardId={debugCardId}。{ex.Message}");
+                return;
+            }
+
+            if (data == null)
+            {
+                Debug.LogWarning($"[TestDriver] 未找到 cardId={debugCardId} 对应的卡牌。");
+                return;
+            }
+
+            var addedCard = debugIgnoreHandLimit
+                ? deck.ForceAddCardToHand(data)
+                : deck.AddCardToHand(data);
+
+            UIManager.Instance?.handPanel?.RefreshHand();
+
+            if (addedCard == null)
+            {
+                Debug.LogWarning($"[TestDriver] 发牌失败：{data.cardName}");
+                return;
+            }
+
+            Debug.Log($"[TestDriver] 已发牌到手牌：id={debugCardId}, name={data.cardName}, ignoreHandLimit={debugIgnoreHandLimit}");
         }
 
         private IEnumerator DrawOneCoroutine()

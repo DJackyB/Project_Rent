@@ -304,6 +304,7 @@ namespace BaoZuPo.UI
             }
 
             RefreshContractPanelText();
+            RefreshContractCardScale();
         }
 
         private GameObject ResolveCardPrefab()
@@ -369,6 +370,59 @@ namespace BaoZuPo.UI
             }
         }
 
+        private void RefreshContractCardScale()
+        {
+            var containerRect = _contractContainer as RectTransform;
+            if (containerRect == null)
+            {
+                return;
+            }
+
+            var layoutGroup = _contractContainer.GetComponent<HorizontalOrVerticalLayoutGroup>();
+            float availableHeight = containerRect.rect.height - (layoutGroup != null ? layoutGroup.padding.vertical : 0f);
+            if (availableHeight <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _contractViews.Count; i++)
+            {
+                var cardView = _contractViews[i];
+                var cardRect = cardView != null ? cardView.transform as RectTransform : null;
+                if (cardRect == null)
+                {
+                    continue;
+                }
+
+                float baseHeight = ResolveContractCardBaseHeight(cardRect);
+                if (baseHeight <= 0f)
+                {
+                    continue;
+                }
+
+                float scale = availableHeight / baseHeight;
+                cardRect.localScale = new Vector3(scale, scale, 1f);
+            }
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+        }
+
+        private static float ResolveContractCardBaseHeight(RectTransform cardRect)
+        {
+            var layout = cardRect.GetComponent<LayoutElement>();
+            if (layout != null && layout.preferredHeight > 0f)
+            {
+                return layout.preferredHeight;
+            }
+
+            if (cardRect.rect.height > 0f)
+            {
+                return cardRect.rect.height;
+            }
+
+            return Mathf.Abs(cardRect.sizeDelta.y);
+        }
+
         private static void ClearContainer(Transform container)
         {
             if (container == null)
@@ -394,14 +448,6 @@ namespace BaoZuPo.UI
             {
                 Debug.LogError(
                     $"[UIBoardPanel] ContractContainer '{container.name}' is missing a layout component. Add a HorizontalLayoutGroup or VerticalLayoutGroup in the scene.",
-                    container);
-                return false;
-            }
-
-            if (container.GetComponent<ContentSizeFitter>() == null)
-            {
-                Debug.LogError(
-                    $"[UIBoardPanel] ContractContainer '{container.name}' is missing ContentSizeFitter. Add and configure it in the scene.",
                     container);
                 return false;
             }
