@@ -171,6 +171,14 @@ MonoBehaviour:
     m_Key: GameText.GameOverPlayAgain
     m_Metadata:
       m_Items: []
+  - m_Id: 1891577940140037
+    m_Key: GameText.RoomTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1891577940140038
+    m_Key: GameText.RoomOccupancySummary
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

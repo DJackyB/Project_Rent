@@ -60,6 +60,18 @@ namespace BaoZuPo.UI
         public static string RewardSkip => Resolve("GameText.RewardSkip", "Skip");
         public static string DeckShuffled => Resolve("GameText.DeckShuffled", "牌堆循环");
 
+        public static string RoomTitle(int roomNumber)
+            => Resolve("GameText.RoomTitle", $"Room {roomNumber}", roomNumber);
+
+        public static string RoomOccupancySummary(int tenantCount, int tenantCapacity, int equipmentCount, int equipmentCapacity)
+            => Resolve(
+                "GameText.RoomOccupancySummary",
+                $"Tenant {tenantCount}/{tenantCapacity}  Equip {equipmentCount}/{equipmentCapacity}",
+                tenantCount,
+                tenantCapacity,
+                equipmentCount,
+                equipmentCapacity);
+
         public static string RoomSummary(int roomNumber, int tenantCount, int tenantCapacity, int equipmentCount, int equipmentCapacity)
             => Resolve(
                 "GameText.RoomSummary",

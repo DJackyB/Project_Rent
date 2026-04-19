@@ -18,6 +18,7 @@ namespace BaoZuPo.UI
     {
         [Header("Optional Scene References")]
         public TextMeshProUGUI titleText;
+        public TextMeshProUGUI occupancyText;
         public Transform cardListContainer;
         public Button roomButton;
         public RectTransform dropAnchor;
@@ -131,17 +132,34 @@ namespace BaoZuPo.UI
 
         private void RefreshTitle()
         {
-            if (titleText == null || _room == null)
+            if (_room == null)
             {
                 return;
             }
 
-            titleText.text = GameText.RoomSummary(
-                _room.RoomIndex + 1,
+            string roomTitle = GameText.RoomTitle(_room.RoomIndex + 1);
+            string occupancySummary = GameText.RoomOccupancySummary(
                 _room.TenantCount,
                 _room.TenantSlotCapacity,
                 _room.EquipmentCount,
                 _room.EquipmentSlotCapacity);
+
+            if (titleText != null)
+            {
+                titleText.text = occupancyText != null
+                    ? roomTitle
+                    : GameText.RoomSummary(
+                        _room.RoomIndex + 1,
+                        _room.TenantCount,
+                        _room.TenantSlotCapacity,
+                        _room.EquipmentCount,
+                        _room.EquipmentSlotCapacity);
+            }
+
+            if (occupancyText != null)
+            {
+                occupancyText.text = occupancySummary;
+            }
         }
 
         private void ConfigureDropZone()
