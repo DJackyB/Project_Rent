@@ -5,44 +5,37 @@ using BaoZuPo.GameFlow;
 using BaoZuPo.Economy;
 using BaoZuPo.UI.Common.Animation;
 using BaoZuPo.UI.Common.FeedbackPopup;
+using BaoZuPo.UI.Common.FlyingNumber;
 using Martian.EventBus;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 
 namespace BaoZuPo.UI.Settlement
 {
     /// <summary>
-    /// 结算演示控制器，管理结算演示序列的队列、执行和金钱转账动画。
+    /// 结算演示控制器，管理结算演示序列的队列、执行和金钱飞行效果。
     /// 支持并行、顺序和聚合等多种播放方式的阶段执行。
     /// 在结算阶段订阅游戏事件，使用反馈系统播放结算视觉和音效。
-    /// 管理金钱转账动画，从源（房间/合约/放置区）飞向顶部金钱显示。
+    /// Batch 结束时用飞行数字从玩区飞向顶部金钱显示，抵达时触发金钱更新。
     /// </summary>
     public class UISettlementSequenceController : MonoBehaviour
     {
-        [Header("Transfer View")]
-        [SerializeField] private RectTransform transferLayerRoot;
-        [SerializeField] private CanvasGroup transferLayerGroup;
-        [SerializeField] private TextMeshProUGUI transferLabel;
-        [SerializeField] private Color transferTextColor = new Color(1f, 0.86f, 0.32f, 1f);
-        [SerializeField] private float transferMoveSeconds = 0.25f;
-        [SerializeField] private float transferFadeInSeconds = 0.08f;
-        [SerializeField] private float transferFadeOutSeconds = 0.08f;
-        [SerializeField] private float transferScale = 1.02f;
-
         [Header("Playback Timing")]
         [SerializeField] private float entryGapSeconds = 0.04f;
         [SerializeField] private float stageGapSeconds = 0.1f;
 
+        [Header("Batch Money Jump")]
+        [SerializeField] private float batchFlyFontSize = 42f;
+        [SerializeField] private Color batchFlyPositiveColor = new Color(1f, 0.85f, 0.25f, 1f);
+        [SerializeField] private Color batchFlyNegativeColor = new Color(0.95f, 0.25f, 0.2f, 1f);
+        [SerializeField] private Vector2 batchFlySourceScreenOffset = new Vector2(0f, 48f);
+
         private readonly Queue<UISettlementPlaybackBatch> _pendingBatches = new();
-        private Sequence _activeTransferSequence;
         private Tween _activePlaybackDelayTween;
         private Canvas _canvas;
-        private RectTransform _canvasRect;
         private UIFeedbackPopupLayer _popupLayer;
         private bool _isPlaybackRunning;
         private bool _isSettling;
-        private bool _runtimeTransferViewBuilt;
 
         private void OnEnable()
         {
@@ -57,7 +50,6 @@ namespace BaoZuPo.UI.Settlement
             EventBus.Unsubscribe<GameEvents.TurnEnded>(OnTurnEnded);
             EventBus.Unsubscribe<GameEvents.PhaseChanged>(OnPhaseChanged);
             ClearPending();
-            HideTransferImmediate();
         }
 
         private void OnSettlementQueued(GameEvents.SettlementSequenceQueued payload)
@@ -89,7 +81,7 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            if (_activeTransferSequence == null && _pendingBatches.Count == 0)
+            if (_pendingBatches.Count == 0)
             {
                 FinishPlayback();
             }
@@ -151,11 +143,6 @@ namespace BaoZuPo.UI.Settlement
             }
 
             if (_isPlaybackRunning)
-            {
-                return;
-            }
-
-            if (_activeTransferSequence != null)
             {
                 return;
             }
@@ -351,116 +338,6 @@ namespace BaoZuPo.UI.Settlement
             }).SetUpdate(true);
         }
 
-        private void PlayTransfer(UISettlementPlaybackEntry entry, Action onCompleted)
-        {
-            EnsureTransferView();
-
-            if (entry == null || entry.Payload == null || UIManager.Instance == null)
-            {
-                onCompleted?.Invoke();
-                return;
-            }
-
-            if (entry.Payload.FinalAmount == 0)
-            {
-                CompleteEntry(entry, onCompleted);
-                return;
-            }
-
-            if (transferLayerRoot == null || transferLayerGroup == null)
-            {
-                UIManager.Instance.CommitDisplayedDelta(entry.Payload.FinalAmount);
-                CompleteEntry(entry, onCompleted);
-                return;
-            }
-
-            var topBarTarget = UIManager.Instance.ResolveMoneyTargetAnchor();
-            if (topBarTarget == null)
-            {
-                UIManager.Instance.CommitDisplayedDelta(entry.Payload.FinalAmount);
-                CompleteEntry(entry, onCompleted);
-                return;
-            }
-
-            var sourceAnchor = ResolveSourceAnchor(entry.Payload);
-            Vector2 sourcePoint = ResolveScreenPoint(sourceAnchor, ResolveSourceOffset(entry.Payload));
-            Vector2 targetPoint = ResolveScreenPoint(topBarTarget, Vector2.zero);
-
-            string transferText = FormatSignedAmount(entry.Payload.FinalAmount);
-            _activeTransferSequence?.Kill(false);
-            _activeTransferSequence = DOTween.Sequence().SetUpdate(true);
-
-            _activeTransferSequence.AppendCallback(() =>
-            {
-                if (transferLayerRoot != null)
-                {
-                    transferLayerRoot.gameObject.SetActive(true);
-                    transferLayerRoot.anchoredPosition = sourcePoint;
-                    transferLayerRoot.localScale = Vector3.one * 0.94f;
-                }
-
-                if (transferLayerGroup != null)
-                {
-                    transferLayerGroup.alpha = 0f;
-                }
-
-                if (transferLabel != null)
-                {
-                    transferLabel.text = transferText;
-                    transferLabel.color = transferTextColor;
-                }
-            });
-
-            if (transferFadeInSeconds > 0f && transferLayerGroup != null)
-            {
-                _activeTransferSequence.Append(transferLayerGroup.DOFade(1f, transferFadeInSeconds).SetEase(Ease.OutQuad));
-                _activeTransferSequence.Join(transferLayerRoot.DOScale(transferScale, transferFadeInSeconds).SetEase(Ease.OutQuad));
-            }
-            else
-            {
-                _activeTransferSequence.AppendCallback(() =>
-                {
-                    if (transferLayerGroup != null)
-                    {
-                        transferLayerGroup.alpha = 1f;
-                    }
-
-                    if (transferLayerRoot != null)
-                    {
-                        transferLayerRoot.localScale = Vector3.one * transferScale;
-                    }
-                });
-            }
-
-            if (transferLayerRoot != null)
-            {
-                _activeTransferSequence.Join(transferLayerRoot.DOAnchorPos(targetPoint, Mathf.Max(0.01f, transferMoveSeconds)).SetEase(Ease.OutCubic));
-            }
-
-            _activeTransferSequence.AppendCallback(() =>
-            {
-                UIManager.Instance.CommitDisplayedDelta(entry.Payload.FinalAmount);
-            });
-
-            if (transferFadeOutSeconds > 0f && transferLayerGroup != null)
-            {
-                _activeTransferSequence.Append(transferLayerGroup.DOFade(0f, transferFadeOutSeconds).SetEase(Ease.InQuad));
-            }
-
-            _activeTransferSequence.OnComplete(() =>
-            {
-                HideTransferImmediate();
-                CompleteEntry(entry, onCompleted);
-            });
-
-            _activeTransferSequence.Play();
-        }
-
-        private static void CompleteEntry(UISettlementPlaybackEntry entry, Action onCompleted)
-        {
-            onCompleted?.Invoke();
-        }
-
         private void OnBatchCompleted(UISettlementPlaybackBatch batch)
         {
             PlayBatchMoneyJump(batch, () =>
@@ -491,7 +368,7 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            if (_pendingBatches.Count > 0 || _activeTransferSequence != null || _activePlaybackDelayTween != null)
+            if (_pendingBatches.Count > 0 || _activePlaybackDelayTween != null)
             {
                 return;
             }
@@ -505,8 +382,6 @@ namespace BaoZuPo.UI.Settlement
             _pendingBatches.Clear();
             _isPlaybackRunning = false;
             _isSettling = false;
-            _activeTransferSequence?.Kill(false);
-            _activeTransferSequence = null;
             _activePlaybackDelayTween?.Kill(false);
             _activePlaybackDelayTween = null;
         }
@@ -526,125 +401,63 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            UIManager.Instance.CommitDisplayedDelta(totalDelta);
-            if (!TryPlayPopupBatchMoneyJump(totalDelta, onCompleted))
+            if (!TryPlayFlyingBatchMoneyJump(totalDelta, onCompleted))
             {
+                UIManager.Instance.CommitDisplayedDelta(totalDelta);
                 onCompleted?.Invoke();
             }
         }
 
-        private bool TryPlayPopupBatchMoneyJump(int totalDelta, Action onCompleted)
+        private bool TryPlayFlyingBatchMoneyJump(int totalDelta, Action onCompleted)
         {
             var layer = ResolvePopupLayer();
-            if (layer == null || UIManager.Instance == null)
+            var uiManager = UIManager.Instance;
+            if (layer == null || uiManager == null || uiManager.boardPanel == null)
             {
                 return false;
             }
 
-            RectTransform anchor = UIManager.Instance.ResolveMoneyTargetAnchor();
-            float verticalGap = UIManager.Instance.topBar != null
-                ? UIManager.Instance.topBar.SettlementTotalPopupVerticalGap
-                : 40f;
-
-            layer.Show(new UIFeedbackPopupRequest
+            RectTransform sourceAnchor = uiManager.boardPanel.ResolvePlayAreaAnchor();
+            RectTransform targetAnchor = uiManager.ResolveMoneyTargetAnchor();
+            if (targetAnchor == null)
             {
-                Anchor = anchor,
-                Text = FormatSignedAmount(totalDelta),
-                Category = totalDelta < 0 ? UIFeedbackPopupCategory.Negative : UIFeedbackPopupCategory.Final,
-                IsFinal = totalDelta >= 0,
-                UseScreenCenterFallback = anchor == null,
-                ScreenOffset = ResolveAboveAnchorOffset(anchor, verticalGap),
-                AnchorFeedback = PlayPopupAnchorFeedback,
-                Completed = onCompleted
-            });
+                return false;
+            }
+
+            Color color = totalDelta < 0 ? batchFlyNegativeColor : batchFlyPositiveColor;
+            string text = FormatSignedAmount(totalDelta);
+
+            bool commitAndFeedback = false;
+            layer.ShowFlyTo(
+                text,
+                color,
+                batchFlyFontSize,
+                sourceAnchor,
+                batchFlySourceScreenOffset,
+                targetAnchor,
+                Vector2.zero,
+                () =>
+                {
+                    if (commitAndFeedback)
+                    {
+                        return;
+                    }
+                    commitAndFeedback = true;
+
+                    if (UIManager.Instance != null)
+                    {
+                        UIManager.Instance.CommitDisplayedDelta(totalDelta);
+                    }
+
+                    PlayPopupAnchorFeedback(targetAnchor);
+                    onCompleted?.Invoke();
+                });
             return true;
         }
 
         private static bool ShouldFinalizeBatch(UISettlementPlaybackBatch batch)
         {
             return batch != null && batch.PlayMoneyJumpOnBatchEnd;
-        }
-
-        private void EnsureTransferView()
-        {
-            if (_runtimeTransferViewBuilt && transferLayerRoot != null && transferLayerGroup != null && transferLabel != null)
-            {
-                return;
-            }
-
-            if (_canvas == null)
-            {
-                _canvas = GetComponentInParent<Canvas>();
-            }
-
-            if (_canvas == null && UIManager.Instance != null)
-            {
-                _canvas = UIManager.Instance.GetComponentInParent<Canvas>();
-            }
-
-            if (_canvas != null)
-            {
-                _canvasRect = _canvas.transform as RectTransform;
-            }
-
-            if (transferLayerRoot == null)
-            {
-                transferLayerRoot = transform as RectTransform;
-                if (transferLayerRoot == null)
-                {
-                    return;
-                }
-            }
-
-            if (transferLayerGroup == null)
-            {
-                transferLayerGroup = transferLayerRoot.GetComponent<CanvasGroup>();
-            }
-
-            if (transferLayerGroup == null)
-            {
-                return;
-            }
-
-            if (transferLabel == null)
-            {
-                var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-                labelObject.transform.SetParent(transferLayerRoot, false);
-
-                var labelRect = labelObject.GetComponent<RectTransform>();
-                labelRect.anchorMin = Vector2.zero;
-                labelRect.anchorMax = Vector2.one;
-                labelRect.offsetMin = new Vector2(20f, 10f);
-                labelRect.offsetMax = new Vector2(-20f, -10f);
-
-                transferLabel = labelObject.GetComponent<TextMeshProUGUI>();
-                transferLabel.fontSize = 24f;
-                transferLabel.alignment = TextAlignmentOptions.Center;
-                transferLabel.color = transferTextColor;
-                transferLabel.raycastTarget = false;
-            }
-
-            transferLayerGroup.blocksRaycasts = false;
-            transferLayerGroup.interactable = false;
-            transferLayerRoot.gameObject.SetActive(false);
-            _runtimeTransferViewBuilt = true;
-        }
-
-        private void HideTransferImmediate()
-        {
-            _activeTransferSequence?.Kill(false);
-            _activeTransferSequence = null;
-
-            if (transferLayerRoot != null)
-            {
-                transferLayerRoot.gameObject.SetActive(false);
-                transferLayerRoot.localScale = Vector3.one;
-            }
-
-            if (transferLayerGroup != null)
-            {
-                transferLayerGroup.alpha = 0f;
-            }
         }
 
         private RectTransform ResolveSourceAnchor(GameEvents.SettlementSequenceQueued payload)
@@ -672,46 +485,6 @@ namespace BaoZuPo.UI.Settlement
                 : payload != null && payload.SourceKind == GameEvents.SettlementSourceKind.Contract
                     ? new Vector2(0f, 120f)
                     : new Vector2(0f, 48f);
-        }
-
-        private Vector2 ResolveScreenPoint(RectTransform anchor, Vector2 screenOffset)
-        {
-            if (_canvasRect == null && _canvas != null)
-            {
-                _canvasRect = _canvas.transform as RectTransform;
-            }
-
-            if (anchor != null)
-            {
-                Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, anchor.position) + screenOffset;
-                if (_canvasRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPoint, null, out var localPoint))
-                {
-                    return localPoint;
-                }
-
-                return screenPoint;
-            }
-
-            Vector2 fallbackScreenPoint = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f) + screenOffset;
-            if (_canvasRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, fallbackScreenPoint, null, out var fallbackLocalPoint))
-            {
-                return fallbackLocalPoint;
-            }
-
-            return fallbackScreenPoint;
-        }
-
-        private static Vector2 ResolveAboveAnchorOffset(RectTransform anchor, float verticalGap)
-        {
-            if (anchor == null)
-            {
-                return new Vector2(0f, 54f);
-            }
-
-            var rect = anchor.rect;
-            return new Vector2(
-                rect.width * (0.5f - anchor.pivot.x),
-                rect.height * (1f - anchor.pivot.y) + verticalGap);
         }
 
         private UIFeedbackPopupLayer ResolvePopupLayer()

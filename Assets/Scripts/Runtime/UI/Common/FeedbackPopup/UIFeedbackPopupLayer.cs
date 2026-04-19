@@ -1,4 +1,5 @@
 using System;
+using BaoZuPo.UI.Common.FlyingNumber;
 using Martian.Localization;
 using TMPro;
 using UnityEngine;
@@ -92,6 +93,57 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
             return popup;
         }
 
+        /// <summary>
+        /// 从 sourceAnchor 位置沿弧线飞向 targetAnchor，到达时触发 onArrived。
+        /// 用于结算收益飞向金钱显示的"跳字"效果。支持多个实例并行。
+        /// </summary>
+        public UIFlyingNumberView ShowFlyTo(
+            string text,
+            Color color,
+            float fontSize,
+            RectTransform sourceAnchor,
+            Vector2 sourceScreenOffset,
+            RectTransform targetAnchor,
+            Vector2 targetScreenOffset,
+            Action onArrived)
+        {
+            EnsureInitialized();
+            if (_layerRect == null || string.IsNullOrWhiteSpace(text))
+            {
+                onArrived?.Invoke();
+                return null;
+            }
+
+            Vector2 sourceLocalPos = ResolveLocalPosition(sourceAnchor, sourceScreenOffset);
+            Vector2 targetLocalPos = ResolveLocalPosition(targetAnchor, targetScreenOffset);
+
+            float distance = Vector2.Distance(sourceLocalPos, targetLocalPos);
+            float arcHeight = Mathf.Clamp(distance * 0.28f, 80f, 240f);
+            float flySeconds = Mathf.Clamp(0.4f + distance / 2000f, 0.4f, 0.75f);
+
+            var viewObject = new GameObject(
+                "UIFlyingNumber",
+                typeof(RectTransform),
+                typeof(CanvasGroup),
+                typeof(UIFlyingNumberView));
+            viewObject.transform.SetParent(_layerRect, false);
+            viewObject.transform.SetAsLastSibling();
+
+            var view = viewObject.GetComponent<UIFlyingNumberView>();
+            view.Play(
+                sourceLocalPos,
+                targetLocalPos,
+                text,
+                color,
+                fontSize,
+                flySeconds,
+                arcHeight,
+                holdAfterArrive: 0.05f,
+                fadeOutSeconds: 0.16f,
+                onArrived);
+            return view;
+        }
+
         [ContextMenu("Show Test Popup")]
         private void ShowTestPopup()
         {
@@ -110,6 +162,32 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
                 ScreenOffset = Vector2.zero,
                 Style = style
             });
+        }
+
+        private Vector2 ResolveLocalPosition(RectTransform anchor, Vector2 screenOffset)
+        {
+            Camera canvasCamera = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? _canvas.worldCamera
+                : null;
+
+            Vector2 screenPoint;
+            if (anchor != null)
+            {
+                Vector3 worldPoint = anchor.TransformPoint(anchor.rect.center);
+                screenPoint = RectTransformUtility.WorldToScreenPoint(canvasCamera, worldPoint) + screenOffset;
+            }
+            else
+            {
+                screenPoint = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f) + screenOffset;
+            }
+
+            if (_layerRect != null
+                && RectTransformUtility.ScreenPointToLocalPointInRectangle(_layerRect, screenPoint, canvasCamera, out var localPoint))
+            {
+                return localPoint;
+            }
+
+            return screenOffset;
         }
 
         private UIFeedbackPopupView CreatePopupView()
