@@ -201,7 +201,6 @@ namespace BaoZuPo.GameFlow
 
             if (drawCount <= 0)
             {
-                TryInjectShopCard();
                 TrySpawnEventCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -218,7 +217,6 @@ namespace BaoZuPo.GameFlow
                     Deck.DeckManager.Instance.Draw(drawCount);
                 }
 
-                TryInjectShopCard();
                 TrySpawnEventCard();
                 UIManager.Instance?.RefreshAll();
                 return;
@@ -280,7 +278,6 @@ namespace BaoZuPo.GameFlow
                 yield return UIManager.Instance.handPanel.PlayIncomingCard(drawn[0], animationKind);
             }
 
-            TryInjectShopCard();
             TrySpawnEventCard();
 
             if (drawCount > 0 && PreparePhaseOutroSeconds > 0f)
@@ -995,14 +992,17 @@ namespace BaoZuPo.GameFlow
         public void OpenShop(CardInstance source)
         {
             EnsureGameManagerInitialized();
+            Debug.Log($"[TurnManager] OpenShop called. source={(source != null && source.Data != null ? source.Data.cardName : "null")}, phase={CurrentPhase}, actionEnded={ActionPhaseEnded}, openedThisTurn={_shopOpenedThisTurn}, closedThisTurn={_shopClosedThisTurn}, isOpen={_isShopOpen}");
 
             if (_isGameOver || CurrentPhase != GamePhase.Action || ActionPhaseEnded)
             {
+                Debug.Log("[TurnManager] OpenShop aborted by phase/game over guard.");
                 return;
             }
 
             if (_shopOpenedThisTurn || _shopClosedThisTurn || _isShopOpen)
             {
+                Debug.Log("[TurnManager] OpenShop aborted because shop was already opened/closed this turn or is currently open.");
                 return;
             }
 
@@ -1042,6 +1042,7 @@ namespace BaoZuPo.GameFlow
             _shopPurchased = new bool[_shopOptions.Length];
             _shopOpenedThisTurn = true;
             _isShopOpen = true;
+            Debug.Log($"[TurnManager] Shop opened with {_shopOptions.Length} option(s).");
             EventBus.Publish(new GameEvents.ShopOpened
             {
                 Options = _shopOptions
@@ -1108,20 +1109,6 @@ namespace BaoZuPo.GameFlow
             }
 
             Deck.DeckManager.Instance.AddCardToHand(_eventCardData);
-        }
-
-        private void TryInjectShopCard()
-        {
-            var gameManager = GameManager.Instance;
-            var config = gameManager != null ? gameManager.gameConfig : null;
-            if (config == null || config.shopCard == null || Deck.DeckManager.Instance == null)
-            {
-                return;
-            }
-
-            Deck.DeckManager.Instance.ForceAddCardToHand(
-                config.shopCard,
-                card => card.ConfigureAsTemporaryHandCard());
         }
 
         private void PublishPhaseChanged(GamePhase phase)
@@ -1635,4 +1622,3 @@ namespace BaoZuPo.GameFlow
         }
     }
 }
-

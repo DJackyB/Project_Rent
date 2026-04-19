@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
@@ -19,6 +18,7 @@ namespace BaoZuPo.UI
     {
         [Header("Optional Scene References")]
         public TextMeshProUGUI titleText;
+        public TextMeshProUGUI occupancyText;
         public Transform cardListContainer;
         public Button roomButton;
         public RectTransform dropAnchor;
@@ -29,26 +29,25 @@ namespace BaoZuPo.UI
         private readonly List<UIRoomSlotView> _slotViews = new();
         private readonly List<CardInstance> _slotCards = new();
         private RoomSlot _room;
-        private UIBoardPanel _boardPanel;
         private GameObject _cardPrefab;
-        private Coroutine _deferredSlotBindingRoutine;
-        private bool _slotsBound;
 
         public RoomSlot Room => _room;
+        public GameObject SlotPrefab => slotPrefab;
         public RectTransform SettlementAnchor => dropAnchor != null ? dropAnchor : (cardListContainer as RectTransform) ?? transform as RectTransform;
         public RectTransform DropAnchor => dropAnchor != null ? dropAnchor : transform as RectTransform;
 
-        public void Setup(RoomSlot room, GameObject cardPrefab, UIBoardPanel boardPanel)
+        public void Setup(RoomSlot room, GameObject cardPrefab)
         {
             _room = room;
             _cardPrefab = cardPrefab;
-            _boardPanel = boardPanel;
 
             EnsureRuntimeReferences();
             ConfigureDropZone();
             BuildSlots();
+            ApplyGridLayout();
             RefreshTitle();
-            FinalizeSlotsOrScheduleFallback();
+            BindSlots();
+            RefreshCardScales();
         }
 
         /// <summary>
@@ -78,24 +77,35 @@ namespace BaoZuPo.UI
             ClearContainer(container);
             _slotViews.Clear();
             _slotCards.Clear();
-            _slotsBound = false;
 
             int tenantCapacity = _room != null ? Mathf.Max(0, _room.TenantSlotCapacity) : 0;
             for (int i = 0; i < tenantCapacity; i++)
             {
+                var tenantCard = _room != null ? _room.GetTenantAt(i) : null;
+                if (tenantCard == null)
+                {
+                    continue;
+                }
+
                 var tenantSlot = CreateSlot(container, $"TenantSlot_{i}", CardViewContext.RoomTenant);
                 if (tenantSlot == null) continue;
                 _slotViews.Add(tenantSlot);
-                _slotCards.Add(_room != null ? _room.GetTenantAt(i) : null);
+                _slotCards.Add(tenantCard);
             }
 
             int equipmentCapacity = _room != null ? Mathf.Max(0, _room.EquipmentSlotCapacity) : 0;
             for (int i = 0; i < equipmentCapacity; i++)
             {
+                var equipmentCard = _room != null ? _room.GetEquipmentAt(i) : null;
+                if (equipmentCard == null)
+                {
+                    continue;
+                }
+
                 var equipmentSlot = CreateSlot(container, $"EquipmentSlot_{i}", CardViewContext.RoomEquipment);
                 if (equipmentSlot == null) continue;
                 _slotViews.Add(equipmentSlot);
-                _slotCards.Add(_room != null ? _room.GetEquipmentAt(i) : null);
+                _slotCards.Add(equipmentCard);
             }
         }
 
@@ -103,7 +113,7 @@ namespace BaoZuPo.UI
         {
             if (slotPrefab == null)
             {
-                Debug.LogError("[UIRoomView] slotPrefab is not assigned. Wire RoomSlot.prefab in the Inspector.", gameObject);
+                Debug.LogError("[UIRoomView] slotPrefab is not assigned. Wire CardSlot.prefab in the Inspector.", gameObject);
                 return null;
             }
 
@@ -122,17 +132,34 @@ namespace BaoZuPo.UI
 
         private void RefreshTitle()
         {
-            if (titleText == null || _room == null)
+            if (_room == null)
             {
                 return;
             }
 
-            titleText.text = GameText.RoomSummary(
-                _room.RoomIndex + 1,
+            string roomTitle = GameText.RoomTitle(_room.RoomIndex + 1);
+            string occupancySummary = GameText.RoomOccupancySummary(
                 _room.TenantCount,
                 _room.TenantSlotCapacity,
                 _room.EquipmentCount,
                 _room.EquipmentSlotCapacity);
+
+            if (titleText != null)
+            {
+                titleText.text = occupancyText != null
+                    ? roomTitle
+                    : GameText.RoomSummary(
+                        _room.RoomIndex + 1,
+                        _room.TenantCount,
+                        _room.TenantSlotCapacity,
+                        _room.EquipmentCount,
+                        _room.EquipmentSlotCapacity);
+            }
+
+            if (occupancyText != null)
+            {
+                occupancyText.text = occupancySummary;
+            }
         }
 
         private void ConfigureDropZone()
@@ -149,128 +176,98 @@ namespace BaoZuPo.UI
             }
         }
 
-        private void FinalizeSlotsOrScheduleFallback()
-        {
-            if (_deferredSlotBindingRoutine != null)
-            {
-                StopCoroutine(_deferredSlotBindingRoutine);
-                _deferredSlotBindingRoutine = null;
-            }
-
-            if (TryApplyGridCellSizeAndBind())
-            {
-                return;
-            }
-
-            _deferredSlotBindingRoutine = StartCoroutine(RefreshGridCellSize());
-        }
-
-        private IEnumerator RefreshGridCellSize()
-        {
-            const int MaxRetryFrames = 2;
-            for (int i = 0; i < MaxRetryFrames; i++)
-            {
-                yield return null; // wait a frame for layout to settle
-                if (TryApplyGridCellSizeAndBind())
-                {
-                    _deferredSlotBindingRoutine = null;
-                    yield break;
-                }
-            }
-
-            BindSlots();
-            _deferredSlotBindingRoutine = null;
-        }
-
-        private bool TryApplyGridCellSizeAndBind()
-        {
-            var container = cardListContainer != null ? cardListContainer : transform;
-            var grid = container.GetComponent<GridLayoutGroup>();
-            if (_slotViews.Count == 0)
-            {
-                _slotsBound = true;
-                return true;
-            }
-
-            Canvas.ForceUpdateCanvases();
-            var roomRect = transform as RectTransform;
-            var parentRect = roomRect != null ? roomRect.parent as RectTransform : null;
-            if (parentRect != null)
-            {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
-            }
-
-            if (roomRect != null)
-            {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(roomRect);
-            }
-
-            var containerRect = container as RectTransform;
-            if (containerRect == null)
-            {
-                return false;
-            }
-
-            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
-            float w = containerRect.rect.width;
-            float h = containerRect.rect.height;
-            if (w <= 0f || h <= 0f)
-            {
-                return false;
-            }
-
-            if (grid != null)
-            {
-                ApplyBestGridCellSize(grid, w, h, _slotViews.Count);
-                LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
-            }
-
-            BindSlots();
-            return true;
-        }
-
-        private static void ApplyBestGridCellSize(GridLayoutGroup grid, float width, float height, int count)
-        {
-            int bestCols = 1;
-            float bestCellArea = 0f;
-
-            for (int cols = 1; cols <= count; cols++)
-            {
-                int rows = Mathf.CeilToInt((float)count / cols);
-                float cellW = (width - grid.padding.left - grid.padding.right - grid.spacing.x * (cols - 1)) / cols;
-                float cellH = (height - grid.padding.top - grid.padding.bottom - grid.spacing.y * (rows - 1)) / rows;
-                if (cellW <= 0f || cellH <= 0f) continue;
-                float area = cellW * cellH;
-                if (area > bestCellArea)
-                {
-                    bestCellArea = area;
-                    bestCols = cols;
-                }
-            }
-
-            int bestRows = Mathf.CeilToInt((float)count / bestCols);
-            float finalCellW = (width - grid.padding.left - grid.padding.right - grid.spacing.x * (bestCols - 1)) / bestCols;
-            float finalCellH = (height - grid.padding.top - grid.padding.bottom - grid.spacing.y * (bestRows - 1)) / bestRows;
-
-            grid.cellSize = new Vector2(finalCellW, finalCellH);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = bestCols;
-        }
-
         private void BindSlots()
         {
-            if (_slotsBound)
-            {
-                return;
-            }
-
             int count = Mathf.Min(_slotViews.Count, _slotCards.Count);
             for (int i = 0; i < count; i++)
             {
                 _slotViews[i].Bind(_slotCards[i]);
             }
+        }
 
-            _slotsBound = true;
+        private void ApplyGridLayout()
+        {
+            var container = cardListContainer != null ? cardListContainer : transform;
+            var grid = container.GetComponent<GridLayoutGroup>();
+            var containerRect = container as RectTransform;
+            if (grid == null || containerRect == null)
+            {
+                return;
+            }
+
+            int itemCount = _slotViews.Count;
+            if (itemCount <= 0)
+            {
+                return;
+            }
+
+            ResolveGrid(itemCount, out int columns, out int rows);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = columns;
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            float availableWidth = containerRect.rect.width - grid.padding.left - grid.padding.right - grid.spacing.x * (columns - 1);
+            float availableHeight = containerRect.rect.height - grid.padding.top - grid.padding.bottom - grid.spacing.y * (rows - 1);
+            if (availableWidth <= 0f || availableHeight <= 0f)
+            {
+                return;
+            }
+
+            grid.cellSize = new Vector2(
+                availableWidth / columns,
+                availableHeight / rows);
+        }
+
+        private void RefreshCardScales()
+        {
+            var containerRect = cardListContainer as RectTransform;
+            if (containerRect != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+            }
+
+            for (int i = 0; i < _slotViews.Count; i++)
+            {
+                _slotViews[i]?.RefreshCardScale();
+            }
+        }
+
+        private static void ResolveGrid(int itemCount, out int columns, out int rows)
+        {
+            if (itemCount <= 1)
+            {
+                columns = 1;
+                rows = 1;
+                return;
+            }
+
+            if (itemCount == 2)
+            {
+                columns = 2;
+                rows = 1;
+                return;
+            }
+
+            if (itemCount <= 4)
+            {
+                columns = 2;
+                rows = 2;
+                return;
+            }
+
+            if (itemCount <= 9)
+            {
+                columns = 3;
+                rows = 3;
+                return;
+            }
+
+            int dimension = Mathf.CeilToInt(Mathf.Sqrt(itemCount));
+            columns = dimension;
+            rows = dimension;
         }
 
         private void EnsureRuntimeReferences()
