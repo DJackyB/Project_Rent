@@ -28,18 +28,17 @@ namespace BaoZuPo.UI
         private readonly List<UIRoomSlotView> _slotViews = new();
         private readonly List<CardInstance> _slotCards = new();
         private RoomSlot _room;
-        private UIBoardPanel _boardPanel;
         private GameObject _cardPrefab;
 
         public RoomSlot Room => _room;
+        public GameObject SlotPrefab => slotPrefab;
         public RectTransform SettlementAnchor => dropAnchor != null ? dropAnchor : (cardListContainer as RectTransform) ?? transform as RectTransform;
         public RectTransform DropAnchor => dropAnchor != null ? dropAnchor : transform as RectTransform;
 
-        public void Setup(RoomSlot room, GameObject cardPrefab, UIBoardPanel boardPanel)
+        public void Setup(RoomSlot room, GameObject cardPrefab)
         {
             _room = room;
             _cardPrefab = cardPrefab;
-            _boardPanel = boardPanel;
 
             EnsureRuntimeReferences();
             ConfigureDropZone();
@@ -113,7 +112,7 @@ namespace BaoZuPo.UI
         {
             if (slotPrefab == null)
             {
-                Debug.LogError("[UIRoomView] slotPrefab is not assigned. Wire RoomSlot.prefab in the Inspector.", gameObject);
+                Debug.LogError("[UIRoomView] slotPrefab is not assigned. Wire CardSlot.prefab in the Inspector.", gameObject);
                 return null;
             }
 

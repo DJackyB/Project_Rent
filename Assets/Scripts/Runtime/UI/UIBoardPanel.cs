@@ -35,9 +35,9 @@ namespace BaoZuPo.UI
         [SerializeField] private float destroyExitYOffset = 60f;
 
         private readonly List<UIRoomView> _roomViews = new();
-        private readonly List<UICardView> _contractViews = new();
+        private readonly List<UIRoomSlotView> _contractViews = new();
         private readonly Dictionary<RoomSlot, UIRoomView> _roomLookup = new();
-        private readonly Dictionary<CardInstance, UICardView> _contractLookup = new();
+        private readonly Dictionary<CardInstance, UIRoomSlotView> _contractLookup = new();
 
         private Transform _contractContainer;
         private RectTransform _destroyAnimationLayer;
@@ -83,9 +83,15 @@ namespace BaoZuPo.UI
 
         public RectTransform ResolveContractAnchor(CardInstance card)
         {
-            if (card != null && _contractLookup.TryGetValue(card, out var contractView))
+            if (card != null && _contractLookup.TryGetValue(card, out var contractView) && contractView != null)
             {
-                return contractView.HoverAnchor;
+                var cardView = contractView.CurrentCardView;
+                if (cardView != null)
+                {
+                    return cardView.HoverAnchor;
+                }
+
+                return contractView.transform as RectTransform;
             }
 
             return _contractContainer as RectTransform ?? transform as RectTransform;
@@ -117,9 +123,13 @@ namespace BaoZuPo.UI
             // 再在合同区找
             if (_contractLookup.TryGetValue(evt.Card, out var contractView) && contractView != null)
             {
-                var obj = contractView.gameObject;
+                var obj = contractView.StealCardObject() ?? contractView.gameObject;
                 _contractLookup.Remove(evt.Card);
                 _contractViews.Remove(contractView);
+                if (obj != contractView.gameObject)
+                {
+                    Destroy(contractView.gameObject);
+                }
                 obj.transform.SetParent(null, true);
                 StartCoroutine(PlayDestroyAnimation(obj));
             }
@@ -270,7 +280,7 @@ namespace BaoZuPo.UI
                     continue;
                 }
 
-                roomView.Setup(rooms[i], cardPrefab, this);
+                roomView.Setup(rooms[i], cardPrefab);
                 _roomViews.Add(roomView);
                 _roomLookup[rooms[i]] = roomView;
             }
@@ -287,24 +297,34 @@ namespace BaoZuPo.UI
             _contractViews.Clear();
             _contractLookup.Clear();
 
+            var slotPrefab = ResolveContractSlotPrefab();
+            if (slotPrefab == null)
+            {
+                Debug.LogError("[UIBoardPanel] Missing contract slot prefab. Reuse CardSlot.prefab via roomPrefab or assign room prefab correctly.");
+                return;
+            }
+
             var contracts = BoardManager.Instance.GetAllContracts();
             for (int i = 0; i < contracts.Count; i++)
             {
-                var contractObject = Instantiate(cardPrefab, _contractContainer);
-                var cardView = contractObject.GetComponent<UICardView>();
-                if (cardView == null)
+                var slotObject = Instantiate(slotPrefab, _contractContainer, false);
+                slotObject.name = $"ContractSlot_{i}";
+
+                var slotView = slotObject.GetComponent<UIRoomSlotView>();
+                if (slotView == null)
                 {
-                    Debug.LogError("[UIBoardPanel] Card prefab requires UICardView.");
+                    Debug.LogError("[UIBoardPanel] Contract slot prefab requires UIRoomSlotView.");
                     continue;
                 }
 
-                cardView.Setup(contracts[i], CardViewContext.Contract, null);
-                _contractViews.Add(cardView);
-                _contractLookup[contracts[i]] = cardView;
+                slotView.Setup(CardViewContext.Contract, cardPrefab);
+                slotView.Bind(contracts[i]);
+                _contractViews.Add(slotView);
+                _contractLookup[contracts[i]] = slotView;
             }
 
+            ApplyContractSlotLayout(cardPrefab);
             RefreshContractPanelText();
-            RefreshContractCardScale();
         }
 
         private GameObject ResolveCardPrefab()
@@ -315,6 +335,17 @@ namespace BaoZuPo.UI
             }
 
             return roomCardEntryPrefab;
+        }
+
+        private GameObject ResolveContractSlotPrefab()
+        {
+            if (roomPrefab == null)
+            {
+                return null;
+            }
+
+            var roomView = roomPrefab.GetComponent<UIRoomView>();
+            return roomView != null ? roomView.SlotPrefab : null;
         }
 
         private bool EnsureContractPanel()
@@ -370,57 +401,127 @@ namespace BaoZuPo.UI
             }
         }
 
-        private void RefreshContractCardScale()
+        private void ApplyContractSlotLayout(GameObject cardPrefab)
         {
             var containerRect = _contractContainer as RectTransform;
-            if (containerRect == null)
+            if (containerRect == null || _contractViews.Count <= 0)
             {
                 return;
             }
 
-            var layoutGroup = _contractContainer.GetComponent<HorizontalOrVerticalLayoutGroup>();
-            float availableHeight = containerRect.rect.height - (layoutGroup != null ? layoutGroup.padding.vertical : 0f);
-            if (availableHeight <= 0f)
+            var layoutGroup = _contractContainer.GetComponent<HorizontalLayoutGroup>();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            ResolveCardDesignSize(cardPrefab, out float designWidth, out float designHeight);
+            if (designWidth <= 0f || designHeight <= 0f)
             {
                 return;
+            }
+
+            float ratio = designWidth / designHeight;
+            float availableWidth = containerRect.rect.width;
+            float availableHeight = containerRect.rect.height;
+            float spacing = 0f;
+
+            if (layoutGroup != null)
+            {
+                availableWidth -= layoutGroup.padding.horizontal;
+                availableHeight -= layoutGroup.padding.vertical;
+                spacing = layoutGroup.spacing;
+            }
+
+            if (availableWidth <= 0f || availableHeight <= 0f)
+            {
+                return;
+            }
+
+            float maxWidthPerSlot = (availableWidth - spacing * (_contractViews.Count - 1)) / _contractViews.Count;
+            if (maxWidthPerSlot <= 0f)
+            {
+                return;
+            }
+
+            float targetHeight = availableHeight;
+            float targetWidth = targetHeight * ratio;
+
+            if (targetWidth > maxWidthPerSlot)
+            {
+                targetWidth = maxWidthPerSlot;
+                targetHeight = targetWidth / ratio;
             }
 
             for (int i = 0; i < _contractViews.Count; i++)
             {
-                var cardView = _contractViews[i];
-                var cardRect = cardView != null ? cardView.transform as RectTransform : null;
-                if (cardRect == null)
+                var slotView = _contractViews[i];
+                if (slotView == null)
                 {
                     continue;
                 }
 
-                float baseHeight = ResolveContractCardBaseHeight(cardRect);
-                if (baseHeight <= 0f)
+                var slotRect = slotView.transform as RectTransform;
+                if (slotRect == null)
                 {
                     continue;
                 }
 
-                float scale = availableHeight / baseHeight;
-                cardRect.localScale = new Vector3(scale, scale, 1f);
+                var layout = slotRect.GetComponent<LayoutElement>();
+                if (layout == null)
+                {
+                    Debug.LogError("[UIBoardPanel] Contract slot prefab is missing LayoutElement.", slotRect);
+                    continue;
+                }
+
+                layout.preferredWidth = targetWidth;
+                layout.preferredHeight = targetHeight;
+                slotRect.sizeDelta = new Vector2(targetWidth, targetHeight);
             }
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            for (int i = 0; i < _contractViews.Count; i++)
+            {
+                _contractViews[i]?.RefreshCardScale();
+            }
         }
 
-        private static float ResolveContractCardBaseHeight(RectTransform cardRect)
+        private static void ResolveCardDesignSize(GameObject cardPrefab, out float width, out float height)
         {
-            var layout = cardRect.GetComponent<LayoutElement>();
-            if (layout != null && layout.preferredHeight > 0f)
+            width = 120f;
+            height = 200f;
+
+            if (cardPrefab == null)
             {
-                return layout.preferredHeight;
+                return;
             }
 
-            if (cardRect.rect.height > 0f)
+            var cardRect = cardPrefab.transform as RectTransform;
+            var layout = cardPrefab.GetComponent<LayoutElement>();
+
+            if (layout != null)
             {
-                return cardRect.rect.height;
+                if (layout.preferredWidth > 0f)
+                {
+                    width = layout.preferredWidth;
+                }
+
+                if (layout.preferredHeight > 0f)
+                {
+                    height = layout.preferredHeight;
+                }
             }
 
-            return Mathf.Abs(cardRect.sizeDelta.y);
+            if (cardRect != null)
+            {
+                if (width <= 0f && cardRect.rect.width > 0f)
+                {
+                    width = cardRect.rect.width;
+                }
+
+                if (height <= 0f && cardRect.rect.height > 0f)
+                {
+                    height = cardRect.rect.height;
+                }
+            }
         }
 
         private static void ClearContainer(Transform container)
