@@ -15,12 +15,12 @@ Notes:
 
 | Cue ID | Local File | Source Title | Source Page |
 |---|---|---|---|
-| `bgm.main` | `Assets/_Assets/Audio/BGM/bgm.main.mp3` | `Games Music` | https://mixkit.co/free-stock-music/mood/energetic/ |
-| `bgm.result` | `Assets/_Assets/Audio/BGM/bgm.result.mp3` | `Silent Descent` | https://mixkit.co/free-stock-music/cinematic/ |
-| `sfx.card.play` | `Assets/_Assets/Audio/SFX/sfx.card.play.mp3` | `Digital sweep effect` | https://mixkit.co/free-sound-effects/woosh/ |
-| `sfx.coin.gain` | `Assets/_Assets/Audio/SFX/sfx.coin.gain.mp3` | `Winning a coin, video game` | https://mixkit.co/free-sound-effects/coin/ |
-| `sfx.coin.lose` | `Assets/_Assets/Audio/SFX/sfx.coin.lose.mp3` | `Player losing or failing` | https://mixkit.co/free-sound-effects/wrong/ |
-| `sfx.turn.start` | `Assets/_Assets/Audio/SFX/sfx.turn.start.mp3` | `Success software tone` | https://mixkit.co/free-sound-effects/tones/ |
-| `sfx.reward.show` | `Assets/_Assets/Audio/SFX/sfx.reward.show.mp3` | `Unlock game notification` | https://mixkit.co/free-sound-effects/coin/ |
-| `sfx.reward.pick` | `Assets/_Assets/Audio/SFX/sfx.reward.pick.mp3` | `Correct answer reward` | https://mixkit.co/free-sound-effects/correct/ |
-| `ui.button` | `Assets/_Assets/Audio/SFX/ui.button.mp3` | `Select click` | https://mixkit.co/free-sound-effects/interface/ |
+| `bgm.main` | `Assets/Audio/BGM/bgm.main.mp3` | `Games Music` | https://mixkit.co/free-stock-music/mood/energetic/ |
+| `bgm.result` | `Assets/Audio/BGM/bgm.result.mp3` | `Silent Descent` | https://mixkit.co/free-stock-music/cinematic/ |
+| `sfx.card.play` | `Assets/Audio/SFX/sfx.card.play.mp3` | `Digital sweep effect` | https://mixkit.co/free-sound-effects/woosh/ |
+| `sfx.coin.gain` | `Assets/Audio/SFX/sfx.coin.gain.mp3` | `Winning a coin, video game` | https://mixkit.co/free-sound-effects/coin/ |
+| `sfx.coin.lose` | `Assets/Audio/SFX/sfx.coin.lose.mp3` | `Player losing or failing` | https://mixkit.co/free-sound-effects/wrong/ |
+| `sfx.turn.start` | `Assets/Audio/SFX/sfx.turn.start.mp3` | `Success software tone` | https://mixkit.co/free-sound-effects/tones/ |
+| `sfx.reward.show` | `Assets/Audio/SFX/sfx.reward.show.mp3` | `Unlock game notification` | https://mixkit.co/free-sound-effects/coin/ |
+| `sfx.reward.pick` | `Assets/Audio/SFX/sfx.reward.pick.mp3` | `Correct answer reward` | https://mixkit.co/free-sound-effects/correct/ |
+| `ui.button` | `Assets/Audio/SFX/ui.button.mp3` | `Select click` | https://mixkit.co/free-sound-effects/interface/ |

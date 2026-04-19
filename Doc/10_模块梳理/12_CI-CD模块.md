@@ -1,7 +1,7 @@
 # CI/CD 模块
 
 ## 当前状态
-- 状态：V1 已落地，待 GitHub Secrets 配置后做线上首轮验收
+- 状态：V1 已落地；工作流文件、构建入口和场景真源均已入库，但线上是否已配置 Secrets 仍需仓库侧确认
 - 目标：在当前仓库内形成“通用契约 + 通用预设 + 项目集成”的轻量 CI/CD 结构
 - 边界：当前只覆盖 `EditMode CI` 和 `Windows x64 artifact CD`，不包含 GitHub Release、渠道分发和商店上传
 
@@ -15,10 +15,10 @@
 ## 目录结构
 
 - `/.github/workflows/unity-ci.yml`
-  - PR / main 自动测试工作流
+  - `EditMode` 测试工作流
 - `/.github/workflows/unity-build-artifact.yml`
   - 手动触发的 Windows 构建工作流
-- `Assets/_Assets/Scripts/Editor/UnityCiBuildEntry.cs`
+- `Assets/Scripts/Editor/UnityCiBuildEntry.cs`
   - 当前项目的 Unity 构建入口
 - `Doc/20_专题方案/轻量化通用CI-CD方案_v1.md`
   - 完整方案与交接文档
@@ -53,7 +53,8 @@
 ### `unity-ci`
 
 - 触发：
-  - `pull_request` 到 `main`
+  - `push` 到 `main`
+  - `pull_request` 到 `main`，但只有当 PR 带有 `run-ci` label 时才真正执行
   - `push` 到 `main`
 - 执行：
   - `game-ci/unity-test-runner@v4`
@@ -97,7 +98,7 @@
 ### 首次接入
 
 1. 在 GitHub 仓库中配置 `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`
-2. 推一个分支并发起到 `main` 的 PR，确认 `unity-ci` 会自动运行
+2. 推一个分支并发起到 `main` 的 PR，并补 `run-ci` label，确认 `unity-ci` 会自动运行
 3. 在 Actions 页手动触发 `unity-build-artifact`
 4. 下载 artifact，确认目录内包含 `exe` 与同级构建输出
 
@@ -107,6 +108,12 @@
 2. 测试结果 artifact 可下载
 3. 手动触发构建后出现 `windows-player-*` artifact
 4. 如果清空 `EditorBuildSettings` 场景，构建入口应明确失败
+
+## 当前限制
+
+- `unity-ci` 对 PR 默认不是无条件触发，而是依赖 `run-ci` label；如果团队忘记打标，PR 可能没有自动化结果。
+- 当前 CI 只跑 `EditMode`，没有 `PlayMode`、打包后冒烟、或多平台覆盖。
+- 当前构建真源仍只有 `SampleScene`，后续如果增加更多场景，需要同步更新 `EditorBuildSettings`。
 
 ## 修改准则
 
