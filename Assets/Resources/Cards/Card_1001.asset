@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: AddMoney;60
   settleEffect: 
   destroyEffect: ReduceMoney;30
+  tags: 
   durability: 5
   waitTurns: 2

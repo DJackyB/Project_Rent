@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5b4d1350bc5dd245aad8bb5a387c48a, type: 3}
+  m_Name: Card_4007
+  m_EditorClassIdentifier: BaoZuPo::BaoZuPo.Card.CardData
+  cardId: 4007
+  cardName: "\u9759\u8C27\u5956\u52B1"
+  description: "\u573A\u4E0A\u5B89\u9759\u79DF\u5BA2\u8D8A\u591A\uFF0C\u6BCF\u56DE\u5408\u989D\u5916\u6536\u5165\u8D8A\u9AD8\u3002"
+  cardType: 3
+  rarity: 1
+  cardArt: {fileID: 0}
+  cost: 150
+  baseRent: 0
+  targetKind: 0
+  preEffect: 
+  instantEffect: 
+  settleEffect: AddMoneyPerAffixOnBoard;Quiet;100
+  destroyEffect: 
+  tags: 
+  durability: 5
+  waitTurns: 0

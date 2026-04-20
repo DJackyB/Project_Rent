@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: TriggerSelectedRoomSettle
   settleEffect: 
   destroyEffect: 
+  tags: 
   durability: 0
   waitTurns: 0

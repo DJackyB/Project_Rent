@@ -14,16 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1004
   cardName: "\u9AD8\u7EA7\u6559\u5E08"
-  description: "\u5B89\u9759\u7684\u8001\u623F\u5BA2\uFF0C\u957F\u4F4F\u4E0D\u8D70\u3002"
+  description: "\u6536\u5165\u9AD8\u4F46\u6D88\u8017\u5FEB\uFF0C\u6709\u65F6\u4F1A\u63D0\u524D\u79BB\u5F00\u3002"
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}
-  cost: 80
-  baseRent: 25
+  cost: 300
+  baseRent: 500
   targetKind: 1
   preEffect: 
-  instantEffect: AddMoney;50
-  settleEffect: 
-  destroyEffect: ReduceMoney;25
-  durability: 0
-  waitTurns: 2
+  instantEffect: 
+  settleEffect: ExtraDurabilityChance;0.3
+  destroyEffect: 
+  tags: 0000000004000000
+  durability: 2
+  waitTurns: 0

@@ -61,6 +61,10 @@ namespace BaoZuPo.Card
         [Tooltip("摧毁效果，当卡牌被摧毁时触发。")]
         public string destroyEffect;
 
+        [Header("Tags")]
+        [Tooltip("词条标签。由导表工具从 Excel 词条列写入，逗号分隔枚举名如 Quiet,Tidy。")]
+        public TagType[] tags;
+
         [Header("Persistent Attributes")]
         [Tooltip("耐久度。通常在结算阶段减少。0 表示无限（不消耗）。")]
         public int durability;

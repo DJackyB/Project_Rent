@@ -43,6 +43,10 @@ namespace BaoZuPo.UI
         [SerializeField] private Image frameImage;
         [SerializeField] private Image artImage;
 
+        [Header("Affix Tags")]
+        [SerializeField] private Transform _affixTagContainer;
+        [SerializeField] private GameObject _affixTagPrefab;
+
         [Header("Skin Configuration")]
         [SerializeField] private CardSkinDatabase skinDatabase;
 
@@ -382,6 +386,7 @@ namespace BaoZuPo.UI
             UpdateBackground();
             UpdateArt();
             UpdateMainText();
+            UpdateAffixTags();
             UpdateContextualText();
             UpdateButtonState();
             ApplyInteractionVisualState(true);
@@ -465,6 +470,34 @@ namespace BaoZuPo.UI
                 if (showDescription)
                 {
                     descText.text = CardText.Description(Card.Data);
+                }
+            }
+        }
+
+        private void UpdateAffixTags()
+        {
+            if (_affixTagContainer == null || _affixTagPrefab == null)
+            {
+                return;
+            }
+
+            foreach (Transform child in _affixTagContainer)
+            {
+                Destroy(child.gameObject);
+            }
+
+            if (Card == null || Card.Data == null || Card.Data.tags == null)
+            {
+                return;
+            }
+
+            foreach (var affix in Card.Data.tags)
+            {
+                var tag = Instantiate(_affixTagPrefab, _affixTagContainer);
+                var label = tag.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+                if (label != null)
+                {
+                    label.text = affix.ToString();
                 }
             }
         }

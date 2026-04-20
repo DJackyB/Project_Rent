@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: 
   settleEffect: AddMoney;10|AddEquipmentDurability;1
   destroyEffect: 
+  tags: 
   durability: 5
   waitTurns: 0

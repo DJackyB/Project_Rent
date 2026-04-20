@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: DrawCard;2
   settleEffect: 
   destroyEffect: 
+  tags: 
   durability: 0
   waitTurns: 0

@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: OpenShop
   settleEffect: 
   destroyEffect: 
+  tags: 
   durability: 0
   waitTurns: 0

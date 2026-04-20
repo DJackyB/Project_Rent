@@ -1172,6 +1172,8 @@ namespace BaoZuPo.GameFlow
                 }
             }
 
+            bool roomHasTidy = TagQuery.RoomHasTag(room, TagType.Tidy);
+
             var equipments = room.GetEquipments();
             for (int i = 0; i < equipments.Count; i++)
             {
@@ -1184,7 +1186,23 @@ namespace BaoZuPo.GameFlow
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
                 var equipmentContext = CreateSettlementExecutionContext(sharedContext, room);
                 equipmentContext.SettlementCapture.Begin();
+
+                int moneyBeforeEquipment = MoneyManager.Instance.CurrentMoney;
                 equipment.SettleEffect?.Execute(equipment, equipmentContext);
+
+                // 整洁词条：房间有 Tidy 租客时装备收益翻倍
+                if (roomHasTidy)
+                {
+                    int equipmentDelta = MoneyManager.Instance.CurrentMoney - moneyBeforeEquipment;
+                    if (equipmentDelta > 0)
+                    {
+                        MoneyManager.Instance.AddMoney(equipmentDelta);
+                        if (equipmentContext.SettlementCapture.IsCapturing)
+                        {
+                            equipmentContext.SettlementCapture.RecordDelta(equipmentDelta, GameText.TagTidy);
+                        }
+                    }
+                }
 
                 var payload = CreateSettlementPayload(
                     batchId,

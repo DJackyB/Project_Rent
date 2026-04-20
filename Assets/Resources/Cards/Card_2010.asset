@@ -25,5 +25,6 @@ MonoBehaviour:
   instantEffect: 
   settleEffect: AddMoney;12|AddTenantDurabilityInSelectedRoom;1
   destroyEffect: 
+  tags: 
   durability: 6
   waitTurns: 0

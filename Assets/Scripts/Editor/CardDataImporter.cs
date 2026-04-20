@@ -41,6 +41,7 @@ namespace BaoZuPo.Editor
         private const string Col_InstantEffect = "instantEffect";
         private const string Col_SettleEffect = "settleEffect";
         private const string Col_DestroyEffect = "destroyEffect";
+        private const string Col_Tags = "tags";
 
         private static readonly string[] CardSheetRequiredColumns =
         {
@@ -148,6 +149,7 @@ namespace BaoZuPo.Editor
                 cardData.settleEffect = GetStringValue(row, columnMap, Col_SettleEffect);
                 cardData.destroyEffect = GetStringValue(row, columnMap, Col_DestroyEffect);
                 cardData.targetKind = ParseTargetKind(GetStringValue(row, columnMap, Col_TargetKind), rowIndex, cardId);
+                cardData.tags = ParseTags(GetStringValue(row, columnMap, Col_Tags), rowIndex, cardId);
 
                 ValidateEffectField(rowIndex, cardId, Col_PreEffect, cardData.preEffect);
                 ValidateEffectField(rowIndex, cardId, Col_InstantEffect, cardData.instantEffect);
@@ -469,6 +471,28 @@ namespace BaoZuPo.Editor
 
             throw new InvalidDataException(
                 $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: invalid targetKind '{configuredTarget}'.");
+        }
+
+        private static TagType[] ParseTags(string tagString, int rowIndex, int cardId)
+        {
+            if (string.IsNullOrWhiteSpace(tagString))
+            {
+                return Array.Empty<TagType>();
+            }
+
+            var parts = tagString.Split('|');
+            var result = new TagType[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string part = parts[i].Trim();
+                if (!Enum.TryParse<TagType>(part, out var tag))
+                {
+                    throw new InvalidDataException(
+                        $"[CardDataImporter] Row {rowIndex + 1}, card {cardId}: unknown tag '{part}' in 词条 column.");
+                }
+                result[i] = tag;
+            }
+            return result;
         }
 
         private static void ValidateConfiguredTarget(int rowIndex, int cardId, CardData cardData)
