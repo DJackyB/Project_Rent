@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using BaoZuPo.Integration.Martian.Feedback;
 using Martian.Feedback.Runtime;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 
 namespace BaoZuPo.Integration.Feel
@@ -13,8 +16,18 @@ namespace BaoZuPo.Integration.Feel
         /// <summary>Current scene-level installer used by UI code that cannot hold an explicit reference.</summary>
         public static BaoZuPoFeelFeedbackInstaller Active { get; private set; }
 
+        [Serializable]
+        private struct SlotEntry
+        {
+            public string slot;
+            public MMF_Player player;
+        }
+
         [Header("Required")]
         [SerializeField] private FeedbackBootstrap _bootstrap;
+
+        [Header("Slot Bindings")]
+        [SerializeField] private List<SlotEntry> _slotBindings = new();
 
         private FeelFeedbackBackend _feelBackend;
         private bool _backendInstalled;
@@ -45,6 +58,9 @@ namespace BaoZuPo.Integration.Feel
         {
             _feelBackend = new FeelFeedbackBackend();
             _feelBackend.Attach(transform);
+
+            foreach (var entry in _slotBindings)
+                _feelBackend.RegisterPlayer(entry.slot, entry.player);
 
             var primary = BaoZuPoMartianFeedbackIntegration.CreateDefaultFloatingTextBackend();
             var composite = new CompositeFeedbackPlaybackBackend(primary, _feelBackend);
