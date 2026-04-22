@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 1009
   cardName: "\u753B\u5BB6"
-  description: "\u9700\u8981\u5B89\u9759\u7684\u90BB\u5C45\u624D\u80FD\u53D1\u6325\u7075\u611F\u3002"
+  description: "\u76F8\u90BB\u6709\u5B89\u9759\u79DF\u5BA2\u65F6\uFF0C\u672C\u623F\u95F4
+    +200 \u52A0\u503C\u3002"
   cardType: 0
   rarity: 1
   cardArt: {fileID: 0}

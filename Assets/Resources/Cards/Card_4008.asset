@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BaoZuPo::BaoZuPo.Card.CardData
   cardId: 4008
   cardName: "\u6C89\u9ED8\u534F\u8BAE"
-  description: "\u672C\u56DE\u5408\u6240\u6709\u5B89\u9759\u623F\u95F4\u989D\u5916\u7ED3\u7B97\u4E00\u6B21\u3002"
+  description: "\u5B89\u9759\u623F\u95F4\u672C\u56DE\u5408\u989D\u5916\u7ED3\u7B97\u4E00\u6B21\u3002"
   cardType: 3
   rarity: 3
   cardArt: {fileID: 0}

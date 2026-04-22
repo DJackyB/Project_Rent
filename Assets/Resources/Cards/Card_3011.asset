@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3011
   cardName: "\u6298\u6263\u4F20\u5355"
-  description: "\u628A\u51B7\u6DE1\u5E02\u573A\u53D8\u6210\u7ACB\u5373\u62BD\u724C\u3002"
+  description: "\u672C\u56DE\u5408\u624B\u724C\u6240\u6709\u5361\u8D39\u7528 -40%\u3002"
   cardType: 2
   rarity: 0
   cardArt: {fileID: 0}
@@ -22,7 +22,7 @@ MonoBehaviour:
   baseRent: 0
   targetKind: 0
   preEffect: 
-  instantEffect: DrawCard;1|AddMoneyByEmptyRooms;10
+  instantEffect: 
   settleEffect: 
   destroyEffect: 
   tags: 

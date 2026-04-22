@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3002
   cardName: "\u7ECF\u7EAA\u4EBA\u4ECB\u7ECD"
-  description: "\u652F\u4ED8\u8D39\u7528\u62BD\u53D62\u5F20\u724C\u3002"
+  description: "\u968F\u673A\u62BD 2 \u5F20\u79DF\u5BA2\u5361\u5230\u624B\u724C\u3002"
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}
-  cost: 50
+  cost: 200
   baseRent: 0
   targetKind: 0
   preEffect: 
