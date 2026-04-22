@@ -6,6 +6,7 @@ using Martian.Feedback;
 using Martian.Feedback.Runtime;
 using MoreMountains.Feedbacks;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BaoZuPo.Integration.Feel
 {
@@ -152,7 +153,8 @@ namespace BaoZuPo.Integration.Feel
             Transform playerTransform = player.transform;
             Transform originalParent = playerTransform.parent;
             int originalSiblingIndex = playerTransform.GetSiblingIndex();
-
+            Vector2 originalAnchorPosition = anchor.anchoredPosition;
+            Vector3 originalAnchorScale = anchor.localScale;
             Vector2 originalAnchorMin = Vector2.zero;
             Vector2 originalAnchorMax = Vector2.zero;
             Vector2 originalPivot = new Vector2(0.5f, 0.5f);
@@ -187,6 +189,8 @@ namespace BaoZuPo.Integration.Feel
                 playerTransform.localScale = Vector3.one;
             }
 
+            RetargetAttachedFeedbacks(player, anchor, originalAnchorScale);
+            player.Initialization(true);
             player.PlayFeedbacks(anchor.position);
 
             float duration = Mathf.Max(0f, player.TotalDuration);
@@ -201,9 +205,80 @@ namespace BaoZuPo.Integration.Feel
                 originalSizeDelta,
                 originalAnchoredPosition,
                 originalLocalScale,
+                anchor,
+                originalAnchorPosition,
+                originalAnchorScale,
                 duration));
 
             return duration;
+        }
+
+        private static void RetargetAttachedFeedbacks(MMF_Player player, RectTransform anchor, Vector3 anchorScale)
+        {
+            if (player == null || anchor == null || player.FeedbacksList == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < player.FeedbacksList.Count; i++)
+            {
+                if (player.FeedbacksList[i] is MMF_Scale scale)
+                {
+                    scale.AnimateScaleTarget = anchor;
+                    scale.Mode = MMF_Scale.Modes.Additive;
+                    scale.RemapCurveZero = 0f;
+                    scale.RemapCurveOne = Mathf.Abs(anchorScale.x) * 0.09f;
+                    scale.AnimateZ = false;
+                    scale.DetermineScaleOnPlay = true;
+                }
+                else if (player.FeedbacksList[i] is MMF_Position position)
+                {
+                    position.AnimatePositionTarget = anchor.gameObject;
+                    position.Space = MMF_Position.Spaces.RectTransform;
+                    position.Mode = MMF_Position.Modes.AlongCurve;
+                    position.RelativePosition = true;
+                    position.DeterminePositionsOnPlay = true;
+                    position.AnimateX = true;
+                    position.AnimateY = false;
+                    position.AnimateZ = false;
+                    position.AllowAdditivePlays = true;
+                }
+                else if (player.FeedbacksList[i] is MMF_Image imageF)
+                {
+                    Image targetImg = FindFlashTargetImage(anchor, player.transform);
+                    if (targetImg != null)
+                    {
+                        imageF.BoundImage = targetImg;
+                        imageF.AllowAdditivePlays = false;
+                    }
+                }
+            }
+        }
+
+        private static Image FindFlashTargetImage(RectTransform anchor, Transform skipTransform)
+        {
+            // 优先找专用闪烁覆盖层，再找边框/背景
+            string[] preferred = { "FlashOverlay", "Frame", "BG", "Background", "Body" };
+            foreach (string name in preferred)
+            {
+                var child = anchor.Find(name);
+                if (child != null && child != skipTransform)
+                {
+                    var img = child.GetComponent<Image>();
+                    if (img != null) return img;
+                }
+            }
+            // 回退到 anchor 自身
+            var rootImg = anchor.GetComponent<Image>();
+            if (rootImg != null) return rootImg;
+            // 最后遍历第一个非 player 子节点
+            foreach (Transform child in anchor)
+            {
+                if (child == skipTransform) continue;
+                var img = child.GetComponent<Image>();
+                if (img != null) return img;
+            }
+            return null;
         }
 
         private static string ResolveSlot(string category)
@@ -282,11 +357,20 @@ namespace BaoZuPo.Integration.Feel
             Vector2 originalSizeDelta,
             Vector2 originalAnchoredPosition,
             Vector3 originalLocalScale,
+            RectTransform anchor,
+            Vector2 originalAnchorPosition,
+            Vector3 originalAnchorScale,
             float duration)
         {
             if (duration > 0f)
             {
                 yield return new WaitForSecondsRealtime(duration);
+            }
+
+            if (anchor != null)
+            {
+                anchor.anchoredPosition = originalAnchorPosition;
+                anchor.localScale = originalAnchorScale;
             }
 
             if (player == null || originalParent == null)
@@ -312,5 +396,6 @@ namespace BaoZuPo.Integration.Feel
                 player.transform.localScale = originalLocalScale;
             }
         }
+
     }
 }

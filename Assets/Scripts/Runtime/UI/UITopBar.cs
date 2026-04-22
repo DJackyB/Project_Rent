@@ -2,6 +2,7 @@ using BaoZuPo.Core;
 using BaoZuPo.Economy;
 using BaoZuPo.GameFlow;
 using BaoZuPo.UI.Common.Animation;
+using DG.Tweening;
 using Martian.EventBus;
 using TMPro;
 using UnityEngine;
@@ -25,10 +26,13 @@ namespace BaoZuPo.UI
         [SerializeField] private float playCostPopupVerticalGap = 18f;
         [SerializeField] private float settlementTotalPopupVerticalGap = 40f;
         [SerializeField] private bool useRuntimeGeneratedLayout;
+        [SerializeField] private float moneyCountDuration = 0.5f;
 
         private bool _deferredMoneyDisplay;
         private int _displayedMoney;
         private int _authoritativeMoney;
+        private float _displayedMoneyFloat;
+        private Tween _moneyCountTween;
 
         public bool IsDeferredMoneyDisplayActive => _deferredMoneyDisplay;
 
@@ -91,9 +95,12 @@ namespace BaoZuPo.UI
         public void BeginDeferredMoneyDisplay(int startValue)
         {
             EnsureHudLayout();
+            _moneyCountTween?.Kill(false);
+            _moneyCountTween = null;
             _deferredMoneyDisplay = true;
             _authoritativeMoney = startValue;
             _displayedMoney = startValue;
+            _displayedMoneyFloat = startValue;
             UpdateMoneyLabel();
         }
 
@@ -113,10 +120,21 @@ namespace BaoZuPo.UI
             PlayMoneyPulse();
         }
 
-        public void EndDeferredMoneyDisplay()
+        public void EndDeferredMoneyDisplay(System.Action onCountUpComplete = null)
         {
+            int target = MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : _authoritativeMoney;
             _deferredMoneyDisplay = false;
-            RefreshMoney(MoneyManager.Instance.CurrentMoney);
+            _authoritativeMoney = target;
+            if (_displayedMoney == target)
+            {
+                _moneyCountTween?.Kill(false);
+                _moneyCountTween = null;
+                UpdateMoneyLabel();
+                onCountUpComplete?.Invoke();
+                return;
+            }
+            TweenMoneyLabel(_displayedMoney, target, onCountUpComplete);
+            _displayedMoney = target;
         }
 
         private void UpdateMoneyLabel()
@@ -282,6 +300,32 @@ namespace BaoZuPo.UI
             label.fontSize = 24f;
             label.raycastTarget = false;
             return label;
+        }
+
+        private void TweenMoneyLabel(int from, int to, System.Action onComplete = null)
+        {
+            if (moneyText == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+            _moneyCountTween?.Kill(false);
+            _displayedMoneyFloat = from;
+            _moneyCountTween = DOTween.To(
+                () => _displayedMoneyFloat,
+                x =>
+                {
+                    _displayedMoneyFloat = x;
+                    moneyText.text = GameText.Money(Mathf.RoundToInt(x));
+                },
+                (float)to,
+                moneyCountDuration
+            ).SetEase(Ease.OutQuart).SetUpdate(true).OnComplete(() =>
+            {
+                _moneyCountTween = null;
+                PlayMoneyPulse();
+                onComplete?.Invoke();
+            });
         }
 
         private void PlayMoneyPulse()

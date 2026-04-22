@@ -121,10 +121,13 @@ namespace BaoZuPo.Card
         /// <summary>已捕获的结算步骤列表（只读）。</summary>
         public IReadOnlyList<GameEvents.SettlementStep> Steps => _steps;
 
+        public CardInstance SourceCard { get; set; }
+
         /// <summary>开始捕获结算步骤。清空之前的步骤列表，设置捕获标志为真。</summary>
         public void Begin()
         {
             _steps.Clear();
+            SourceCard = null;
             IsCapturing = true;
         }
 
@@ -190,6 +193,7 @@ namespace BaoZuPo.Card
         public void Reset()
         {
             _steps.Clear();
+            SourceCard = null;
             IsCapturing = false;
         }
 
@@ -215,7 +219,8 @@ namespace BaoZuPo.Card
                 Kind = kind,
                 Label = string.IsNullOrWhiteSpace(label) ? null : label,
                 Amount = amount,
-                IsMultiplier = isMultiplier
+                IsMultiplier = isMultiplier,
+                SourceCard = SourceCard
             });
         }
     }

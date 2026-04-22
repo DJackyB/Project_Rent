@@ -8,6 +8,7 @@ namespace BaoZuPo.Integration.Feel
     {
         public const string MoneyDelta = "MoneyDelta";
         public const string SettlementStep = "SettlementStep";
+        public const string SourceTriggered = "SourceTriggered";
         public const string LoanPayment = "LoanPayment";
         public const string CardPlay = "CardPlay";
         public const string RewardReveal = "RewardReveal";

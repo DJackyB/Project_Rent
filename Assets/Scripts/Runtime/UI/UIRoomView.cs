@@ -36,6 +36,24 @@ namespace BaoZuPo.UI
         public RectTransform SettlementAnchor => dropAnchor != null ? dropAnchor : (cardListContainer as RectTransform) ?? transform as RectTransform;
         public RectTransform DropAnchor => dropAnchor != null ? dropAnchor : transform as RectTransform;
 
+        public RectTransform ResolveCardAnchor(CardInstance card)
+        {
+            if (card == null)
+            {
+                return null;
+            }
+
+            foreach (var slot in _slotViews)
+            {
+                if (slot != null && ReferenceEquals(slot.BoundCard, card))
+                {
+                    return slot.CardAnchor;
+                }
+            }
+
+            return null;
+        }
+
         public void Setup(RoomSlot room, GameObject cardPrefab)
         {
             _room = room;

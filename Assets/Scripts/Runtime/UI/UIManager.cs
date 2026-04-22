@@ -202,9 +202,9 @@ namespace BaoZuPo.UI
             topBar?.CommitDisplayedDelta(delta);
         }
 
-        public void EndDeferredMoneyDisplay()
+        public void EndDeferredMoneyDisplay(System.Action onCountUpComplete = null)
         {
-            topBar?.EndDeferredMoneyDisplay();
+            topBar?.EndDeferredMoneyDisplay(onCountUpComplete);
         }
 
         public RectTransform ResolveMoneyTargetAnchor()

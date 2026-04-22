@@ -81,6 +81,20 @@ namespace BaoZuPo.UI
             return roomContainer as RectTransform ?? transform as RectTransform;
         }
 
+        public RectTransform ResolveRoomCardAnchor(RoomSlot room, CardInstance card)
+        {
+            if (room != null && card != null && _roomLookup.TryGetValue(room, out var roomView) && roomView != null)
+            {
+                var cardAnchor = roomView.ResolveCardAnchor(card);
+                if (cardAnchor != null)
+                {
+                    return cardAnchor;
+                }
+            }
+
+            return ResolveRoomAnchor(room);
+        }
+
         public RectTransform ResolveContractAnchor(CardInstance card)
         {
             if (card != null && _contractLookup.TryGetValue(card, out var contractView) && contractView != null)
