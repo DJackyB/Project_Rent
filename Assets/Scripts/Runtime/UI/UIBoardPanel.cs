@@ -30,9 +30,15 @@ namespace BaoZuPo.UI
         [SerializeField] private TextMeshProUGUI contractTitleText;
 
         [Header("Destroy Animation")]
-        [SerializeField] private float destroyFlashSeconds = 0.08f;
-        [SerializeField] private float destroyMoveSeconds = 0.28f;
-        [SerializeField] private float destroyExitYOffset = 60f;
+        [SerializeField] private RectTransform destroyAnimationLayer;
+        [SerializeField] private Color destroyFlashColor = new Color(1f, 0.18f, 0.18f, 1f);
+        [SerializeField] private float destroyPunchStrength = 0.14f;
+        [SerializeField] private float destroyPunchSeconds = 0.1f;
+        [SerializeField] private float destroyFlashSeconds = 0.09f;
+        [SerializeField] private float destroyHoldSeconds = 0.06f;
+        [SerializeField] private float destroyCollapseSeconds = 0.32f;
+        [SerializeField] private float destroyExitYOffset = 72f;
+        [SerializeField] private float destroyRotateDegrees = -12f;
 
         private readonly List<UIRoomView> _roomViews = new();
         private readonly List<UIRoomSlotView> _contractViews = new();
@@ -40,7 +46,6 @@ namespace BaoZuPo.UI
         private readonly Dictionary<CardInstance, UIRoomSlotView> _contractLookup = new();
 
         private Transform _contractContainer;
-        private RectTransform _destroyAnimationLayer;
         private int _pendingDestroyAnimations;
 
         public bool HasDestroyAnimations => _pendingDestroyAnimations > 0;
@@ -144,98 +149,87 @@ namespace BaoZuPo.UI
                 {
                     Destroy(contractView.gameObject);
                 }
-                obj.transform.SetParent(null, true);
                 StartCoroutine(PlayDestroyAnimation(obj));
             }
         }
 
         private IEnumerator PlayDestroyAnimation(GameObject cardObject)
         {
-            if (cardObject == null)
+            if (cardObject == null) yield break;
+
+            if (destroyAnimationLayer == null)
             {
+                Debug.LogError("[UIBoardPanel] destroyAnimationLayer is not assigned.", this);
+                Destroy(cardObject);
                 yield break;
             }
 
             _pendingDestroyAnimations++;
-            EnsureDestroyAnimationLayer();
-            if (_destroyAnimationLayer != null)
-            {
-                cardObject.transform.SetParent(_destroyAnimationLayer, true);
-            }
 
             var rect = cardObject.transform as RectTransform;
-            var canvasGroup = cardObject.GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
+
+            // 在挂到动画层之前捕获：
+            // - worldPos：以原始 pivot 为基准的世界坐标（不改 pivot 就不会偏移）
+            // - localScale：原始相对于父级的局部缩放（lossyScale 含 Canvas 累积缩放，不能直接用）
+            Vector3 worldPos = rect != null ? (Vector3)rect.position : cardObject.transform.position;
+            Vector3 localScale = cardObject.transform.localScale;
+
+            // 挂到动画层：只改 anchor 到中心，不改 pivot（pivot 改变会使 worldPos 参照点偏移）
+            cardObject.transform.SetParent(destroyAnimationLayer, false);
+            if (rect != null)
             {
-                canvasGroup = cardObject.AddComponent<CanvasGroup>();
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.position = worldPos;   // 还原位置（参照点与 pivot 一致，无偏移）
+                rect.localScale = localScale; // 还原局部缩放（不含 Canvas 累积，不会叠加）
             }
 
+            var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+            if (canvasGroup == null) canvasGroup = cardObject.AddComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
 
-            // 红闪 + 下沉 + 缩小 + 淡出
             var graphics = cardObject.GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
-            var originalColors = new Color[graphics.Length];
-            for (int i = 0; i < graphics.Length; i++)
-            {
-                originalColors[i] = graphics[i].color;
-            }
-
             var seq = DOTween.Sequence().SetUpdate(true).SetLink(cardObject, LinkBehaviour.KillOnDestroy);
 
-            // 红闪
+            // Phase 1: 冲击感 punch + 红闪同时触发
+            if (rect != null)
+            {
+                seq.Append(rect.DOPunchScale(Vector3.one * destroyPunchStrength, destroyPunchSeconds, 6, 0.4f)
+                    .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+            }
             foreach (var g in graphics)
             {
-                seq.Join(g.DOColor(new Color(1f, 0.2f, 0.2f, g.color.a), destroyFlashSeconds)
+                seq.Join(g.DOColor(new Color(destroyFlashColor.r, destroyFlashColor.g, destroyFlashColor.b, g.color.a),
+                        destroyFlashSeconds)
                     .SetEase(Ease.OutQuad)
                     .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
             }
 
-            seq.AppendInterval(destroyFlashSeconds * 0.5f);
+            // Phase 2: 红色停留一拍，让玩家看清
+            seq.AppendInterval(destroyHoldSeconds);
 
-            // 缩小 + 下沉 + 淡出
+            // Phase 3: 旋转跌落 + 缩到零 + 淡出（带回弹感的 InBack）
             if (rect != null)
             {
-                seq.Join(rect.DOScale(Vector3.zero, destroyMoveSeconds).SetEase(Ease.InBack).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
-                seq.Join(rect.DOMove(rect.position + new Vector3(0f, -destroyExitYOffset, 0f), destroyMoveSeconds).SetEase(Ease.InCubic).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                seq.Append(rect.DOScale(Vector3.zero, destroyCollapseSeconds)
+                    .SetEase(Ease.InBack)
+                    .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(rect.DOAnchorPos(rect.anchoredPosition + new Vector2(0f, -destroyExitYOffset), destroyCollapseSeconds)
+                    .SetEase(Ease.InCubic)
+                    .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+                seq.Join(rect.DOLocalRotate(new Vector3(0f, 0f, destroyRotateDegrees), destroyCollapseSeconds)
+                    .SetEase(Ease.InQuad)
+                    .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
             }
-
-            seq.Join(canvasGroup.DOFade(0f, destroyMoveSeconds * 0.6f).SetEase(Ease.InQuad).SetLink(cardObject, LinkBehaviour.KillOnDestroy));
+            seq.Join(canvasGroup.DOFade(0f, destroyCollapseSeconds * 0.65f)
+                .SetEase(Ease.InQuad)
+                .SetLink(cardObject, LinkBehaviour.KillOnDestroy));
 
             yield return seq.WaitForCompletion();
 
             _pendingDestroyAnimations--;
-            if (cardObject != null)
-            {
-                Destroy(cardObject);
-            }
-        }
-
-        private void EnsureDestroyAnimationLayer()
-        {
-            if (_destroyAnimationLayer != null)
-            {
-                return;
-            }
-
-            var canvas = GetComponentInParent<Canvas>();
-            if (canvas == null)
-            {
-                return;
-            }
-
-            var layerObject = new GameObject("BoardDestroyAnimationLayer", typeof(RectTransform), typeof(CanvasGroup));
-            layerObject.transform.SetParent(canvas.transform, false);
-
-            _destroyAnimationLayer = layerObject.GetComponent<RectTransform>();
-            _destroyAnimationLayer.anchorMin = Vector2.zero;
-            _destroyAnimationLayer.anchorMax = Vector2.one;
-            _destroyAnimationLayer.offsetMin = Vector2.zero;
-            _destroyAnimationLayer.offsetMax = Vector2.zero;
-
-            var cg = layerObject.GetComponent<CanvasGroup>();
-            cg.blocksRaycasts = false;
-            cg.interactable = false;
+            if (cardObject != null) Destroy(cardObject);
         }
 
         private void EnsurePlayAreaDropZone()

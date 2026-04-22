@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f63a2cd64def145af3cced0b3f8909, type: 3}
+  m_Name: event_midnight_delivery
+  m_EditorClassIdentifier: Martian.RandomEvent::Martian.RandomEvent.RandomEventData
+  eventId: event_midnight_delivery
+  tags:
+  - positive
+  - social
+  titleKey: "\u5348\u591C\u5916\u5356\u8FF7\u8DEF"
+  descriptionKey: "\u9A91\u624B\u628A\u5916\u5356\u9001\u5230\u4F60\u8FD9\u91CC\uFF0C\u8BF4\u5BFC\u822A\u663E\u793A\u5168\u5C0F\u533A\u53EA\u6709\u4F60\u770B\u8D77\u6765\u50CF\u8D1F\u8D23\u4EBA\u3002"
+  artwork: {fileID: 0}
+  options:
+  - optionId: option_return
+    displayTextKey: "\u5E2E\u5FD9\u8054\u7CFB\u79DF\u5BA2\uFF08\u79DF\u5BA2\u8010\u4E45+1\uFF09"
+    tooltipKey: "\u4EBA\u60C5\u4E16\u6545\uFF0C\u6709\u65F6\u5C31\u662F\u4E00\u4EFD\u6CA1\u51C9\u7684\u7092\u7C89\u3002"
+    effect: AddTenantDurability;1
+    nextEventId: 
+  - optionId: option_coupon
+    displayTextKey: "\u6536\u4E0B\u8865\u507F\u5238\uFF08+70\xA5\uFF09"
+    tooltipKey: "\u9053\u5FB7\u6323\u624E\u7ED3\u675F\u5F97\u5F88\u5FEB\uFF0C\u56E0\u4E3A\u5238\u8981\u8FC7\u671F\u3002"
+    effect: AddMoney;70
+    nextEventId: 

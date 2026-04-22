@@ -13,18 +13,19 @@ MonoBehaviour:
   m_Name: event_tenant_complaint
   m_EditorClassIdentifier: Assembly-CSharp::Martian.RandomEvent.RandomEventData
   eventId: event_tenant_complaint
-  tags: []
+  tags:
+  - social
   titleKey: "\u79DF\u5BA2\u6295\u8BC9"
-  descriptionKey: "302\u5BA4\u738B\u5927\u7237\u62B1\u6028\u9694\u58C1\u566A\u97F3\u592A\u5927\uFF0C\u8981\u6C42\u4F60\u51FA\u9762\u89E3\u51B3\u3002"
+  descriptionKey: "302\u5BA4\u738B\u5927\u7237\u8BF4\u9694\u58C1\u592A\u5435\uFF0C\u8BC1\u636E\u662F\u4E00\u6BB5\u65F6\u957F\u56DB\u5C0F\u65F6\u7684\u6C89\u9ED8\u5F55\u97F3\u3002"
   artwork: {fileID: 0}
   options:
   - optionId: option_mediate
-    displayTextKey: "\u51FA\u9762\u8C03\u89E3\uFF08-20\u91D1\uFF09"
-    tooltipKey: "\u82B1\u94B1\u5E73\u606F\u7EA0\u7EB7"
+    displayTextKey: "\u51FA\u9762\u8C03\u89E3\uFF08-20\xA5\uFF09"
+    tooltipKey: "\u82B1\u4E00\u70B9\u94B1\uFF0C\u5047\u88C5\u6210\u5E74\u4EBA\u793E\u4F1A\u4ECD\u53EF\u534F\u5546\u3002"
     effect: ReduceMoney;20
     nextEventId: 
   - optionId: option_ignore
-    displayTextKey: "\u7F6E\u4E4B\u4E0D\u7406"
-    tooltipKey: "\u7701\u94B1\uFF0C\u4F46\u738B\u5927\u7237\u53EF\u80FD\u4E0D\u7EED\u79DF"
+    displayTextKey: "\u8F6C\u53D1\u7269\u4E1A\u7FA4\u516C\u544A"
+    tooltipKey: "\u6210\u672C\u4E3A\u96F6\uFF0C\u5C0A\u4E25\u4E5F\u5DEE\u4E0D\u591A\u3002"
     effect: 
     nextEventId: 

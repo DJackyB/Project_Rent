@@ -8,6 +8,7 @@ using BaoZuPo.Core;
 using BaoZuPo.Economy;
 using BaoZuPo.Integration.Martian.Feedback;
 using Martian.EventBus;
+using Martian.RandomEvent;
 using UnityEngine;
 using BaoZuPo.UI;
 using BaoZuPo.UI.Settlement;
@@ -71,6 +72,8 @@ namespace BaoZuPo.GameFlow
         private bool _settlementTurnEndedPublished;
         /// <summary>标记是否等待玩家选择奖励�?/summary>
         private bool _isRewardSelectionPending;
+        /// <summary>标记是否等待结算后的随机事件流程完成。</summary>
+        private bool _isPostSettlementRandomEventPending;
         private bool _isPreparePresentationPending;
         /// <summary>标记事件订阅是否已建�?/summary>
         private bool _eventsSubscribed;
@@ -93,6 +96,7 @@ namespace BaoZuPo.GameFlow
         public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
         /// <summary>是否等待玩家从奖励池选择</summary>
         public bool IsRewardSelectionPending => _isRewardSelectionPending;
+        public bool IsPostSettlementRandomEventPending => _isPostSettlementRandomEventPending;
         public bool IsPreparePresentationPending => _isPreparePresentationPending;
         public bool IsShopOpen => _isShopOpen;
         /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
@@ -415,23 +419,30 @@ namespace BaoZuPo.GameFlow
 
             targetRoom = validation.TargetRoom;
             var context = GameManager.Instance.GameContext;
+            var previousRoom = context.EffectContext.SelectedRoom;
             context.EffectContext.SelectedRoom = targetRoom;
-
-            if (CardTargeting.PersistsAsContract(card.Data))
+            try
             {
-                return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), targetRoom);
-            }
-
-            if (CardTargeting.PersistsInRoom(card.Data))
-            {
-                if (targetRoom == null || !targetRoom.PlaceCard(card))
+                if (CardTargeting.PersistsAsContract(card.Data))
                 {
-                    Debug.LogWarning($"[TurnManager] Failed to place {card}");
-                    return false;
+                    return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), targetRoom);
                 }
-            }
 
-            return ResolveCardAfterPlay(card, context, null, targetRoom);
+                if (CardTargeting.PersistsInRoom(card.Data))
+                {
+                    if (targetRoom == null || !targetRoom.PlaceCard(card))
+                    {
+                        Debug.LogWarning($"[TurnManager] Failed to place {card}");
+                        return false;
+                    }
+                }
+
+                return ResolveCardAfterPlay(card, context, null, targetRoom);
+            }
+            finally
+            {
+                context.EffectContext.SelectedRoom = previousRoom;
+            }
         }
 
         public bool CardNeedsRoomTarget(CardInstance card)
@@ -1336,6 +1347,16 @@ namespace BaoZuPo.GameFlow
 
         private void DoStartRewardOrComplete()
         {
+            if (!_isGameOver && TryStartPostSettlementRandomEvent())
+            {
+                return;
+            }
+
+            StartRewardSelectionOrComplete();
+        }
+
+        private void StartRewardSelectionOrComplete()
+        {
             if (!_isGameOver)
             {
                 AwardOneCardFromThreeOptions(_pendingRewardBoosted);
@@ -1348,6 +1369,79 @@ namespace BaoZuPo.GameFlow
             }
 
             CompleteSettlementPhase();
+        }
+
+        private bool TryStartPostSettlementRandomEvent()
+        {
+            var config = GameManager.Instance != null ? GameManager.Instance.gameConfig : null;
+            if (config == null
+                || config.postSettlementRandomEventChance <= 0f
+                || string.IsNullOrWhiteSpace(config.postSettlementRandomEventLibraryId))
+            {
+                return false;
+            }
+
+            float chance = Mathf.Clamp01(config.postSettlementRandomEventChance);
+            if (UnityEngine.Random.value >= chance)
+            {
+                return false;
+            }
+
+            if (!RandomEventDatabase.IsLoaded)
+            {
+                Debug.LogWarning("[TurnManager] Post-settlement random event skipped because RandomEventDatabase is not loaded.");
+                return false;
+            }
+
+            if (!RandomEventDatabase.TryGetLibraryById(config.postSettlementRandomEventLibraryId, out var library)
+                || library == null
+                || library.entries == null
+                || library.entries.Count == 0)
+            {
+                Debug.LogWarning($"[TurnManager] Post-settlement random event library '{config.postSettlementRandomEventLibraryId}' is not available.");
+                return false;
+            }
+
+            var manager = RandomEventManager.Instance;
+            if (manager == null)
+            {
+                Debug.LogWarning("[TurnManager] Post-settlement random event requested but RandomEventManager is missing.");
+                return false;
+            }
+
+            _isPostSettlementRandomEventPending = true;
+            manager.TriggerRandomFromLibrary(
+                config.postSettlementRandomEventLibraryId,
+                _ =>
+                {
+                    if (this != null)
+                    {
+                        StartCoroutine(WaitForPostSettlementRandomEventThenReward());
+                    }
+                });
+
+            if (!manager.IsEventActive)
+            {
+                _isPostSettlementRandomEventPending = false;
+                return false;
+            }
+
+            return true;
+        }
+
+        private IEnumerator WaitForPostSettlementRandomEventThenReward()
+        {
+            yield return null;
+
+            var manager = RandomEventManager.Instance;
+            while (manager != null && manager.IsEventActive)
+            {
+                yield return null;
+                manager = RandomEventManager.Instance;
+            }
+
+            _isPostSettlementRandomEventPending = false;
+            StartRewardSelectionOrComplete();
         }
 
         private bool HasPendingExitAnimations()
@@ -1404,7 +1498,7 @@ namespace BaoZuPo.GameFlow
 
         private void CompleteSettlementPhase()
         {
-            if (_settlementTurnEndedPublished || _isRewardSelectionPending)
+            if (_settlementTurnEndedPublished || _isRewardSelectionPending || _isPostSettlementRandomEventPending)
             {
                 return;
             }

@@ -221,6 +221,24 @@ namespace BaoZuPo.Card
         }
 
         /// <summary>
+        /// 判断效果字符串中是否包含指定效果 ID（按 | 分隔精确匹配 ID 部分，不做裸 Contains）。
+        /// 用于额外结算递归防护，替代直接 string.Contains。
+        /// </summary>
+        public static bool ContainsEffect(string effectString, string effectId)
+        {
+            if (string.IsNullOrWhiteSpace(effectString) || string.IsNullOrWhiteSpace(effectId))
+                return false;
+            foreach (var segment in effectString.Split('|'))
+            {
+                var trimmed = segment.Trim();
+                var id = trimmed.Contains(';') ? trimmed.Substring(0, trimmed.IndexOf(';')).Trim() : trimmed;
+                if (string.Equals(id, effectId, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// 内部方法，创建单个效果（不处理 | 分隔）。
         ///
         /// 调用 TryCreateSingle，启用错误日志。返回 effect 对象或 null。

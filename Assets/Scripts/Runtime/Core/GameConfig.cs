@@ -100,6 +100,20 @@ namespace BaoZuPo.Core
         [Tooltip("Number of unique cards shown in the shop.")]
         public int shopOfferCount = MaxShopOfferCount;
 
+        [Header("Random Events")]
+        /// <summary>
+        /// 结算结束、三选一奖励出现前触发随机事件的概率。
+        /// </summary>
+        [Range(0f, 1f)]
+        [Tooltip("Chance to trigger a random event after settlement before reward selection.")]
+        public float postSettlementRandomEventChance = 0.25f;
+
+        /// <summary>
+        /// 结算后随机事件使用的事件库 ID。
+        /// </summary>
+        [Tooltip("Random event library id used after settlement.")]
+        public string postSettlementRandomEventLibraryId = "lib_general";
+
         [Header("Rooms")]
         /// <summary>
         /// 游戏开始时已有的房间数。

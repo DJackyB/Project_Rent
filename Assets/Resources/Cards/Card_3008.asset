@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3008
   cardName: "\u642C\u8FC1\u4EE4"
-  description: "\u8BA9\u5934\u53F7\u623F\u5BA2\u642C\u51FA\uFF0C\u4E3A\u4E0B\u4E00\u6B65\u8BA1\u5212\u817E\u51FA\u623F\u95F4\u3002"
+  description: "\u5C06\u573A\u4E0A\u4E00\u540D\u79DF\u5BA2\u79FB\u52A8\u5230\u53E6\u4E00\u4E2A\u7A7A\u623F\u95F4\u3002"
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}
-  cost: 25
+  cost: 100
   baseRent: 0
   targetKind: 1
   preEffect: 
-  instantEffect: MoveTenantToEmptyRoom|AddMoney;20
+  instantEffect: MoveTenantToEmptyRoom
   settleEffect: 
   destroyEffect: 
   tags: 

@@ -28,10 +28,10 @@ namespace BaoZuPo.Card.Effects
             context.MoneyManager.AddMoney(_amount);
             if (context.SettlementCapture.IsCapturing)
             {
-                context.SettlementCapture.RecordDelta(_amount, source.Data?.cardName);
+                context.SettlementCapture.RecordDelta(_amount, EffectSourceHelper.Name(source));
             }
 
-            Debug.Log($"[Effect] {source.Data?.cardName}: AddMoneyIfAffixInRoom({_affix}, {_amount})");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: AddMoneyIfAffixInRoom({_affix}, {_amount})");
         }
     }
 }

@@ -26,3 +26,4 @@
 | UI-18 | 旧中文字体链路移除 | 已完成 | `UIFontCatalog`、字体工具和 `Assets/Resources/Fonts` 已删除 |
 | UI-19 | CardSkinDatabase 资源固化 | 已完成待验收 | 已接入正式卡面与边框资源 |
 | UI-20 | 占位 Sprite 正式资源化 | 待处理 | 当前仍有白图兜底 |
+

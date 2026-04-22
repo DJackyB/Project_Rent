@@ -46,10 +46,10 @@ namespace BaoZuPo.Card.Effects
             context.MoneyManager.AddMoney(totalBonus);
             if (context.SettlementCapture.IsCapturing)
             {
-                context.SettlementCapture.RecordDelta(totalBonus, source.Data?.cardName);
+                context.SettlementCapture.RecordDelta(totalBonus, EffectSourceHelper.Name(source));
             }
 
-            Debug.Log($"[Effect] {source.Data?.cardName}: AffixRoomMultiplier({_affix}, x{_multiplier}) +{totalBonus}");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: AffixRoomMultiplier({_affix}, x{_multiplier}) +{totalBonus}");
         }
     }
 }

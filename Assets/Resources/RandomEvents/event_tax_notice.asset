@@ -16,16 +16,16 @@ MonoBehaviour:
   tags:
   - financial
   titleKey: "\u623F\u4EA7\u7A0E\u5355"
-  descriptionKey: "\u5E74\u5EA6\u623F\u4EA7\u7A0E\u901A\u77E5\u5230\u4E86\uFF0C\u5FC5\u987B\u7F34\u7EB3\u3002"
+  descriptionKey: "\u7A0E\u52A1\u901A\u77E5\u5230\u4E86\u3002\u5B83\u7684\u8BED\u6C14\u5F88\u6E29\u67D4\uFF0C\u91D1\u989D\u5F88\u8BDA\u5B9E\uFF0C\u5408\u8D77\u6765\u7279\u522B\u4E0D\u793C\u8C8C\u3002"
   artwork: {fileID: 0}
   options:
   - optionId: option_pay
-    displayTextKey: "\u4E56\u4E56\u7F34\u7A0E\uFF08-150\u91D1\uFF09"
-    tooltipKey: "\u6309\u65F6\u7F34\u6E05"
+    displayTextKey: "\u4E56\u4E56\u7F34\u7A0E\uFF08-150\xA5\uFF09"
+    tooltipKey: "\u6210\u719F\u7684\u6807\u5FD7\u662F\u88AB\u6263\u94B1\u65F6\u53EA\u53F9\u4E00\u53E3\u6C14\u3002"
     effect: ReduceMoney;150
     nextEventId: 
   - optionId: option_appeal
-    displayTextKey: "\u7533\u8BF7\u51CF\u514D\uFF08-50\u91D1\uFF09"
-    tooltipKey: "\u51CF\u514D\u90E8\u5206\u7A0E\u6B3E"
+    displayTextKey: "\u7533\u8BF7\u51CF\u514D\uFF08-50\xA5\uFF09"
+    tooltipKey: "\u586B\u4E09\u5F20\u8868\uFF0C\u7701\u4E00\u70B9\u94B1\uFF0C\u635F\u5931\u4E00\u70B9\u7075\u9B42\u3002"
     effect: ReduceMoney;50
     nextEventId: 

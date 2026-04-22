@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.Card.CardData
   cardId: 3007
   cardName: "\u62DB\u8058\u7535\u8BDD"
-  description: "\u7ACB\u5373\u62BD\u724C\u8865\u5145\u624B\u724C\u3002"
+  description: "\u968F\u673A\u62BD 1 \u5F20\u88C5\u5907\u5361\u5230\u624B\u724C\u3002"
   cardType: 2
   rarity: 1
   cardArt: {fileID: 0}
-  cost: 40
+  cost: 100
   baseRent: 0
   targetKind: 0
   preEffect: 
-  instantEffect: DrawCard;2
+  instantEffect: DrawCard;1
   settleEffect: 
   destroyEffect: 
   tags: 

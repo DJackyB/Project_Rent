@@ -95,9 +95,10 @@ namespace BaoZuPo.Economy
         /// <returns>支付是否成功。false表示余额不足，余额保持不变</returns>
         public bool ReduceMoney(int amount)
         {
-            if (amount <= 0)
+            if (amount == 0) return true;
+            if (amount < 0)
             {
-                Debug.LogWarning($"[MoneyManager] ReduceMoney received non-positive amount: {amount}");
+                Debug.LogWarning($"[MoneyManager] ReduceMoney received negative amount: {amount}");
                 return true;
             }
 

@@ -14,7 +14,7 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null || room.TenantCount <= 0)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: No tenant in room, effect skipped.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: No tenant in room, effect skipped.");
                 return;
             }
 
@@ -23,7 +23,7 @@ namespace BaoZuPo.Card.Effects
                 if (tenant.IsDestroyed) continue;
                 tenant.DestroyEffect?.Execute(tenant, context);
                 tenant.MarkDestroyed();
-                Debug.Log($"[Effect] {source.Data.cardName}: Evicted tenant {tenant.Data.cardName} from room {room.RoomIndex}.");
+                Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: Evicted tenant {tenant.Data.cardName} from room {room.RoomIndex}.");
                 return;
             }
         }

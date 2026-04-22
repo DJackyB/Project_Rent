@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f63a2cd64def145af3cced0b3f8909, type: 3}
+  m_Name: event_mold_review
+  m_EditorClassIdentifier: Martian.RandomEvent::Martian.RandomEvent.RandomEventData
+  eventId: event_mold_review
+  tags:
+  - maintenance
+  titleKey: "\u9709\u6591\u4E94\u661F\u5DEE\u8BC4"
+  descriptionKey: "\u5899\u89D2\u957F\u51FA\u4E00\u5757\u9709\u6591\uFF0C\u5F62\u72B6\u50CF\u5DEE\u8BC4\u622A\u56FE\uFF0C\u751A\u81F3\u8FD8\u5F88\u9AD8\u6E05\u3002"
+  artwork: {fileID: 0}
+  options:
+  - optionId: option_clean
+    displayTextKey: "\u8BF7\u4EBA\u5904\u7406\uFF08-90\xA5\uFF0C\u88C5\u5907\u8010\u4E45+2\uFF09"
+    tooltipKey: "\u94B1\u8D70\u4E86\uFF0C\u5899\u9762\u7EC8\u4E8E\u4E0D\u50CF\u5728\u5199\u9057\u4E66\u3002"
+    effect: ReduceMoney;90|AddEquipmentDurability;2
+    nextEventId: 
+  - optionId: option_paint
+    displayTextKey: "\u5237\u5C42\u767D\u6F06\uFF08-30\xA5\uFF09"
+    tooltipKey: "\u89E3\u51B3\u89C6\u89C9\u95EE\u9898\uFF0C\u4E5F\u5C31\u662F\u89E3\u51B3\u4E00\u5207\u95EE\u9898\u7684\u7B2C\u4E00\u9636\u6BB5\u3002"
+    effect: ReduceMoney;30
+    nextEventId: 

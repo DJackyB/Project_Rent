@@ -21,7 +21,7 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: No room selected, effect skipped.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: No room selected, effect skipped.");
                 return;
             }
 
@@ -33,7 +33,7 @@ namespace BaoZuPo.Card.Effects
                 affected++;
             }
 
-            Debug.Log($"[Effect] {source.Data.cardName}: Room {room.RoomIndex} tenant durability {_amount:+#;-#;0} ({affected} cards).");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: Room {room.RoomIndex} tenant durability {_amount:+#;-#;0} ({affected} cards).");
         }
     }
 }

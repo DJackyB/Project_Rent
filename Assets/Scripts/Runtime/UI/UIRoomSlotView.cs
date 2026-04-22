@@ -98,13 +98,9 @@ namespace BaoZuPo.UI
         public GameObject StealCardObject()
         {
             var obj = _currentCardObject;
-            if (obj == null)
-            {
-                return null;
-            }
-
+            if (obj == null) return null;
             _currentCardObject = null;
-            obj.transform.SetParent(null, true);
+            // 不在这里 SetParent，由调用方在捕获 localScale/position 后再脱离
             return obj;
         }
 

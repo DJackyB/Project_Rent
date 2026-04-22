@@ -18,7 +18,7 @@
   - PR / main 自动测试工作流
 - `/.github/workflows/unity-build-artifact.yml`
   - 手动触发的 Windows 构建工作流
-- `Assets/_Assets/Scripts/Editor/UnityCiBuildEntry.cs`
+- `Assets/Scripts/Editor/UnityCiBuildEntry.cs`
   - 当前项目的 Unity 构建入口
 - `Doc/20_专题方案/轻量化通用CI-CD方案_v1.md`
   - 完整方案与交接文档
@@ -114,3 +114,4 @@
 - 不要把项目专属发布语义写进 GitHub Actions 通用契约层
 - 如果未来第二个 Unity 仓库也要接入，再抽 `workflow_call` 或 composite action
 - 如果只是在当前仓库调整平台、缓存或 artifact 命名，优先改项目集成层，不要反向污染通用边界
+

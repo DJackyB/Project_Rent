@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f63a2cd64def145af3cced0b3f8909, type: 3}
+  m_Name: event_agent_course
+  m_EditorClassIdentifier: Martian.RandomEvent::Martian.RandomEvent.RandomEventData
+  eventId: event_agent_course
+  tags:
+  - card
+  - financial
+  titleKey: "\u623F\u4EA7\u5927\u5E08\u8BFE"
+  descriptionKey: "\u6709\u4EBA\u9080\u8BF7\u4F60\u53C2\u52A0\u300A\u4E09\u5929\u5B66\u4F1A\u88AB\u52A8\u6536\u5165\u300B\u3002\u95E8\u7968\u4E3B\u52A8\u5F97\u5F88\u3002"
+  artwork: {fileID: 0}
+  options:
+  - optionId: option_learn
+    displayTextKey: "\u62A5\u540D\u5B66\u4E60\uFF08-120\xA5\uFF0C\u64782\u724C\uFF09"
+    tooltipKey: "\u77E5\u8BC6\u4ED8\u8D39\u7684\u91CD\u70B9\u901A\u5E38\u5728\u4ED8\u8D39\u3002"
+    effect: ReduceMoney;120|DrawCard;2
+    nextEventId: 
+  - optionId: option_sell
+    displayTextKey: "\u8F6C\u5356\u540D\u989D\uFF08+90\xA5\uFF09"
+    tooltipKey: "\u628A\u7126\u8651\u5356\u7ED9\u4E0B\u4E00\u4E2A\u6709\u68A6\u60F3\u7684\u4EBA\u3002"
+    effect: AddMoney;90
+    nextEventId: 
