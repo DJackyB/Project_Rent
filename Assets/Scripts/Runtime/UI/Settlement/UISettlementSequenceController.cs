@@ -4,6 +4,7 @@ using BaoZuPo.Core;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Economy;
 using BaoZuPo.UI.Common.Animation;
+using BaoZuPo.Integration.Feel;
 using BaoZuPo.UI.Common.FeedbackPopup;
 using Martian.EventBus;
 using DG.Tweening;
@@ -30,11 +31,37 @@ namespace BaoZuPo.UI.Settlement
         [SerializeField] private float transferFadeOutSeconds = 0.08f;
         [SerializeField] private float transferScale = 1.02f;
 
+        [Header("Accumulator View")]
+        [SerializeField] private RectTransform accumulatorRoot;
+        [SerializeField] private CanvasGroup accumulatorGroup;
+        [SerializeField] private TextMeshProUGUI accumulatorLabel;
+        [SerializeField] private Color accumulatorTextColor = new Color(1f, 0.86f, 0.32f, 1f);
+        [SerializeField] private float accumulatorCountDuration = 0.3f;
+        [SerializeField] private float accumulatorFlyDuration = 0.4f;
+        [SerializeField] private float accumulatorPauseBeforeFly = 0.4f;
+
+        [Header("Room Accumulator View")]
+        [SerializeField] private RectTransform roomAccumulatorRoot;
+        [SerializeField] private CanvasGroup roomAccumulatorGroup;
+        [SerializeField] private TextMeshProUGUI roomAccumulatorLabel;
+        [SerializeField] private Color roomAccumulatorTextColor = new Color(1f, 0.92f, 0.62f, 1f);
+        [SerializeField] private float roomAccumulatorCountDuration = 0.18f;
+        [SerializeField] private float roomAccumulatorFlyDuration = 0.28f;
+        [SerializeField] private float roomAccumulatorPauseBeforeFly = 0.3f;
+
         [Header("Playback Timing")]
         [SerializeField] private float entryGapSeconds = 0.04f;
         [SerializeField] private float stageGapSeconds = 0.1f;
+        [SerializeField] private float stepGapSeconds = 0.12f;
+
+        [Header("Source Feedback")]
+        [SerializeField] private float sourceTriggerPunchScale = 0.055f;
+        [SerializeField] private float sourceTriggerPunchDuration = 0.15f;
+        [SerializeField] private int sourceTriggerPunchVibrato = 6;
+        [SerializeField] private float sourceTriggerPunchElasticity = 0.45f;
 
         private readonly Queue<UISettlementPlaybackBatch> _pendingBatches = new();
+        private readonly List<string> _pendingCompletionBatchIds = new();
         private Sequence _activeTransferSequence;
         private Tween _activePlaybackDelayTween;
         private Canvas _canvas;
@@ -43,6 +70,23 @@ namespace BaoZuPo.UI.Settlement
         private bool _isPlaybackRunning;
         private bool _isSettling;
         private bool _runtimeTransferViewBuilt;
+        private int _accumulatedAmount;
+        private float _accumulatorDisplayFloat;
+        private Tween _accumulatorCountTween;
+        private Sequence _accumulatorFlySequence;
+        private Action _onAccumulatorCountComplete;
+        private bool _isFinishingPlayback;
+        private Vector2 _accumulatorHomePosition;
+        private int _roomAccumulatedAmount;
+        private float _roomAccumulatedFloat;
+        private Tween _roomAccumulatorCountTween;
+        private Sequence _roomAccumulatorFlySequence;
+
+        private void Start()
+        {
+            if (accumulatorRoot != null)
+                _accumulatorHomePosition = accumulatorRoot.anchoredPosition;
+        }
 
         private void OnEnable()
         {
@@ -80,6 +124,8 @@ namespace BaoZuPo.UI.Settlement
             _isSettling = payload.Phase == GamePhase.Settle;
             if (_isSettling)
             {
+                ResetAccumulator();
+                ShowAccumulatorInitial();
                 if (UIManager.Instance != null && !UIManager.Instance.IsDeferredMoneyDisplayActive)
                 {
                     UIManager.Instance.BeginDeferredMoneyDisplay(MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
@@ -254,8 +300,39 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            if (!TryPlayPopupSettlementEntry(entry, onCompleted))
+            _roomAccumulatedAmount = 0;
+            _roomAccumulatedFloat = 0f;
+            ShowRoomAccumulatorForEntry(entry.Payload);
+
+            void OnPopupCompleted() => FinalizeRoomEntry(entry, onCompleted);
+
+            if (!TryPlayPopupSettlementEntry(entry, OnPopupCompleted))
+                FinalizeRoomEntry(entry, onCompleted);
+        }
+
+        private void FinalizeRoomEntry(UISettlementPlaybackEntry entry, Action onCompleted)
+        {
+            int finalAmount = entry?.FinalAmount ?? 0;
+            if (finalAmount != 0 && _roomAccumulatedAmount != finalAmount)
             {
+                int from = Mathf.RoundToInt(_roomAccumulatedFloat);
+                _roomAccumulatedAmount = finalAmount;
+                TweenRoomAccumulatorLabel(from, finalAmount);
+            }
+
+            if (finalAmount != 0 && roomAccumulatorRoot != null && roomAccumulatorRoot.gameObject.activeSelf)
+            {
+                SchedulePlaybackDelay(roomAccumulatorPauseBeforeFly, () =>
+                    FlyRoomAccumulatorToTotal(() =>
+                    {
+                        AccumulateToTotal(finalAmount);
+                        onCompleted?.Invoke();
+                    }));
+            }
+            else
+            {
+                HideRoomAccumulatorImmediate();
+                if (finalAmount != 0) AccumulateToTotal(finalAmount);
                 onCompleted?.Invoke();
             }
         }
@@ -298,23 +375,53 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
+            UpdateRoomAccumulatorForStep(step);
+            BaoZuPoFeelFeedbackInstaller.Active?.FeelBackend?.PlaySlot(FeelFeedbackSlots.SettlementStep);
+
             bool isFinalStep = step.Kind == GameEvents.SettlementStepKind.Final;
+            var sourceAnchor = ResolveSourceAnchor(payload, step);
             layer.Show(new UIFeedbackPopupRequest
             {
-                Anchor = ResolveSourceAnchor(payload),
+                Anchor = sourceAnchor,
                 Text = text,
                 Category = ResolvePopupCategory(step, isFinalStep),
                 IsFinal = isFinalStep,
                 UseScreenCenterFallback = true,
-                ScreenOffset = ResolveSourceOffset(payload),
-                AnchorFeedback = PlayPopupAnchorFeedback,
-                Completed = () => PlayPopupSettlementStep(layer, payload, stepIndex + 1, onCompleted)
+                ScreenOffset = ResolveSourceOffset(payload, sourceAnchor),
+                AnchorFeedback = PlaySourceTriggeredFeedback,
+                Completed = () =>
+                {
+                    if (stepGapSeconds > 0f)
+                        SchedulePlaybackDelay(stepGapSeconds, () => PlayPopupSettlementStep(layer, payload, stepIndex + 1, onCompleted));
+                    else
+                        PlayPopupSettlementStep(layer, payload, stepIndex + 1, onCompleted);
+                }
             });
         }
 
-        private static void PlayPopupAnchorFeedback(RectTransform anchor)
+        private void PlaySourceTriggeredFeedback(RectTransform anchor)
         {
-            UIAnimationTweenUtility.PunchScalePreserveBase(anchor, 0.045f, 0.14f, 6, 0.45f);
+            if (anchor == null)
+            {
+                return;
+            }
+
+            float feelDuration = BaoZuPoFeelFeedbackInstaller.Active?.FeelBackend?.PlaySlotAttached(
+                FeelFeedbackSlots.SourceTriggered,
+                anchor,
+                "SettlementSourceTriggered") ?? 0f;
+
+            if (feelDuration > 0f)
+            {
+                return;
+            }
+
+            UIAnimationTweenUtility.PunchScalePreserveBase(
+                anchor,
+                sourceTriggerPunchScale,
+                sourceTriggerPunchDuration,
+                sourceTriggerPunchVibrato,
+                sourceTriggerPunchElasticity);
         }
 
         private void PlayNextSerialEntry(IReadOnlyList<UISettlementPlaybackEntry> entries, int currentIndex, Action onCompleted)
@@ -383,7 +490,7 @@ namespace BaoZuPo.UI.Settlement
             }
 
             var sourceAnchor = ResolveSourceAnchor(entry.Payload);
-            Vector2 sourcePoint = ResolveScreenPoint(sourceAnchor, ResolveSourceOffset(entry.Payload));
+            Vector2 sourcePoint = ResolveScreenPoint(sourceAnchor, ResolveSourceOffset(entry.Payload, sourceAnchor));
             Vector2 targetPoint = ResolveScreenPoint(topBarTarget, Vector2.zero);
 
             string transferText = FormatSignedAmount(entry.Payload.FinalAmount);
@@ -467,10 +574,7 @@ namespace BaoZuPo.UI.Settlement
             {
                 if (batch != null && batch.PublishCompletionOnBatchEnd && !string.IsNullOrWhiteSpace(batch.CompletionBatchId))
                 {
-                    EventBus.Publish(new GameEvents.SettlementPlaybackCompleted
-                    {
-                        BatchId = batch.CompletionBatchId
-                    });
+                    _pendingCompletionBatchIds.Add(batch.CompletionBatchId);
                 }
 
                 _isPlaybackRunning = false;
@@ -496,68 +600,50 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            UIManager.Instance?.EndDeferredMoneyDisplay();
-            UIManager.Instance?.RefreshAll();
+            if (_isFinishingPlayback)
+            {
+                return;
+            }
+
+            if (_accumulatedAmount != 0 && accumulatorRoot != null && accumulatorRoot.gameObject.activeSelf)
+            {
+                _isFinishingPlayback = true;
+                void DoFly() => SchedulePlaybackDelay(accumulatorPauseBeforeFly, () => FlyAccumulatorToTopBar(() =>
+                {
+                    _isFinishingPlayback = false;
+                    UIManager.Instance?.RefreshAll();
+                    UIManager.Instance?.EndDeferredMoneyDisplay(PublishPendingCompletions);
+                }));
+                if (_accumulatorCountTween != null)
+                    _onAccumulatorCountComplete = DoFly;
+                else
+                    DoFly();
+            }
+            else
+            {
+                UIManager.Instance?.RefreshAll();
+                UIManager.Instance?.EndDeferredMoneyDisplay(PublishPendingCompletions);
+            }
         }
 
         private void ClearPending()
         {
             _pendingBatches.Clear();
+            _pendingCompletionBatchIds.Clear();
             _isPlaybackRunning = false;
             _isSettling = false;
+            _isFinishingPlayback = false;
             _activeTransferSequence?.Kill(false);
             _activeTransferSequence = null;
             _activePlaybackDelayTween?.Kill(false);
             _activePlaybackDelayTween = null;
+            HideRoomAccumulatorImmediate();
+            ResetAccumulator();
         }
 
         private void PlayBatchMoneyJump(UISettlementPlaybackBatch batch, Action onCompleted)
         {
-            if (!ShouldFinalizeBatch(batch))
-            {
-                onCompleted?.Invoke();
-                return;
-            }
-
-            int totalDelta = batch.TotalDelta;
-            if (totalDelta == 0 || UIManager.Instance == null)
-            {
-                onCompleted?.Invoke();
-                return;
-            }
-
-            UIManager.Instance.CommitDisplayedDelta(totalDelta);
-            if (!TryPlayPopupBatchMoneyJump(totalDelta, onCompleted))
-            {
-                onCompleted?.Invoke();
-            }
-        }
-
-        private bool TryPlayPopupBatchMoneyJump(int totalDelta, Action onCompleted)
-        {
-            var layer = ResolvePopupLayer();
-            if (layer == null || UIManager.Instance == null)
-            {
-                return false;
-            }
-
-            RectTransform anchor = UIManager.Instance.ResolveMoneyTargetAnchor();
-            float verticalGap = UIManager.Instance.topBar != null
-                ? UIManager.Instance.topBar.SettlementTotalPopupVerticalGap
-                : 40f;
-
-            layer.Show(new UIFeedbackPopupRequest
-            {
-                Anchor = anchor,
-                Text = FormatSignedAmount(totalDelta),
-                Category = totalDelta < 0 ? UIFeedbackPopupCategory.Negative : UIFeedbackPopupCategory.Final,
-                IsFinal = totalDelta >= 0,
-                UseScreenCenterFallback = anchor == null,
-                ScreenOffset = ResolveAboveAnchorOffset(anchor, verticalGap),
-                AnchorFeedback = PlayPopupAnchorFeedback,
-                Completed = onCompleted
-            });
-            return true;
+            onCompleted?.Invoke();
         }
 
         private static bool ShouldFinalizeBatch(UISettlementPlaybackBatch batch)
@@ -572,15 +658,7 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
-            if (_canvas == null)
-            {
-                _canvas = GetComponentInParent<Canvas>();
-            }
-
-            if (_canvas == null && UIManager.Instance != null)
-            {
-                _canvas = UIManager.Instance.GetComponentInParent<Canvas>();
-            }
+            EnsureCanvas();
 
             if (_canvas != null)
             {
@@ -665,13 +743,31 @@ namespace BaoZuPo.UI.Settlement
             }
         }
 
-        private static Vector2 ResolveSourceOffset(GameEvents.SettlementSequenceQueued payload)
+        private RectTransform ResolveSourceAnchor(GameEvents.SettlementSequenceQueued payload, GameEvents.SettlementStep step)
         {
+            if (payload == null || UIManager.Instance == null || UIManager.Instance.boardPanel == null)
+            {
+                return null;
+            }
+
+            if (payload.SourceKind == GameEvents.SettlementSourceKind.Room && step.SourceCard != null)
+            {
+                return UIManager.Instance.boardPanel.ResolveRoomCardAnchor(payload.Room, step.SourceCard);
+            }
+
+            return ResolveSourceAnchor(payload);
+        }
+
+        private static Vector2 ResolveSourceOffset(GameEvents.SettlementSequenceQueued payload, RectTransform anchor)
+        {
+            if (payload != null && payload.SourceKind == GameEvents.SettlementSourceKind.Contract)
+            {
+                return ResolveAboveAnchorOffset(anchor, 18f);
+            }
+
             return payload != null && payload.SourceKind == GameEvents.SettlementSourceKind.Room
                 ? new Vector2(0f, 140f)
-                : payload != null && payload.SourceKind == GameEvents.SettlementSourceKind.Contract
-                    ? new Vector2(0f, 120f)
-                    : new Vector2(0f, 48f);
+                : new Vector2(0f, 48f);
         }
 
         private Vector2 ResolveScreenPoint(RectTransform anchor, Vector2 screenOffset)
@@ -714,6 +810,16 @@ namespace BaoZuPo.UI.Settlement
                 rect.height * (1f - anchor.pivot.y) + verticalGap);
         }
 
+        private void EnsureCanvas()
+        {
+            if (_canvas != null) return;
+            _canvas = GetComponentInParent<Canvas>();
+            if (_canvas == null && UIManager.Instance != null)
+                _canvas = UIManager.Instance.GetComponentInParent<Canvas>();
+            if (_canvas != null)
+                _canvasRect = _canvas.transform as RectTransform;
+        }
+
         private UIFeedbackPopupLayer ResolvePopupLayer()
         {
             if (_popupLayer != null)
@@ -721,16 +827,7 @@ namespace BaoZuPo.UI.Settlement
                 return _popupLayer;
             }
 
-            if (_canvas == null)
-            {
-                _canvas = GetComponentInParent<Canvas>();
-            }
-
-            if (_canvas == null && UIManager.Instance != null)
-            {
-                _canvas = UIManager.Instance.GetComponentInParent<Canvas>();
-            }
-
+            EnsureCanvas();
             _popupLayer = UIFeedbackPopupLayer.GetOrCreate(_canvas);
             return _popupLayer;
         }
@@ -804,6 +901,267 @@ namespace BaoZuPo.UI.Settlement
         {
             string sign = amount > 0 ? "+" : string.Empty;
             return $"{sign}{amount}";
+        }
+
+        private void AccumulateToTotal(int amount)
+        {
+            if (amount == 0 || accumulatorRoot == null || accumulatorLabel == null)
+            {
+                return;
+            }
+            ShowAccumulator();
+            int from = Mathf.RoundToInt(_accumulatorDisplayFloat);
+            _accumulatedAmount += amount;
+            TweenAccumulatorLabel(from, _accumulatedAmount);
+            UIAnimationTweenUtility.PunchScalePreserveBase(accumulatorRoot, 0.07f, 0.22f, 6, 0.55f);
+        }
+
+        private void ShowRoomAccumulatorForEntry(GameEvents.SettlementSequenceQueued payload)
+        {
+            if (roomAccumulatorRoot == null || roomAccumulatorLabel == null)
+            {
+                return;
+            }
+            EnsureCanvas();
+            var anchor = ResolveSourceAnchor(payload);
+            roomAccumulatorRoot.anchoredPosition = ResolveScreenPoint(anchor, new Vector2(0f, 260f));
+            roomAccumulatorRoot.localScale = Vector3.one;
+            roomAccumulatorLabel.text = "+0";
+            roomAccumulatorLabel.color = roomAccumulatorTextColor;
+            _roomAccumulatedFloat = 0f;
+            roomAccumulatorRoot.gameObject.SetActive(true);
+            if (roomAccumulatorGroup != null)
+            {
+                roomAccumulatorGroup.alpha = 0f;
+                roomAccumulatorGroup.DOFade(1f, 0.18f).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+        }
+
+        private void HideRoomAccumulatorImmediate()
+        {
+            _roomAccumulatorFlySequence?.Kill(false);
+            _roomAccumulatorFlySequence = null;
+            _roomAccumulatorCountTween?.Kill(false);
+            _roomAccumulatorCountTween = null;
+            if (roomAccumulatorRoot != null)
+            {
+                roomAccumulatorRoot.gameObject.SetActive(false);
+            }
+            if (roomAccumulatorGroup != null)
+            {
+                roomAccumulatorGroup.alpha = 0f;
+            }
+        }
+
+        private void UpdateRoomAccumulatorForStep(GameEvents.SettlementStep step)
+        {
+            if (roomAccumulatorRoot == null || roomAccumulatorLabel == null || !roomAccumulatorRoot.gameObject.activeSelf)
+            {
+                return;
+            }
+            int from = Mathf.RoundToInt(_roomAccumulatedFloat);
+            if (step.IsMultiplier)
+                _roomAccumulatedAmount = Mathf.RoundToInt(_roomAccumulatedAmount * (step.Amount / 100f));
+            else if (step.Kind == GameEvents.SettlementStepKind.Final)
+                _roomAccumulatedAmount = step.Amount;
+            else
+                _roomAccumulatedAmount += step.Amount;
+            TweenRoomAccumulatorLabel(from, _roomAccumulatedAmount);
+        }
+
+        private void TweenRoomAccumulatorLabel(int from, int to)
+        {
+            if (roomAccumulatorLabel == null)
+            {
+                return;
+            }
+            _roomAccumulatorCountTween?.Kill(false);
+            _roomAccumulatedFloat = from;
+            _roomAccumulatorCountTween = DOTween.To(
+                () => _roomAccumulatedFloat,
+                x =>
+                {
+                    _roomAccumulatedFloat = x;
+                    roomAccumulatorLabel.text = FormatSignedAmount(Mathf.RoundToInt(x));
+                    roomAccumulatorLabel.color = roomAccumulatorTextColor;
+                },
+                (float)to,
+                roomAccumulatorCountDuration
+            ).SetEase(Ease.OutQuart).SetUpdate(true).OnComplete(() => _roomAccumulatorCountTween = null);
+        }
+
+        private void FlyRoomAccumulatorToTotal(Action onCompleted)
+        {
+            _roomAccumulatorCountTween?.Kill(false);
+            _roomAccumulatorCountTween = null;
+
+            if (roomAccumulatorRoot == null || roomAccumulatorGroup == null)
+            {
+                HideRoomAccumulatorImmediate();
+                onCompleted?.Invoke();
+                return;
+            }
+
+            if (accumulatorRoot == null || !accumulatorRoot.gameObject.activeSelf)
+            {
+                HideRoomAccumulatorImmediate();
+                onCompleted?.Invoke();
+                return;
+            }
+
+            if (roomAccumulatorLabel != null)
+            {
+                roomAccumulatorLabel.text = FormatSignedAmount(_roomAccumulatedAmount);
+            }
+
+            Vector2 targetPos = ResolveScreenPoint(accumulatorRoot, Vector2.zero);
+
+            _roomAccumulatorFlySequence?.Kill(false);
+            _roomAccumulatorFlySequence = DOTween.Sequence().SetUpdate(true);
+            _roomAccumulatorFlySequence.Append(roomAccumulatorRoot.DOAnchorPos(targetPos, roomAccumulatorFlyDuration).SetEase(Ease.InCubic));
+            _roomAccumulatorFlySequence.Join(
+                roomAccumulatorGroup.DOFade(0f, roomAccumulatorFlyDuration * 0.5f)
+                    .SetEase(Ease.InQuad)
+                    .SetDelay(roomAccumulatorFlyDuration * 0.5f));
+            _roomAccumulatorFlySequence.OnComplete(() =>
+            {
+                HideRoomAccumulatorImmediate();
+                onCompleted?.Invoke();
+            });
+        }
+
+        private void ShowAccumulatorInitial()
+        {
+            if (accumulatorRoot == null || accumulatorLabel == null)
+            {
+                return;
+            }
+            accumulatorLabel.text = "+0";
+            _accumulatorDisplayFloat = 0f;
+            accumulatorRoot.anchoredPosition = _accumulatorHomePosition;
+            accumulatorRoot.localScale = Vector3.one;
+            accumulatorRoot.gameObject.SetActive(true);
+            if (accumulatorGroup != null)
+            {
+                accumulatorGroup.alpha = 0f;
+                accumulatorGroup.DOFade(1f, 0.25f).SetEase(Ease.OutQuad).SetUpdate(true);
+            }
+        }
+
+        private void ShowAccumulator()
+        {
+            if (accumulatorRoot == null || accumulatorRoot.gameObject.activeSelf)
+            {
+                return;
+            }
+            accumulatorRoot.anchoredPosition = _accumulatorHomePosition;
+            accumulatorRoot.localScale = Vector3.one;
+            accumulatorRoot.gameObject.SetActive(true);
+            if (accumulatorGroup != null)
+            {
+                accumulatorGroup.alpha = 1f;
+            }
+        }
+
+        private void HideAccumulatorImmediate()
+        {
+            _accumulatorFlySequence?.Kill(false);
+            _accumulatorFlySequence = null;
+            _accumulatorCountTween?.Kill(false);
+            _accumulatorCountTween = null;
+            _onAccumulatorCountComplete = null;
+            if (accumulatorRoot != null)
+            {
+                accumulatorRoot.gameObject.SetActive(false);
+            }
+            if (accumulatorGroup != null)
+            {
+                accumulatorGroup.alpha = 0f;
+            }
+        }
+
+        private void ResetAccumulator()
+        {
+            HideAccumulatorImmediate();
+            _accumulatedAmount = 0;
+            _accumulatorDisplayFloat = 0f;
+            if (accumulatorLabel != null)
+            {
+                accumulatorLabel.text = FormatSignedAmount(0);
+            }
+        }
+
+        private void TweenAccumulatorLabel(int from, int to)
+        {
+            if (accumulatorLabel == null)
+            {
+                return;
+            }
+            _accumulatorCountTween?.Kill(false);
+            _accumulatorDisplayFloat = from;
+            _accumulatorCountTween = DOTween.To(
+                () => _accumulatorDisplayFloat,
+                x =>
+                {
+                    _accumulatorDisplayFloat = x;
+                    accumulatorLabel.text = FormatSignedAmount(Mathf.RoundToInt(x));
+                    accumulatorLabel.color = accumulatorTextColor;
+                },
+                (float)to,
+                accumulatorCountDuration
+            ).SetEase(Ease.OutQuart).SetUpdate(true).OnComplete(() =>
+            {
+                _accumulatorCountTween = null;
+                var cb = _onAccumulatorCountComplete;
+                _onAccumulatorCountComplete = null;
+                cb?.Invoke();
+            });
+        }
+
+        private void PublishPendingCompletions()
+        {
+            foreach (var id in _pendingCompletionBatchIds)
+            {
+                EventBus.Publish(new GameEvents.SettlementPlaybackCompleted { BatchId = id });
+            }
+            _pendingCompletionBatchIds.Clear();
+        }
+
+        private void FlyAccumulatorToTopBar(Action onCompleted)
+        {
+            if (accumulatorRoot == null || accumulatorGroup == null || UIManager.Instance == null)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            var target = UIManager.Instance.ResolveMoneyTargetAnchor();
+            if (target == null)
+            {
+                HideAccumulatorImmediate();
+                onCompleted?.Invoke();
+                return;
+            }
+
+            if (accumulatorLabel != null)
+            {
+                accumulatorLabel.text = FormatSignedAmount(_accumulatedAmount);
+            }
+
+            Vector2 targetPos = ResolveScreenPoint(target, Vector2.zero);
+
+            _accumulatorFlySequence?.Kill(false);
+            _accumulatorFlySequence = DOTween.Sequence().SetUpdate(true);
+            _accumulatorFlySequence.Append(accumulatorRoot.DOAnchorPos(targetPos, accumulatorFlyDuration).SetEase(Ease.InCubic));
+            _accumulatorFlySequence.Join(
+                accumulatorGroup.DOFade(0f, accumulatorFlyDuration * 0.6f)
+                    .SetEase(Ease.InQuad)
+                    .SetDelay(accumulatorFlyDuration * 0.4f));
+            _accumulatorFlySequence.OnComplete(() =>
+            {
+                HideAccumulatorImmediate();
+                onCompleted?.Invoke();
+            });
         }
     }
 }
