@@ -649,6 +649,7 @@ namespace BaoZuPo.GameFlow
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
                 var contractContext = CreateSettlementExecutionContext(sharedContext, null);
                 contractContext.SettlementCapture.Begin();
+                contractContext.SettlementCapture.SourceCard = contract;
                 contract.SettleEffect?.Execute(contract, contractContext);
 
                 var payload = CreateSettlementPayload(
@@ -1147,6 +1148,7 @@ namespace BaoZuPo.GameFlow
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
                 var tenantContext = CreateSettlementExecutionContext(sharedContext, room);
                 tenantContext.SettlementCapture.Begin();
+                tenantContext.SettlementCapture.SourceCard = tenant;
 
                 int baseRent = Mathf.Max(0, tenant.Data != null ? tenant.Data.baseRent : 0);
                 if (baseRent > 0)
@@ -1186,6 +1188,7 @@ namespace BaoZuPo.GameFlow
                 int sourceStartMoney = MoneyManager.Instance.CurrentMoney;
                 var equipmentContext = CreateSettlementExecutionContext(sharedContext, room);
                 equipmentContext.SettlementCapture.Begin();
+                equipmentContext.SettlementCapture.SourceCard = equipment;
 
                 int moneyBeforeEquipment = MoneyManager.Instance.CurrentMoney;
                 equipment.SettleEffect?.Execute(equipment, equipmentContext);

@@ -19,6 +19,19 @@ namespace BaoZuPo.UI
 
         public CardInstance BoundCard => _boundCard;
         public UICardView CurrentCardView => _currentCardObject != null ? _currentCardObject.GetComponent<UICardView>() : null;
+        public RectTransform CardAnchor
+        {
+            get
+            {
+                var cardView = CurrentCardView;
+                if (cardView != null)
+                {
+                    return cardView.HoverAnchor;
+                }
+
+                return _currentCardObject != null ? _currentCardObject.transform as RectTransform : transform as RectTransform;
+            }
+        }
 
         public void Setup(CardViewContext context, GameObject cardPrefab)
         {

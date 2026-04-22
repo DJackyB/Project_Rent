@@ -30,6 +30,7 @@ namespace BaoZuPo.Core
             public string Label;
             public int Amount;
             public bool IsMultiplier;
+            public Card.CardInstance SourceCard;
         }
 
         public struct MoneyChanged
