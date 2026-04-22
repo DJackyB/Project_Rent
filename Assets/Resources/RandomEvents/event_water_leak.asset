@@ -15,17 +15,18 @@ MonoBehaviour:
   eventId: event_water_leak
   tags:
   - urgent
+  - maintenance
   titleKey: "\u6C34\u7BA1\u6F0F\u6C34"
-  descriptionKey: "\u4E94\u697C\u8D70\u5ECA\u6C34\u7BA1\u7A81\u7136\u7206\u88C2\uFF0C\u5730\u677F\u5F00\u59CB\u79EF\u6C34\u3002"
+  descriptionKey: "\u6C34\u7BA1\u7528\u5B9E\u9645\u884C\u52A8\u8BC1\u660E\uFF1A\u5B83\u6BD4\u79DF\u5BA2\u66F4\u60F3\u62E5\u6709\u6D41\u52A8\u6027\u3002"
   artwork: {fileID: 0}
   options:
   - optionId: option_repair
-    displayTextKey: "\u7ACB\u5373\u4FEE\u7406\uFF08-50\u91D1\uFF09"
-    tooltipKey: "\u5F7B\u5E95\u89E3\u51B3"
-    effect: ReduceMoney;50
+    displayTextKey: "\u7ACB\u5373\u4FEE\u7406\uFF08-80\xA5\uFF0C\u88C5\u5907\u8010\u4E45+1\uFF09"
+    tooltipKey: "\u7EF4\u4FEE\u5E08\u5085\u62A5\u4EF7\u5F88\u8D35\uFF0C\u4F46\u81F3\u5C11\u4ED6\u771F\u7684\u4F1A\u6765\u3002"
+    effect: ReduceMoney;80|AddEquipmentDurability;1
     nextEventId: 
   - optionId: option_delay
-    displayTextKey: "\u5148\u62D6\u7740"
-    tooltipKey: "\u7701\u94B1\u4F46\u9690\u60A3\u4ECD\u5728"
-    effect: 
+    displayTextKey: "\u5148\u6446\u4E2A\u6876"
+    tooltipKey: "\u7528\u5BB9\u5668\u7BA1\u7406\u95EE\u9898\uFF0C\u542C\u8D77\u6765\u5C31\u5F88\u4E13\u4E1A\u3002"
+    effect: ReduceMoney;20
     nextEventId: 

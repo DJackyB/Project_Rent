@@ -16,16 +16,16 @@ MonoBehaviour:
   tags:
   - positive
   titleKey: "\u5E78\u8FD0\u65E5"
-  descriptionKey: "\u4ECA\u5929\u4E00\u5207\u987A\u5229\uFF0C\u6536\u5230\u4E00\u7B14\u610F\u5916\u4E4B\u8D22\uFF01"
+  descriptionKey: "\u4F60\u5728\u65E7\u6C99\u53D1\u7F1D\u91CC\u6478\u5230\u73B0\u91D1\u3002\u524D\u4EFB\u79DF\u5BA2\u53EF\u80FD\u7BA1\u8FD9\u53EB\u50A8\u84C4\uFF0C\u94F6\u884C\u7BA1\u8FD9\u53EB\u4E0D\u5B58\u5728\u3002"
   artwork: {fileID: 0}
   options:
   - optionId: option_keep
-    displayTextKey: "\u72EC\u541E\uFF08+100\u91D1\uFF09"
-    tooltipKey: "\u6536\u5165\u56CA\u4E2D"
-    effect: AddMoney;100
+    displayTextKey: "\u6536\u5165\u56CA\u4E2D\uFF08+120\xA5\uFF09"
+    tooltipKey: "\u73B0\u91D1\u6CA1\u6709\u8BB0\u5FC6\uFF0C\u8D26\u672C\u4E5F\u53EF\u4EE5\u6CA1\u6709\u3002"
+    effect: AddMoney;120
     nextEventId: 
   - optionId: option_share
-    displayTextKey: "\u4E0E\u79DF\u5BA2\u5171\u4EAB\uFF08+50\u91D1+\u64781\u724C\uFF09"
-    tooltipKey: "\u7686\u5927\u6B22\u559C"
-    effect: AddMoney;50|DrawCard;1
+    displayTextKey: "\u53D1\u79DF\u5BA2\u798F\u5229\uFF08+60\xA5\uFF0C\u64781\u724C\uFF09"
+    tooltipKey: "\u7528\u4E00\u70B9\u5C0F\u6069\u5C0F\u60E0\u6362\u4E00\u5806\u622A\u56FE\u8F6C\u53D1\u3002"
+    effect: AddMoney;60|DrawCard;1
     nextEventId: 
