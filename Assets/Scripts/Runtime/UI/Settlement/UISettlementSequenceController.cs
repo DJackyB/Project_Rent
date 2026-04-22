@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BaoZuPo.Board;
 using BaoZuPo.Core;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Economy;
@@ -69,7 +70,7 @@ namespace BaoZuPo.UI.Settlement
         private UIFeedbackPopupLayer _popupLayer;
         private bool _isPlaybackRunning;
         private bool _isSettling;
-        private bool _runtimeTransferViewBuilt;
+        private bool _transferViewReady;
         private int _accumulatedAmount;
         private float _accumulatorDisplayFloat;
         private Tween _accumulatorCountTween;
@@ -79,6 +80,8 @@ namespace BaoZuPo.UI.Settlement
         private Vector2 _accumulatorHomePosition;
         private int _roomAccumulatedAmount;
         private float _roomAccumulatedFloat;
+        private int _roomEntryBaseAmount;
+        private int _roomEntryAccumulatedAmount;
         private Tween _roomAccumulatorCountTween;
         private Sequence _roomAccumulatorFlySequence;
 
@@ -242,6 +245,12 @@ namespace BaoZuPo.UI.Settlement
                 return;
             }
 
+            if (IsRoomSettlementStage(stage))
+            {
+                PlayRoomStage(stage.Entries, () => PlayNextStageAfterGap(stages, index, onCompleted));
+                return;
+            }
+
             switch (stage.Kind)
             {
                 case UISettlementPlaybackStageKind.Parallel:
@@ -255,6 +264,126 @@ namespace BaoZuPo.UI.Settlement
                 default:
                     PlaySerial(stage.Entries, 0, () => PlayNextStageAfterGap(stages, index, onCompleted));
                     break;
+            }
+        }
+
+        private static bool IsRoomSettlementStage(UISettlementPlaybackStage stage)
+        {
+            if (stage == null
+                || (stage.Kind != UISettlementPlaybackStageKind.Serial && stage.Kind != UISettlementPlaybackStageKind.Aggregate)
+                || stage.Entries == null
+                || stage.Entries.Count == 0)
+            {
+                return false;
+            }
+
+            RoomSlot room = null;
+            for (int i = 0; i < stage.Entries.Count; i++)
+            {
+                var payload = stage.Entries[i]?.Payload;
+                if (payload == null || payload.SourceKind != GameEvents.SettlementSourceKind.Room || payload.Room == null)
+                {
+                    return false;
+                }
+
+                if (room == null)
+                {
+                    room = payload.Room;
+                    continue;
+                }
+
+                if (!ReferenceEquals(room, payload.Room))
+                {
+                    return false;
+                }
+            }
+
+            return room != null;
+        }
+
+        private void PlayRoomStage(IReadOnlyList<UISettlementPlaybackEntry> entries, Action onCompleted)
+        {
+            var firstPayload = FindFirstPayload(entries);
+            if (firstPayload == null)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            _roomAccumulatedAmount = 0;
+            _roomAccumulatedFloat = 0f;
+            _roomEntryBaseAmount = 0;
+            _roomEntryAccumulatedAmount = 0;
+            ShowRoomAccumulatorForEntry(firstPayload);
+            PlayRoomStageEntry(entries, 0, () => FinalizeRoomStage(entries, onCompleted));
+        }
+
+        private void PlayRoomStageEntry(IReadOnlyList<UISettlementPlaybackEntry> entries, int index, Action onCompleted)
+        {
+            if (entries == null || index >= entries.Count)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            var entry = entries[index];
+            if (entry == null || entry.Payload == null)
+            {
+                PlayNextRoomStageEntry(entries, index, onCompleted);
+                return;
+            }
+
+            _roomEntryBaseAmount = _roomAccumulatedAmount;
+            _roomEntryAccumulatedAmount = 0;
+
+            void OnPopupCompleted()
+            {
+                _roomAccumulatedAmount = _roomEntryBaseAmount + entry.FinalAmount;
+                PlayNextRoomStageEntry(entries, index, onCompleted);
+            }
+
+            if (!TryPlayPopupSettlementEntry(entry, OnPopupCompleted))
+            {
+                OnPopupCompleted();
+            }
+        }
+
+        private void PlayNextRoomStageEntry(IReadOnlyList<UISettlementPlaybackEntry> entries, int currentIndex, Action onCompleted)
+        {
+            int nextIndex = currentIndex + 1;
+            if (entries == null || nextIndex >= entries.Count || entryGapSeconds <= 0f)
+            {
+                PlayRoomStageEntry(entries, nextIndex, onCompleted);
+                return;
+            }
+
+            SchedulePlaybackDelay(entryGapSeconds, () => PlayRoomStageEntry(entries, nextIndex, onCompleted));
+        }
+
+        private void FinalizeRoomStage(IReadOnlyList<UISettlementPlaybackEntry> entries, Action onCompleted)
+        {
+            int finalAmount = SumFinalAmount(entries);
+            if (finalAmount != 0 && _roomAccumulatedAmount != finalAmount)
+            {
+                int from = Mathf.RoundToInt(_roomAccumulatedFloat);
+                _roomAccumulatedAmount = finalAmount;
+                TweenRoomAccumulatorLabel(from, finalAmount);
+            }
+
+            if (finalAmount != 0 && roomAccumulatorRoot != null && roomAccumulatorRoot.gameObject.activeSelf)
+            {
+                SchedulePlaybackDelay(roomAccumulatorPauseBeforeFly, () =>
+                    FlyRoomAccumulatorToTotal(() =>
+                    {
+                        AccumulateToTotal(finalAmount);
+                        onCompleted?.Invoke();
+                    }));
+            }
+            else
+            {
+                HideRoomAccumulatorImmediate();
+                if (finalAmount != 0) AccumulateToTotal(finalAmount);
+                onCompleted?.Invoke();
             }
         }
 
@@ -302,6 +431,8 @@ namespace BaoZuPo.UI.Settlement
 
             _roomAccumulatedAmount = 0;
             _roomAccumulatedFloat = 0f;
+            _roomEntryBaseAmount = 0;
+            _roomEntryAccumulatedAmount = 0;
             ShowRoomAccumulatorForEntry(entry.Payload);
 
             void OnPopupCompleted() => FinalizeRoomEntry(entry, onCompleted);
@@ -460,7 +591,11 @@ namespace BaoZuPo.UI.Settlement
 
         private void PlayTransfer(UISettlementPlaybackEntry entry, Action onCompleted)
         {
-            EnsureTransferView();
+            if (!EnsureTransferView())
+            {
+                onCompleted?.Invoke();
+                return;
+            }
 
             if (entry == null || entry.Payload == null || UIManager.Instance == null)
             {
@@ -651,61 +786,25 @@ namespace BaoZuPo.UI.Settlement
             return batch != null && batch.PlayMoneyJumpOnBatchEnd;
         }
 
-        private void EnsureTransferView()
+        private bool EnsureTransferView()
         {
-            if (_runtimeTransferViewBuilt && transferLayerRoot != null && transferLayerGroup != null && transferLabel != null)
-            {
-                return;
-            }
+            if (_transferViewReady) return true;
 
             EnsureCanvas();
-
             if (_canvas != null)
-            {
                 _canvasRect = _canvas.transform as RectTransform;
-            }
 
-            if (transferLayerRoot == null)
+            if (transferLayerRoot == null || transferLayerGroup == null || transferLabel == null)
             {
-                transferLayerRoot = transform as RectTransform;
-                if (transferLayerRoot == null)
-                {
-                    return;
-                }
-            }
-
-            if (transferLayerGroup == null)
-            {
-                transferLayerGroup = transferLayerRoot.GetComponent<CanvasGroup>();
-            }
-
-            if (transferLayerGroup == null)
-            {
-                return;
-            }
-
-            if (transferLabel == null)
-            {
-                var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-                labelObject.transform.SetParent(transferLayerRoot, false);
-
-                var labelRect = labelObject.GetComponent<RectTransform>();
-                labelRect.anchorMin = Vector2.zero;
-                labelRect.anchorMax = Vector2.one;
-                labelRect.offsetMin = new Vector2(20f, 10f);
-                labelRect.offsetMax = new Vector2(-20f, -10f);
-
-                transferLabel = labelObject.GetComponent<TextMeshProUGUI>();
-                transferLabel.fontSize = 24f;
-                transferLabel.alignment = TextAlignmentOptions.Center;
-                transferLabel.color = transferTextColor;
-                transferLabel.raycastTarget = false;
+                Debug.LogWarning("[UISettlementSequenceController] Transfer view references are not assigned. Transfer animation will be skipped.");
+                return false;
             }
 
             transferLayerGroup.blocksRaycasts = false;
             transferLayerGroup.interactable = false;
             transferLayerRoot.gameObject.SetActive(false);
-            _runtimeTransferViewBuilt = true;
+            _transferViewReady = true;
+            return true;
         }
 
         private void HideTransferImmediate()
@@ -961,12 +1060,47 @@ namespace BaoZuPo.UI.Settlement
             }
             int from = Mathf.RoundToInt(_roomAccumulatedFloat);
             if (step.IsMultiplier)
-                _roomAccumulatedAmount = Mathf.RoundToInt(_roomAccumulatedAmount * (step.Amount / 100f));
+                _roomEntryAccumulatedAmount = Mathf.RoundToInt(_roomEntryAccumulatedAmount * (step.Amount / 100f));
             else if (step.Kind == GameEvents.SettlementStepKind.Final)
-                _roomAccumulatedAmount = step.Amount;
+                _roomEntryAccumulatedAmount = step.Amount;
             else
-                _roomAccumulatedAmount += step.Amount;
+                _roomEntryAccumulatedAmount += step.Amount;
+            _roomAccumulatedAmount = _roomEntryBaseAmount + _roomEntryAccumulatedAmount;
             TweenRoomAccumulatorLabel(from, _roomAccumulatedAmount);
+        }
+
+        private static GameEvents.SettlementSequenceQueued FindFirstPayload(IReadOnlyList<UISettlementPlaybackEntry> entries)
+        {
+            if (entries == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i]?.Payload != null)
+                {
+                    return entries[i].Payload;
+                }
+            }
+
+            return null;
+        }
+
+        private static int SumFinalAmount(IReadOnlyList<UISettlementPlaybackEntry> entries)
+        {
+            int sum = 0;
+            if (entries == null)
+            {
+                return sum;
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                sum += entries[i]?.FinalAmount ?? 0;
+            }
+
+            return sum;
         }
 
         private void TweenRoomAccumulatorLabel(int from, int to)

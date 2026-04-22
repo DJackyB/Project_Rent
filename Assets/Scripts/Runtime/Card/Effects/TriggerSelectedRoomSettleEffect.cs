@@ -14,20 +14,20 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: No room selected, effect skipped.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: No room selected, effect skipped.");
                 return;
             }
 
             if (room.TenantCount <= 0)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: Room {room.RoomIndex} has no tenant, settle skipped.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: Room {room.RoomIndex} has no tenant, settle skipped.");
                 return;
             }
 
             // 递归防护：检查是否已在额外结算上下文中，防止嵌套触发此效果导致无限递归。
             if (context.EffectContext.IsExtraRoomSettlementActive)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: Nested extra settlement is blocked.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: Nested extra settlement is blocked.");
                 return;
             }
 
@@ -81,7 +81,7 @@ namespace BaoZuPo.Card.Effects
                 context.EffectContext.IsExtraRoomSettlementActive = false;
             }
 
-            Debug.Log($"[Effect] {source.Data.cardName}: Triggered extra settle once for room {room.RoomIndex} without durability loss.");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: Triggered extra settle once for room {room.RoomIndex} without durability loss.");
         }
 
         // 检查卡牌的 SettleEffect 是否包含 TriggerSelectedRoomSettle，若包含则在额外结算上下文中跳过此卡牌，防止递归。
@@ -89,8 +89,7 @@ namespace BaoZuPo.Card.Effects
         {
             return card != null
                 && card.Data != null
-                && !string.IsNullOrWhiteSpace(card.Data.settleEffect)
-                && card.Data.settleEffect.Contains("TriggerSelectedRoomSettle");
+                && CardEffectFactory.ContainsEffect(card.Data.settleEffect, "TriggerSelectedRoomSettle");
         }
     }
 }

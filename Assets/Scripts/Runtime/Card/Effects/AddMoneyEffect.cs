@@ -19,7 +19,7 @@ namespace BaoZuPo.Card.Effects
         {
             context.MoneyManager.AddMoney(_amount);
             context?.SettlementCapture?.RecordDelta(_amount, source != null && source.Data != null ? source.Data.cardName : null);
-            Debug.Log($"[MirrorEffect] {source.Data.cardName} triggered AddMoney({_amount})");
+            Debug.Log($"[MirrorEffect] {EffectSourceHelper.Name(source)} triggered AddMoney({_amount})");
         }
     }
 }

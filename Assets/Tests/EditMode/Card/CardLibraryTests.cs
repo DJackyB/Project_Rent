@@ -1207,6 +1207,8 @@ namespace BaoZuPo.Tests.Card
                 CreateCardData(9004, "Shop Offer C"));
             gameConfig.shopCard = shopCard ?? CreateShopCardData();
             gameConfig.shopOfferCount = shopOfferCount;
+            gameConfig.postSettlementRandomEventChance = 0f;
+            gameConfig.postSettlementRandomEventLibraryId = string.Empty;
             gameConfig.startingMoney = 1000;
             gameConfig.firstTurnDrawCount = firstTurnDrawCount;
             gameConfig.normalTurnDrawCount = normalTurnDrawCount;

@@ -25,7 +25,7 @@ namespace BaoZuPo.Card.Effects
                 context?.SettlementCapture?.RecordDelta(total, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
-            Debug.Log($"[MirrorEffect] {source.Data.cardName}: {roomCount} room(s), money delta {total}");
+            Debug.Log($"[MirrorEffect] {EffectSourceHelper.Name(source)}: {roomCount} room(s), money delta {total}");
         }
     }
 }

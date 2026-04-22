@@ -25,6 +25,8 @@ MonoBehaviour:
   shopLibrary: {fileID: 11400000, guid: 5f0810784d744633bf704b1194ab40cd, type: 2}
   shopCard: {fileID: 11400000, guid: b7aeb236867673940a3ab306184a3e6e, type: 2}
   shopOfferCount: 3
+  postSettlementRandomEventChance: 0.25
+  postSettlementRandomEventLibraryId: lib_general
   initialRoomCount: 3
   defaultTenantSlots: 1
   defaultEquipmentSlots: 3

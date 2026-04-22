@@ -13,7 +13,7 @@ namespace BaoZuPo.Card.Effects
             var fromRoom = context.EffectContext.SelectedRoom;
             if (fromRoom == null || fromRoom.TenantCount <= 0)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: no movable tenant in the selected room");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: no movable tenant in the selected room");
                 return;
             }
 
@@ -41,11 +41,11 @@ namespace BaoZuPo.Card.Effects
 
                 fromRoom.RemoveCard(targetTenant);
                 room.PlaceCard(targetTenant);
-                Debug.Log($"[Effect] {source.Data.cardName}: moved tenant Room {fromRoom.RoomIndex} -> Room {room.RoomIndex}");
+                Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: moved tenant Room {fromRoom.RoomIndex} -> Room {room.RoomIndex}");
                 return;
             }
 
-            Debug.LogWarning($"[Effect] {source.Data.cardName}: no empty room available for migration");
+            Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: no empty room available for migration");
         }
     }
 }

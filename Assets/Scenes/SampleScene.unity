@@ -1489,9 +1489,15 @@ MonoBehaviour:
   contractPanelRoot: {fileID: 2686549601}
   contractContainer: {fileID: 2686549609}
   contractTitleText: {fileID: 2686549607}
+  destroyAnimationLayer: {fileID: 1791002240}
+  destroyFlashColor: {r: 1, g: 0.18, b: 0.18, a: 1}
+  destroyPunchStrength: 0.14
+  destroyPunchSeconds: 0.1
   destroyFlashSeconds: 0.08
-  destroyMoveSeconds: 0.28
+  destroyHoldSeconds: 0.06
+  destroyCollapseSeconds: 0.32
   destroyExitYOffset: 60
+  destroyRotateDegrees: -12
 --- !u!114 &268654953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2514,6 +2520,7 @@ RectTransform:
   - {fileID: 163530267}
   - {fileID: 422525505}
   - {fileID: 859650710}
+  - {fileID: 1791002240}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3571,10 +3578,10 @@ RectTransform:
   - {fileID: 912665071}
   m_Father: {fileID: 1944210853}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 226, y: -32.5}
+  m_SizeDelta: {x: 452, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &599128929
 MonoBehaviour:
@@ -5582,10 +5589,10 @@ RectTransform:
   - {fileID: 1338256374}
   m_Father: {fileID: 1745911704}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 131.54399, y: 180}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 706.39886, y: -139.9818}
+  m_SizeDelta: {x: 0, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &821995479
 MonoBehaviour:
@@ -6534,7 +6541,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 970503291}
-  - component: {fileID: 970503290}
   - component: {fileID: 970503292}
   m_Layer: 5
   m_Name: SettlementPanel
@@ -6543,47 +6549,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &970503290
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 970503289}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35dbbb0cd579ced4baa2443e350d4887, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaoZuPo.UI.Settlement.UISettlementSequenceController
-  transferLayerRoot: {fileID: 0}
-  transferLayerGroup: {fileID: 0}
-  transferLabel: {fileID: 0}
-  transferTextColor: {r: 1, g: 0.86, b: 0.32, a: 1}
-  transferMoveSeconds: 0.25
-  transferFadeInSeconds: 0.08
-  transferFadeOutSeconds: 0.08
-  transferScale: 1.02
-  accumulatorRoot: {fileID: 0}
-  accumulatorGroup: {fileID: 0}
-  accumulatorLabel: {fileID: 0}
-  accumulatorTextColor: {r: 1, g: 0.86, b: 0.32, a: 1}
-  accumulatorCountDuration: 0.3
-  accumulatorFlyDuration: 0.4
-  accumulatorPauseBeforeFly: 0.4
-  roomAccumulatorRoot: {fileID: 0}
-  roomAccumulatorGroup: {fileID: 0}
-  roomAccumulatorLabel: {fileID: 0}
-  roomAccumulatorTextColor: {r: 1, g: 0.92, b: 0.62, a: 1}
-  roomAccumulatorCountDuration: 0.18
-  roomAccumulatorFlyDuration: 0.28
-  roomAccumulatorPauseBeforeFly: 0.3
-  entryGapSeconds: 0.04
-  stageGapSeconds: 0.1
-  stepGapSeconds: 0.12
-  sourceTriggerPunchScale: 0.055
-  sourceTriggerPunchDuration: 0.15
-  sourceTriggerPunchVibrato: 6
-  sourceTriggerPunchElasticity: 0.45
 --- !u!224 &970503291
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9788,7 +9753,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1605538934
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10721,6 +10686,54 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1790049613}
   m_CullTransparentMesh: 1
+--- !u!1 &1791002239
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1791002240}
+  - component: {fileID: 1791002241}
+  m_Layer: 0
+  m_Name: BoardDestroyAnimationLayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1791002240
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1791002239}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 406429160}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &1791002241
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1791002239}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &1833090510
 GameObject:
   m_ObjectHideFlags: 0
@@ -10812,7 +10825,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1857837017
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11530,10 +11543,10 @@ RectTransform:
   - {fileID: 657384745}
   m_Father: {fileID: 1944210853}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 226, y: -107.5}
+  m_SizeDelta: {x: 452, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2007025702
 MonoBehaviour:

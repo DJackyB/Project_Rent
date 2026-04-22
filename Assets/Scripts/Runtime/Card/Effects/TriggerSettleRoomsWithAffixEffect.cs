@@ -20,7 +20,7 @@ namespace BaoZuPo.Card.Effects
         {
             if (context.EffectContext.IsExtraRoomSettlementActive)
             {
-                Debug.LogWarning($"[Effect] {source.Data?.cardName}: Nested extra settlement is blocked.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: Nested extra settlement is blocked.");
                 return;
             }
 
@@ -70,7 +70,7 @@ namespace BaoZuPo.Card.Effects
                         equipment.SettleEffect?.Execute(equipment, context);
                     }
 
-                    Debug.Log($"[Effect] {source.Data?.cardName}: Extra settle for room {room.RoomIndex}");
+                    Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: Extra settle for room {room.RoomIndex}");
                 }
             }
             finally
@@ -82,8 +82,7 @@ namespace BaoZuPo.Card.Effects
         private static bool ShouldSkip(CardInstance card)
         {
             return card?.Data != null
-                && !string.IsNullOrWhiteSpace(card.Data.settleEffect)
-                && card.Data.settleEffect.Contains("TriggerSettleRoomsWithAffix");
+                && CardEffectFactory.ContainsEffect(card.Data.settleEffect, "TriggerSettleRoomsWithAffix");
         }
     }
 }

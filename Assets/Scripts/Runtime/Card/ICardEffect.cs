@@ -224,4 +224,13 @@ namespace BaoZuPo.Card
             });
         }
     }
+
+    /// <summary>
+    /// 效果类共用工具。供所有 ICardEffect 实现统一访问来源卡牌信息，避免裸访问 source.Data 导致 NRE。
+    /// </summary>
+    public static class EffectSourceHelper
+    {
+        /// <summary>source 或 source.Data 为 null 时返回 "Unknown"。</summary>
+        public static string Name(CardInstance source) => source?.Data?.cardName ?? "Unknown";
+    }
 }

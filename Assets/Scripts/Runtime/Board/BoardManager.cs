@@ -109,6 +109,14 @@ namespace BaoZuPo.Board
         /// <returns>房间列表的只读视图</returns>
         public IReadOnlyList<RoomSlot> GetAllRooms() => _rooms;
 
+        public int GetEmptyRoomCount()
+        {
+            int count = 0;
+            foreach (var room in _rooms)
+                if (room.TenantCount <= 0) count++;
+            return count;
+        }
+
         /// <summary>
         /// 查询适合放置给定卡牌的房间。性能特点：O(n) 遍历所有房间直到找到可用的。
         /// [伪代码]

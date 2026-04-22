@@ -15,7 +15,7 @@ namespace BaoZuPo.Card.Effects
             var room = context.EffectContext.SelectedRoom;
             if (room == null || !room.CanPlaceTenant)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: Target room cannot accept tenants.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: Target room cannot accept tenants.");
                 return;
             }
 
@@ -28,7 +28,7 @@ namespace BaoZuPo.Card.Effects
 
             if (pool.Count == 0)
             {
-                Debug.LogWarning($"[Effect] {source.Data.cardName}: Tenant pool is empty.");
+                Debug.LogWarning($"[Effect] {EffectSourceHelper.Name(source)}: Tenant pool is empty.");
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace BaoZuPo.Card.Effects
             var tenant = new CardInstance(pick);
             room.PlaceCard(tenant);
             tenant.InstantEffect?.Execute(tenant, context);
-            Debug.Log($"[Effect] {source.Data.cardName}: Spawned tenant {tenant.Data.cardName} in room {room.RoomIndex}.");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: Spawned tenant {tenant.Data.cardName} in room {room.RoomIndex}.");
         }
     }
 }

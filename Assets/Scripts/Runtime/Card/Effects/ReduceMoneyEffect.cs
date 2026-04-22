@@ -23,7 +23,7 @@ namespace BaoZuPo.Card.Effects
                 context?.SettlementCapture?.RecordDelta(-_amount, source != null && source.Data != null ? source.Data.cardName : null);
             }
 
-            Debug.Log($"[MirrorEffect] {source.Data.cardName} triggered ReduceMoney({_amount}), success: {success}");
+            Debug.Log($"[MirrorEffect] {EffectSourceHelper.Name(source)} triggered ReduceMoney({_amount}), success: {success}");
         }
     }
 }

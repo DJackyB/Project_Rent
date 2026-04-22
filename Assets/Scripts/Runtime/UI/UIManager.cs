@@ -94,8 +94,7 @@ namespace BaoZuPo.UI
                 CurrentPhase = parsedPhase;
             }
 
-            cardDragController?.CancelCurrentDrag(true);
-            TooltipServices.Current.HideAll();
+            ResetTransientInteraction();
             if (e.Phase == GamePhase.Settle)
             {
                 BeginDeferredMoneyDisplay(MoneyManager.Instance != null ? MoneyManager.Instance.CurrentMoney : 0);
@@ -108,8 +107,7 @@ namespace BaoZuPo.UI
 
         private void OnCardPlayed(GameEvents.CardPlayed e)
         {
-            cardDragController?.CancelCurrentDrag(true);
-            TooltipServices.Current.HideAll();
+            ResetTransientInteraction();
             RefreshAll();
         }
 
@@ -127,8 +125,7 @@ namespace BaoZuPo.UI
 
         private void HandleTurnStarted(GameEvents.TurnStarted e)
         {
-            cardDragController?.CancelCurrentDrag(true);
-            TooltipServices.Current.HideAll();
+            ResetTransientInteraction();
             topBar?.RefreshTurn(e.TurnNumber);
 
             int turnsUntilLoanDue = 0;
@@ -146,8 +143,7 @@ namespace BaoZuPo.UI
 
         private void OnGameOver(GameEvents.GameOver e)
         {
-            cardDragController?.CancelCurrentDrag(true);
-            TooltipServices.Current.HideAll();
+            ResetTransientInteraction();
             int totalEarnedMoney = e.FinalMoney + (MoneyManager.Instance != null ? MoneyManager.Instance.TotalSpent : 0);
             gameOverPanel?.Show(e.TotalTurns, totalEarnedMoney);
         }
@@ -177,10 +173,15 @@ namespace BaoZuPo.UI
             _cardShopPanel?.Hide();
         }
 
-        public void RefreshAll()
+        private void ResetTransientInteraction()
         {
             cardDragController?.CancelCurrentDrag(true);
             TooltipServices.Current.HideAll();
+        }
+
+        public void RefreshAll()
+        {
+            ResetTransientInteraction();
             RefreshHudAndHand();
             boardPanel?.RefreshBoard();
         }

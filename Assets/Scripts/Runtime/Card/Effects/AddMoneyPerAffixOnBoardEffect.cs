@@ -30,10 +30,10 @@ namespace BaoZuPo.Card.Effects
             context.MoneyManager.AddMoney(total);
             if (context.SettlementCapture.IsCapturing)
             {
-                context.SettlementCapture.RecordDelta(total, source.Data?.cardName);
+                context.SettlementCapture.RecordDelta(total, EffectSourceHelper.Name(source));
             }
 
-            Debug.Log($"[Effect] {source.Data?.cardName}: AddMoneyPerAffixOnBoard({_affix}) x{count} = +{total}");
+            Debug.Log($"[Effect] {EffectSourceHelper.Name(source)}: AddMoneyPerAffixOnBoard({_affix}) x{count} = +{total}");
         }
     }
 }
