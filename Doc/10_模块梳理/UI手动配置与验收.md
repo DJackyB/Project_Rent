@@ -11,14 +11,14 @@
 - 主链路优先跑通，但主链路缺失的必需引用必须尽早暴露。
 - Tooltip 和反馈模块允许“缺失只影响表现，不影响流程”。
 - 奖励面板不属于可选模块；缺失时应直接暴露配置错误。
-- 当前固定文案真源是 [GameText.cs](../../Assets/_Assets/Scripts/UI/GameText.cs)。
+- 当前固定文案真源是 [GameText.cs](../../Assets/Scripts/Runtime/UI/GameText.cs)。
 - 资金 popup 文字会通过项目侧文本配置应用当前字体；通用 popup 视图本身不直接依赖多语言服务。
 
 ## 1. UIManager
 
 目标脚本：
 
-- [UIManager.cs](../../Assets/_Assets/Scripts/UI/UIManager.cs)
+- [UIManager.cs](../../Assets/Scripts/Runtime/UI/UIManager.cs)
 
 必须显式配置：
 
@@ -41,7 +41,7 @@
 
 目标脚本：
 
-- [UIHandPanel.cs](../../Assets/_Assets/Scripts/UI/UIHandPanel.cs)
+- [UIHandPanel.cs](../../Assets/Scripts/Runtime/UI/UIHandPanel.cs)
 
 建议显式配置：
 
@@ -58,7 +58,7 @@
 
 目标脚本：
 
-- [UIBoardPanel.cs](../../Assets/_Assets/Scripts/UI/UIBoardPanel.cs)
+- [UIBoardPanel.cs](../../Assets/Scripts/Runtime/UI/UIBoardPanel.cs)
 
 建议显式配置：
 
@@ -75,7 +75,7 @@
 
 目标脚本：
 
-- [UIRoomView.cs](../../Assets/_Assets/Scripts/UI/UIRoomView.cs)
+- [UIRoomView.cs](../../Assets/Scripts/Runtime/UI/UIRoomView.cs)
 
 建议显式配置：
 
@@ -95,8 +95,8 @@
 
 目标脚本：
 
-- [UICardView.cs](../../Assets/_Assets/Scripts/UI/UICardView.cs)
-- [TooltipTrigger.cs](../../Assets/_Assets/Martian/Tooltip/TooltipTrigger.cs)
+- [UICardView.cs](../../Assets/Scripts/Runtime/UI/UICardView.cs)
+- [TooltipTrigger.cs](../../Assets/Modules/Martian/Tooltip/TooltipTrigger.cs)
 
 建议显式配置：
 
@@ -124,8 +124,8 @@
 
 目标脚本：
 
-- [UICardDragController.cs](../../Assets/_Assets/Scripts/UI/UICardDragController.cs)
-- [UICardDropZone.cs](../../Assets/_Assets/Scripts/UI/Common/Drag/UICardDropZone.cs)
+- [UICardDragController.cs](../../Assets/Scripts/Runtime/UI/UICardDragController.cs)
+- [UICardDropZone.cs](../../Assets/Scripts/Runtime/UI/Common/Drag/UICardDropZone.cs)
 
 建议后续显式化：
 
@@ -142,13 +142,13 @@
 
 目标脚本：
 
-- [TooltipServices.cs](../../Assets/_Assets/Martian/Tooltip/TooltipServices.cs)
-- [TooltipRuntimeService.cs](../../Assets/_Assets/Martian/Tooltip/Runtime/TooltipRuntimeService.cs)
-- [BaoZuPoCardTooltipPresenter.cs](../../Assets/_Assets/Scripts/Integration/Martian/Tooltip/BaoZuPoCardTooltipPresenter.cs)
-- [UIFeedbackPopupLayer.cs](../../Assets/_Assets/Scripts/UI/Common/FeedbackPopup/UIFeedbackPopupLayer.cs)
-- [UIFeedbackPopupView.cs](../../Assets/_Assets/Scripts/UI/Common/FeedbackPopup/UIFeedbackPopupView.cs)
-- [BaoZuPoFeedbackAdapter.cs](../../Assets/_Assets/Scripts/Integration/Martian/Feedback/BaoZuPo/BaoZuPoFeedbackAdapter.cs)
-- [UISettlementSequenceController.cs](../../Assets/_Assets/Scripts/UI/Settlement/UISettlementSequenceController.cs)
+- [TooltipServices.cs](../../Assets/Modules/Martian/Tooltip/TooltipServices.cs)
+- [TooltipRuntimeService.cs](../../Assets/Modules/Martian/Tooltip/Runtime/TooltipRuntimeService.cs)
+- [BaoZuPoCardTooltipPresenter.cs](../../Assets/Scripts/Runtime/Integration/Martian/Tooltip/BaoZuPoCardTooltipPresenter.cs)
+- [UIFeedbackPopupLayer.cs](../../Assets/Scripts/Runtime/UI/Common/FeedbackPopup/UIFeedbackPopupLayer.cs)
+- [UIFeedbackPopupView.cs](../../Assets/Scripts/Runtime/UI/Common/FeedbackPopup/UIFeedbackPopupView.cs)
+- [BaoZuPoFeedbackAdapter.cs](../../Assets/Scripts/Runtime/Integration/Martian/Feedback/BaoZuPo/BaoZuPoFeedbackAdapter.cs)
+- [UISettlementSequenceController.cs](../../Assets/Scripts/Runtime/UI/Settlement/UISettlementSequenceController.cs)
 
 当前现状：
 
@@ -167,8 +167,8 @@
 
 目标脚本：
 
-- [UIManager.cs](../../Assets/_Assets/Scripts/UI/UIManager.cs)
-- [UICardRewardPanel.cs](../../Assets/_Assets/Scripts/UI/UICardRewardPanel.cs)
+- [UIManager.cs](../../Assets/Scripts/Runtime/UI/UIManager.cs)
+- [UICardRewardPanel.cs](../../Assets/Scripts/Runtime/UI/UICardRewardPanel.cs)
 
 必须显式配置：
 
@@ -191,7 +191,7 @@
 
 必须认清当前运行时真源：
 
-- [GameText.cs](../../Assets/_Assets/Scripts/UI/GameText.cs)
+- [GameText.cs](../../Assets/Scripts/Runtime/UI/GameText.cs)
 
 验收时需要确认：
 
@@ -212,3 +212,4 @@
 9. 出牌扣款、贷款扣款和结算最终入账都出现在 `Money Target Anchor` 上方。
 10. 结算后奖励面板会弹出。
 11. 选择奖励或跳过都能进入下一回合。
+

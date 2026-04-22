@@ -15,7 +15,7 @@
   - https://feel-docs.moremountains.com/API/index.html
 - `Martian.Feedback` 是反馈语义和时序真源；Feel 只做可选视觉增强。
 - Feel 不负责音频、haptics，也不引入 Cinemachine。音频继续归 `Martian.Audio`。
-- 业务核心脚本不直接 `using MoreMountains.*`。Feel 相关依赖收口在 `Assets/_Assets/Scripts/Integration/Feel/` 和 UI 表现层。
+- 业务核心脚本不直接 `using MoreMountains.*`。Feel 相关依赖收口在 `Assets/Scripts/Runtime/Integration/Feel/` 和 UI 表现层。
 - `CardPlay` 只能代表确认出牌成功，不能被 hover、奖励选择或泛用卡片 commit 动画触发。
 - 后续 Feel 默认是“对象效果”，不是“在某个点生成粒子”：只要反馈能归属于卡牌、房间、HUD 文本、按钮、奖励卡等具体 UI 对象，就优先把表现挂到该对象的 `RectTransform` 下播放。
 - 卡牌/房间/HUD 这类对象本体效果优先使用 `PlaySlotAttached(slot, targetRect, debugLabel)`；`PlaySlotAt(slot, anchor.position, debugLabel)` 只用于没有稳定宿主对象、确实需要空间落点的少数效果；只有真正全局效果才考虑 `PlaySlot()`。
@@ -35,10 +35,10 @@
 
 ## 当前框架入口
 
-- Installer：`Assets/_Assets/Scripts/Integration/Feel/BaoZuPoFeelFeedbackInstaller.cs`
-- 后端：`Assets/_Assets/Scripts/Integration/Feel/FeelFeedbackBackend.cs`
-- Slot 常量：`Assets/_Assets/Scripts/Integration/Feel/FeelFeedbackSlots.cs`
-- Composite 后端：`Assets/_Assets/Scripts/Integration/Feel/CompositeFeedbackPlaybackBackend.cs`
+- Installer：`Assets/Scripts/Runtime/Integration/Feel/BaoZuPoFeelFeedbackInstaller.cs`
+- 后端：`Assets/Scripts/Runtime/Integration/Feel/FeelFeedbackBackend.cs`
+- Slot 常量：`Assets/Scripts/Runtime/Integration/Feel/FeelFeedbackSlots.cs`
+- Composite 后端：`Assets/Scripts/Runtime/Integration/Feel/CompositeFeedbackPlaybackBackend.cs`
 
 ## 恢复单个效果的步骤
 
@@ -49,3 +49,4 @@
 5. 在 `Start()` 中只注册对应 slot。
 6. Play Mode 验证：启用 installer 能通过 gameplay 看到效果，禁用 installer 后效果消失，游戏逻辑和 floating text 不变；如果是对象效果，要确认播放位置跟随目标对象而不是停在旧坐标或 drop anchor。
 7. 更新本文档和接入计划。
+

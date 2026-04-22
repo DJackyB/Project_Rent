@@ -57,7 +57,7 @@
 
 ### Unity 构建入口
 
-- `Assets/_Assets/Scripts/Editor/UnityCiBuildEntry.cs`
+- `Assets/Scripts/Editor/UnityCiBuildEntry.cs`
   - 当前唯一 CI/CD 构建入口
   - 只认 `EditorBuildSettings` 的启用场景
   - 输出目录统一收敛到 workflow 传入的 `buildOutput`
@@ -163,3 +163,4 @@
 - 是否接私有 UPM registry / SSH 私仓
 
 这些都应在“当前 V1 已跑通”的前提下，再单独开下一轮方案。
+

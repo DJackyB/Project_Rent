@@ -8,7 +8,7 @@ This document explains how designers and engineers add a new audio cue and trigg
 
 The runtime source of truth is:
 
-`Assets/_Assets/Data/Audio/AudioCatalog.asset`
+`Assets/Data/Audio/AudioCatalog.asset`
 
 The catalog is edited through the custom Inspector provided by the reusable package:
 
@@ -69,7 +69,7 @@ Current examples:
 
 For gameplay events, prefer adding the mapping to:
 
-`Assets/_Assets/Scripts/Integration/Martian/Audio/AudioEventBridge.cs`
+`Assets/Scripts/Runtime/Integration/Martian/Audio/AudioEventBridge.cs`
 
 This keeps audio routing centralized and avoids scattering direct `AudioServices` calls across gameplay systems.
 
@@ -94,3 +94,4 @@ Minimum validation after adding a cue:
 2. Enter Play Mode and trigger the action.
 3. Check the Unity Console for missing cue or missing clip warnings.
 4. Confirm the cue plays on the expected bus so volume controls affect it correctly.
+

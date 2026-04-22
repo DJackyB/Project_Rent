@@ -26,7 +26,7 @@ Unity 6000.3.11f1 卡牌游戏（包租婆），目标平台 PC Windows。3 个�
 
 ## 数据管线（卡牌导表）
 
-Excel (`Assets/_Assets/Data/Excel/CardData.xlsx`) → 在 Unity Editor 手动运行 `CardDataImporter` → 生成 `Resources/Cards/*.asset`。无自动化构建，每次改表后需手工触发导表。
+Excel (`Assets/Data/Excel/CardData.xlsx`) → 在 Unity Editor 手动运行 `CardDataImporter` → 生成 `Assets/Resources/Cards/*.asset`。无自动化构建，每次改表后需手工触发导表。
 
 ## 文案
 
@@ -35,13 +35,15 @@ Excel (`Assets/_Assets/Data/Excel/CardData.xlsx`) → 在 Unity Editor 手动运
 
 ## 模块状态
 
-同一能力只允许一个真源。每个模块必须明确标记：**已导入未接线** 或 **已接线启用**。当前未接线模块：`Martian.Localization`、`com.unity.localization`（运行时文案真源仍为 `GameText`）。
+同一能力只允许一个真源。每个模块必须明确标记：**已导入未接线** 或 **已接线启用**。当前 `Martian.Localization` 与 `com.unity.localization` 已接线启用：UI 固定文案经 `GameText` 调用面进入本地化表，卡牌文案经 `CardText` 进入 `Card` 表；运行时无语言切换 UI，当前固定 zh-Hans。
 
 ## 文档维护
 
 改动模块后同步更新 `Doc/10_模块梳理/` 对应文档。
 项目原则见 `@Doc/00_必读/项目开发必读.md`。
+文档导航和归档状态见 `@Doc/README.md` 与 `@Doc/00_必读/文档状态索引_2026-04-22.md`。
 
 ## Git 交付
 
 提交、PR、交付说明使用 `/chinese-git-delivery` skill。
+

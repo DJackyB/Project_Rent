@@ -13,7 +13,7 @@
 当前仓内目录：
 
 ```text
-Assets/_Assets/Martian/
+Assets/Modules/Martian/
   Tooltip/
     Runtime/
     Presets/
@@ -21,7 +21,7 @@ Assets/_Assets/Martian/
     Runtime/
     Presets/
 
-Assets/_Assets/Scripts/Integration/Martian/
+Assets/Scripts/Runtime/Integration/Martian/
   Tooltip/
   Feedback/
 ```
@@ -34,7 +34,7 @@ Assets/_Assets/Scripts/Integration/Martian/
 
 1. 通用安装：
 
-`[BaoZuPoMartianTooltipIntegration.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Tooltip/BaoZuPoMartianTooltipIntegration.cs)`
+`[BaoZuPoMartianTooltipIntegration.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Tooltip/BaoZuPoMartianTooltipIntegration.cs)`
 
 - 显式安装 `TooltipRuntimeInstaller`
 - 注册默认文档型 tooltip preset
@@ -42,7 +42,7 @@ Assets/_Assets/Scripts/Integration/Martian/
 
 2. 业务内容构建：
 
-`[UICardView.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/UI/UICardView.cs)`
+`[UICardView.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/UI/UICardView.cs)`
 
 - `UICardView` 实现 `ITooltipContentProvider`
 - hover 时返回 `TooltipRequest`
@@ -50,12 +50,12 @@ Assets/_Assets/Scripts/Integration/Martian/
 
 3. 项目专属 presenter：
 
-`[BaoZuPoCardTooltipPresenter.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Tooltip/BaoZuPoCardTooltipPresenter.cs)`
+`[BaoZuPoCardTooltipPresenter.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Tooltip/BaoZuPoCardTooltipPresenter.cs)`
 
 - 根据 `CardPreview` content id 渲染卡牌预览
 - 这类 presenter 是项目层代码，不属于 `Martian.Tooltip` 核心
 
-当前项目启动时在 `[UIManager.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/UI/UIManager.cs)` 的 `Start()` 中调用：
+当前项目启动时在 `[UIManager.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/UI/UIManager.cs)` 的 `Start()` 中调用：
 
 ```csharp
 BaoZuPoMartianTooltipIntegration.Install();
@@ -67,27 +67,27 @@ BaoZuPoMartianTooltipIntegration.Install();
 
 1. 配置映射：
 
-`[BaoZuPoMartianFeedbackIntegration.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Feedback/BaoZuPoMartianFeedbackIntegration.cs)`
+`[BaoZuPoMartianFeedbackIntegration.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Feedback/BaoZuPoMartianFeedbackIntegration.cs)`
 
 - 把 `GameConfig` 映射到 `FeedbackRuntimeOptions`
 - 保留当前项目自己的 `enableMoneyFeedback` 语义
 
 2. 业务转译：
 
-`[BaoZuPoFeedbackAdapter.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Feedback/BaoZuPo/BaoZuPoFeedbackAdapter.cs)`
+`[BaoZuPoFeedbackAdapter.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Feedback/BaoZuPo/BaoZuPoFeedbackAdapter.cs)`
 
 - 把当前项目的“房间/合同/贷款/即时收益”等业务语义转成 `FeedbackRequest` 或 `FeedbackSequenceRequest`
 - 负责解析 target key、anchor、offset、category
 
 3. 流程联动：
 
-`[UISettlementSequenceController.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/UI/Settlement/UISettlementSequenceController.cs)`
+`[UISettlementSequenceController.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/UI/Settlement/UISettlementSequenceController.cs)`
 
 - 监听结算事件
 - 调用项目 adapter 发布反馈
 - 等 `FeedbackPlaybackCoordinator.AllPlaybackCompleted` 后再刷新 UI
 
-当前项目启动时在 `[UIManager.cs](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/UI/UIManager.cs)` 中：
+当前项目启动时在 `[UIManager.cs](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/UI/UIManager.cs)` 中：
 
 - 保证存在 `FeedbackBootstrap`
 - 调用 `BaoZuPoMartianFeedbackIntegration.Configure(...)`
@@ -98,7 +98,7 @@ BaoZuPoMartianTooltipIntegration.Install();
 
 如果新项目只想要通用文档型 tooltip：
 
-1. 保留 `Assets/_Assets/Martian/Tooltip`
+1. 保留 `Assets/Modules/Martian/Tooltip`
 2. 在项目启动时显式安装：
 
 ```csharp
@@ -144,7 +144,7 @@ new TooltipRequest(
 
 如果新项目只想直接触发默认浮字反馈：
 
-1. 保留 `Assets/_Assets/Martian/Feedback`
+1. 保留 `Assets/Modules/Martian/Feedback`
 2. 在 UI 根节点下挂一个 `FeedbackBootstrap`
 3. 启动时配置：
 
@@ -258,14 +258,15 @@ bootstrap.SetBackend(customBackend);
 ## 7. 当前仓内关键文件
 
 - Tooltip 核心：
-  `[Martian/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Martian/Tooltip)`
+  `[Martian/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/Modules/Martian/Tooltip)`
 - Feedback 核心：
-  `[Martian/Feedback](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Martian/Feedback)`
+  `[Martian/Feedback](/E:/SDL/PJ/Project_Rent/Assets/Modules/Martian/Feedback)`
 - 当前项目 Tooltip 接入：
-  `[Scripts/Integration/Martian/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Tooltip)`
+  `[Scripts/Integration/Martian/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Tooltip)`
 - 当前项目 Feedback 接入：
-  `[Scripts/Integration/Martian/Feedback](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Scripts/Integration/Martian/Feedback)`
+  `[Scripts/Integration/Martian/Feedback](/E:/SDL/PJ/Project_Rent/Assets/Scripts/Runtime/Integration/Martian/Feedback)`
 - Tooltip 测试：
-  `[Tests/EditMode/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Tests/EditMode/Tooltip)`
+  `[Tests/EditMode/Tooltip](/E:/SDL/PJ/Project_Rent/Assets/Tests/EditMode/Tooltip)`
 - Feedback 测试：
-  `[Tests/EditMode/Feedback](/E:/SDL/PJ/Project_Rent/Assets/_Assets/Tests/EditMode/Feedback)`
+  `[Tests/EditMode/Feedback](/E:/SDL/PJ/Project_Rent/Assets/Tests/EditMode/Feedback)`
+
