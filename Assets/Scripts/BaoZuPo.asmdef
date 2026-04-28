@@ -13,6 +13,7 @@
     "Martian.Tooltip.Runtime",
     "Unity.TextMeshPro",
     "Unity.InputSystem",
+    "UniTask",
     "NodeCanvas",
     "ParadoxNotion",
     "DOTween.Modules",

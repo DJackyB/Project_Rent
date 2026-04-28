@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using BaoZuPo.Board;
 using BaoZuPo.GameFlow;
 using BaoZuPo.Integration.Feel;
 using BaoZuPo.UI.Common.Drag;
 using BaoZuPo.UI.Common.FeedbackPopup;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using Martian.Tooltip;
 using UnityEngine;
@@ -43,6 +45,7 @@ namespace BaoZuPo.UI
         private UICardDragHandler _activeHandler;
         private RectTransform _activeRect;
         private CanvasGroup _activeCanvasGroup;
+        private ICardPlayService _cardPlayService;
         private Transform _originalParent;
         private int _originalSiblingIndex;
         private Vector2 _originalAnchorMin;
@@ -54,6 +57,11 @@ namespace BaoZuPo.UI
 
         public static UICardDragController Instance => _instance;
 
+        public void SetCardPlayService(ICardPlayService cardPlayService)
+        {
+            _cardPlayService = cardPlayService ?? throw new ArgumentNullException(nameof(cardPlayService));
+        }
+
         private void Awake()
         {
             if (_instance != null && _instance != this)
@@ -63,6 +71,7 @@ namespace BaoZuPo.UI
             }
 
             _instance = this;
+            _cardPlayService ??= new CardPlayService();
             ResolveSceneReferences();
         }
 
@@ -357,12 +366,12 @@ namespace BaoZuPo.UI
         private bool TryResolveValidDropZone(UICardDropZone zone, out CardPlayValidationResult validation)
         {
             validation = default;
-            if (_activeHandler == null || _activeHandler.CardView == null || _activeHandler.CardView.Card == null || TurnManager.Instance == null)
+            if (_activeHandler == null || _activeHandler.CardView == null || _activeHandler.CardView.Card == null)
             {
                 return false;
             }
 
-            CardPlayTargetKind requiredTarget = TurnManager.Instance.GetRequiredTargetKind(_activeHandler.CardView.Card);
+            CardPlayTargetKind requiredTarget = _cardPlayService.GetRequiredTargetKind(_activeHandler.CardView.Card);
             if (zone == null)
             {
                 validation = CardPlayValidationResult.Failure(
@@ -378,7 +387,7 @@ namespace BaoZuPo.UI
             }
 
             RoomSlot targetRoom = zone.ZoneKind == CardPlayTargetKind.Room ? zone.BoundRoom : null;
-            validation = TurnManager.Instance.ValidatePlay(_activeHandler.CardView.Card, targetRoom);
+            validation = _cardPlayService.ValidatePlay(_activeHandler.CardView.Card, targetRoom);
             return validation.IsValid;
         }
 
@@ -483,10 +492,10 @@ namespace BaoZuPo.UI
                 sequence.Join(_activeCanvasGroup.DOFade(0.2f, successDuration * 0.72f).SetEase(Ease.OutQuad));
             }
 
-            sequence.OnComplete(() => CommitPlay(validation));
+            sequence.OnComplete(() => CommitPlayAsync(validation).Forget());
         }
 
-        private void CommitPlay(CardPlayValidationResult validation)
+        private async UniTask CommitPlayAsync(CardPlayValidationResult validation)
         {
             if (_activeHandler == null || _activeHandler.CardView == null || _activeHandler.CardView.Card == null)
             {
@@ -499,10 +508,21 @@ namespace BaoZuPo.UI
             RoomSlot targetRoom = validation.RequiredTargetKind == CardPlayTargetKind.Room ? validation.TargetRoom : null;
 
             _isCompletingPlay = true;
-            bool played = TurnManager.Instance != null && TurnManager.Instance.PlayCard(card, targetRoom);
-            _isCompletingPlay = false;
+            CardPlayResult playResult;
+            try
+            {
+                playResult = await _cardPlayService.PlayAsync(card, targetRoom, destroyCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            finally
+            {
+                _isCompletingPlay = false;
+            }
 
-            if (!played)
+            if (!playResult.Succeeded)
             {
                 if (_activeCanvasGroup != null)
                 {
@@ -510,7 +530,7 @@ namespace BaoZuPo.UI
                     _activeCanvasGroup.blocksRaycasts = false;
                 }
 
-                ReturnToHand(true, validation);
+                ReturnToHand(true, playResult.Validation);
                 return;
             }
 

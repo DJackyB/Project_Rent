@@ -52,6 +52,8 @@ namespace BaoZuPo.GameFlow
         private const float PreparePhaseOutroSeconds = 0.08f;
         private const float RewardPickOutroSeconds = 0.1f;
 
+        private readonly ICardPlayService _cardPlayService = new CardPlayService();
+
         [Header("洗牌提示")]
         [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
         [SerializeField] private float shufflePauseAfterSeconds = 0.35f;
@@ -342,50 +344,7 @@ namespace BaoZuPo.GameFlow
         /// </summary>
         public CardPlayValidationResult ValidatePlay(CardInstance card, RoomSlot targetRoom = null)
         {
-            CardPlayTargetKind requiredTargetKind = GetRequiredTargetKind(card);
-
-            if (_isGameOver)
-            {
-                return CardPlayValidationResult.Failure(CardPlayBlockReason.GameOver, requiredTargetKind, targetRoom);
-            }
-
-            if (card == null || card.Data == null || card.IsDestroyed)
-            {
-                return CardPlayValidationResult.Failure(CardPlayBlockReason.InvalidTarget, requiredTargetKind, targetRoom);
-            }
-
-            if (CurrentPhase != GamePhase.Action || ActionPhaseEnded)
-            {
-                return CardPlayValidationResult.Failure(CardPlayBlockReason.NotActionPhase, requiredTargetKind, targetRoom);
-            }
-
-            if (!MoneyManager.Instance.CanAfford(card.Data.cost))
-            {
-                return CardPlayValidationResult.Failure(CardPlayBlockReason.InsufficientMoney, requiredTargetKind, targetRoom);
-            }
-
-            if (requiredTargetKind == CardPlayTargetKind.Room)
-            {
-                if (targetRoom == null)
-                {
-                    return CardPlayValidationResult.Failure(CardPlayBlockReason.MissingTarget, requiredTargetKind);
-                }
-
-                if (CardTargeting.PersistsInRoom(card.Data))
-                {
-                    if (card.Data.cardType == CardType.Tenant && !targetRoom.CanPlaceTenant)
-                    {
-                        return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
-                    }
-
-                    if (card.Data.cardType == CardType.Equipment && !targetRoom.CanPlaceEquipment)
-                    {
-                        return CardPlayValidationResult.Failure(CardPlayBlockReason.TargetFull, requiredTargetKind, targetRoom);
-                    }
-                }
-            }
-
-            return CardPlayValidationResult.Success(requiredTargetKind, targetRoom);
+            return _cardPlayService.ValidatePlay(card, targetRoom);
         }
 
         /// <summary>
@@ -398,51 +357,18 @@ namespace BaoZuPo.GameFlow
         ///    - 合同卡：添加�?BoardManager.Contracts
         ///    - 房间卡（租户、装备）：放入目标房�?
         ///    - 即发卡：无需放置
-        /// 4. 调用 ResolveCardAfterPlay 完成结算�?
+        /// 4. 转调 CardPlayService 完成结算
         ///    - 费用扣除
         ///    - 即发效果执行
         ///    - 从手牌移�?
         ///    - 发布 CardPlayed 事件
         ///    - 发送数据反�?
         ///
-        /// 返回值：true 出牌成功，false 验证失败或放置失�?
+        /// 返回值：true 出牌成功，false 验证失败或放置失败
         /// </summary>
         public bool PlayCard(CardInstance card, RoomSlot targetRoom = null)
         {
-            EnsureGameManagerInitialized();
-
-            var validation = ValidatePlay(card, targetRoom);
-            if (!validation.IsValid)
-            {
-                return false;
-            }
-
-            targetRoom = validation.TargetRoom;
-            var context = GameManager.Instance.GameContext;
-            var previousRoom = context.EffectContext.SelectedRoom;
-            context.EffectContext.SelectedRoom = targetRoom;
-            try
-            {
-                if (CardTargeting.PersistsAsContract(card.Data))
-                {
-                    return ResolveCardAfterPlay(card, context, c => BoardManager.Instance.AddContract(c), targetRoom);
-                }
-
-                if (CardTargeting.PersistsInRoom(card.Data))
-                {
-                    if (targetRoom == null || !targetRoom.PlaceCard(card))
-                    {
-                        Debug.LogWarning($"[TurnManager] Failed to place {card}");
-                        return false;
-                    }
-                }
-
-                return ResolveCardAfterPlay(card, context, null, targetRoom);
-            }
-            finally
-            {
-                context.EffectContext.SelectedRoom = previousRoom;
-            }
+            return _cardPlayService.Play(card, targetRoom).Succeeded;
         }
 
         public bool CardNeedsRoomTarget(CardInstance card)
@@ -853,101 +779,6 @@ namespace BaoZuPo.GameFlow
             {
                 BatchId = batchId
             });
-        }
-
-        /// <summary>
-        /// 出牌后的结算 - 费用、效果、事件的统一入口
-        ///
-        /// [伪代码流程]�?
-        /// 1. 尝试扣除费用
-        ///    paid = MoneyManager.ReduceMoney(card.cost)
-        ///    if not paid:
-        ///        如果卡牌已放入房间，撤回
-        ///        return false
-        ///
-        /// 2. 记录扣费前金钱数
-        ///
-        /// 3. 执行即发效果
-        ///    card.InstantEffect?.Execute(card, context)
-        ///    计算金钱变化（用于反馈）
-        ///
-        /// 4. 执行额外操作
-        ///    afterInstant?.Invoke(card)  // 如添加合同、其他处�?
-        ///
-        /// 5. 从手牌移除卡�?
-        ///    DeckManager.RemoveFromHand(card)
-        ///
-        /// 6. 发布事件与反�?
-        ///    EventBus.Publish(CardPlayed)
-        ///    BaoZuPoFeedbackAdapter.PublishPlayCost(...)
-        ///    PublishPlaySequence(...)
-        ///
-        /// 返回值：true 出牌成功，false 费用不足
-        ///
-        /// 关键细节�?
-        /// - afterInstant 是添加合同或其他持久化操作的时机（在效果与移除手牌之间）
-        /// - 费用扣除失败时需撤回已放入房间的卡牌
-        /// - instantMoneyDelta 用于 UI 反馈动画（如金钱浮点数）
-        /// - targetRoom 优先使用参数，次优使�?card.PlacedRoom（已放置的房间）
-        ///
-        /// 外部系统�?
-        /// - MoneyManager：ReduceMoney、CurrentMoney
-        /// - DeckManager：RemoveFromHand
-        /// - EventBus：CardPlayed
-        /// - BaoZuPoFeedbackAdapter：PublishPlayCost、PublishInstantMoneyDelta
-        /// </summary>
-        private bool ResolveCardAfterPlay(
-            CardInstance card,
-            GameContext context,
-            Action<CardInstance> afterInstant,
-            RoomSlot targetRoom)
-        {
-            if (!MoneyManager.Instance.ReduceMoney(card.Data.cost))
-            {
-                if (targetRoom != null && card != null && card.PlacedRoom == targetRoom)
-                {
-                    targetRoom.RemoveCard(card);
-                }
-
-                return false;
-            }
-
-            int moneyBeforeInstant = MoneyManager.Instance.CurrentMoney;
-            card.InstantEffect?.Execute(card, context);
-            int instantMoneyDelta = MoneyManager.Instance.CurrentMoney - moneyBeforeInstant;
-
-            afterInstant?.Invoke(card);
-            if (Deck.DeckManager.Instance != null && Deck.DeckManager.Instance.ContainsInHand(card))
-            {
-                Deck.DeckManager.Instance.RemoveFromHand(card);
-            }
-
-            if (card.RemoveFromGameAfterPlay)
-            {
-                card.MarkDestroyed();
-            }
-            else if (!CardTargeting.PersistsInRoom(card.Data) && !CardTargeting.PersistsAsContract(card.Data))
-            {
-
-            // 即发卡（不上场的卡）打出后进弃卡池参与循环，并播放出场动�?
-                Deck.DeckManager.Instance.SendToDiscard(card);
-                UIManager.Instance?.handPanel?.PlayDiscardAnimation(card);
-            }
-
-            EventBus.Publish(new GameEvents.CardPlayed { Card = card });
-            BaoZuPoFeedbackAdapter.PublishPlayCost(card, targetRoom ?? card.PlacedRoom, card.Data.cost);
-            PublishPlaySequence(card, targetRoom ?? card.PlacedRoom, instantMoneyDelta);
-            return true;
-        }
-
-        private void PublishPlaySequence(CardInstance card, RoomSlot targetRoom, int moneyDelta)
-        {
-            if (card == null || moneyDelta == 0)
-            {
-                return;
-            }
-
-            BaoZuPoFeedbackAdapter.PublishInstantMoneyDelta(card, targetRoom, moneyDelta);
         }
 
         private static void ShowShufflePopup()
