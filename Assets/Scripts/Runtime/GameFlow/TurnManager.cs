@@ -53,6 +53,9 @@ namespace BaoZuPo.GameFlow
         private const float RewardPickOutroSeconds = 0.1f;
 
         private readonly ICardPlayService _cardPlayService = new CardPlayService();
+        private readonly ISettlementService _settlementService = new SettlementService();
+        private readonly ISettlementPresentationMapper _settlementPresentationMapper = new SettlementPresentationMapper();
+        private readonly ISettlementPresentationService _settlementPresentationService = new SettlementPresentationService();
 
         [Header("洗牌提示")]
         [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
@@ -453,29 +456,15 @@ namespace BaoZuPo.GameFlow
             CleanupTemporaryHandCards();
             PublishPhaseChanged(GamePhase.Settle);
 
-            var sharedContext = GameManager.Instance.GameContext;
-            int phaseStartMoney = MoneyManager.Instance.CurrentMoney;
-            string batchId = Guid.NewGuid().ToString("N");
-            int sourceIndex = 0;
-            var settlementBatch = new UISettlementPlaybackBatch
-            {
-                CompletionBatchId = batchId,
-                DeferredMoneyStartValue = phaseStartMoney
-            };
+            var request = new SettlementRequest(_currentTurn, _loanPaymentCount, PlayHandWaitDiscardAnimations);
+            var result = _settlementService.ResolveAsync(request).GetAwaiter().GetResult();
+            _loanPaymentCount = result.NewLoanPaymentCount;
+            _isGameOver = result.IsGameOver;
+            _pendingRewardBoosted = result.RewardBoosted;
+            UIManager.Instance?.handPanel?.RefreshHand();
 
-            var toDestroy = new List<CardInstance>();
-
-            ProcessRoomSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
-            ProcessContractSettlements(settlementBatch, batchId, sharedContext, ref sourceIndex, toDestroy);
-            DestroyAndCleanupCards(toDestroy, sharedContext);
-
-            ProcessLoanPayment();
-
-            // 缓存 boosted 状态，奖励在结算动画播完后再展�?
-            var config = GameManager.Instance.gameConfig;
-            _pendingRewardBoosted = config.loanInterval > 0 && _currentTurn % config.loanInterval == 0;
-
-            FinalizeBatch(settlementBatch, batchId);
+            var settlementBatch = _settlementPresentationMapper.Map(result);
+            FinalizeBatch(result, settlementBatch);
         }
 
         /// <summary>
@@ -751,12 +740,9 @@ namespace BaoZuPo.GameFlow
             }
         }
 
-        private void FinalizeBatch(UISettlementPlaybackBatch settlementBatch, string batchId)
+        private void FinalizeBatch(SettlementResult result, UISettlementPlaybackBatch settlementBatch)
         {
-            settlementBatch.DeferredMoneyEndValue = MoneyManager.Instance.CurrentMoney;
-            FinalizeSourceCounts(settlementBatch);
-
-            if (settlementBatch.IsEmpty && settlementBatch.TotalDelta == 0)
+            if (result == null || settlementBatch == null || (settlementBatch.IsEmpty && settlementBatch.TotalDelta == 0))
             {
                 // 无结算动画，直接进入奖励或完�?
                 TryStartRewardOrComplete();
@@ -769,8 +755,25 @@ namespace BaoZuPo.GameFlow
                 return;
             }
 
-            BeginSettlementPlayback(batchId, 1);
-            UIManager.Instance.SubmitSettlementBatch(settlementBatch);
+            BeginSettlementPlayback(result.SettlementId, 1);
+            _settlementPresentationService.PlayAsync(settlementBatch).GetAwaiter().GetResult();
+        }
+
+        private static void PlayHandWaitDiscardAnimations(IReadOnlyList<CardInstance> cards)
+        {
+            var handPanel = UIManager.Instance?.handPanel;
+            if (handPanel == null || cards == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < cards.Count; i++)
+            {
+                if (cards[i] != null)
+                {
+                    handPanel.PlayDiscardAnimation(cards[i]);
+                }
+            }
         }
 
         public void NotifySettlementPlaybackCompleted(string batchId)

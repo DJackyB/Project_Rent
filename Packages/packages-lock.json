@@ -10,6 +10,13 @@
       },
       "hash": "940831fe8a474e92b96a5c183298b45843cf067e"
     },
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "7c0f199fe0d3fc528024488ccd671e6c7b27745b"
+    },
     "com.martian.audio": {
       "version": "file:com.martian.audio",
       "depth": 0,
