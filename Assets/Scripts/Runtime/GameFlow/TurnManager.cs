@@ -13,6 +13,7 @@ using Martian.RandomEvent;
 using UnityEngine;
 using BaoZuPo.UI;
 using BaoZuPo.UI.Settlement;
+using VContainer;
 
 namespace BaoZuPo.GameFlow
 {
@@ -60,6 +61,7 @@ namespace BaoZuPo.GameFlow
         private IRewardService _rewardService = new RewardService();
         private IShopService _shopService = new ShopService();
 
+        [Inject]
         public void Construct(
             ICardPlayService cardPlayService,
             ISettlementService settlementService,

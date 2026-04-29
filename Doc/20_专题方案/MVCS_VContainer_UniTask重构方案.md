@@ -2,7 +2,7 @@
 
 > 状态：执行中  
 > 创建日期：2026-04-28  
-> 当前阶段：Phase 3，RewardService / ShopService 拆分完成，等待验收；Phase 4 VContainer 接入仍未验收
+> 当前阶段：Phase 4，VContainer 基础接入完成，等待验收；Phase 5 TurnFlowService 尚未开始
 > 适用范围：核心流程、出牌、结算、奖励、商店、UI 表现、依赖管理和对象池重构
 
 ## 1. 总目标
@@ -66,7 +66,7 @@ Infrastructure
 | 问题 | 技术选型 | 结论 |
 |---|---|---|
 | 主循环 / 异步流程 | UniTask | 替代 coroutine、callback、pending count |
-| 依赖管理 | VContainer | 替代 `Singleton.Instance` 和场景内隐式查找 |
+| 依赖管理 | VContainer | 先装配已拆出的 Service，逐步替代 `Singleton.Instance` 和场景内隐式查找 |
 | 跨层事件 | 保留 EventBus | 只发事实事件，不当 Command 用 |
 | UI 响应式 | 不引入 R3 | 当前事件刷新已够用 |
 | FSM | 移除 NodeCanvas 主流程 | `TurnFlowService.RunAsync` 成为流程真源 |
@@ -148,7 +148,15 @@ public sealed class RunState
 
 ### Boot / Composition
 
-`GameLifetimeScope` 注册所有 Service、Repository、Adapter、Pool。`GameBootstrapper` 加载并校验配置，创建初始 `RunState`，调用 `TurnFlowService.RunAsync(ct)`。
+`GameLifetimeScope` 是场景级装配入口。当前阶段只注册已经拆出的 `CardPlayService`、`SettlementService`、`RewardService`、`ShopService` 和结算表现相关 service，并注入 `TurnManager`、`UICardDragController`。后续 Phase 5 再由 `GameBootstrapper` 加载并校验配置，创建初始 `RunState`，调用 `TurnFlowService.RunAsync(ct)`。
+
+VContainer 通过 OpenUPM scoped registry 引入：
+
+```json
+"jp.hadashikick.vcontainer": "1.17.0"
+```
+
+Unity Package Manager 显示的 unsigned warning 来自 OpenUPM 第三方 scoped registry，不代表编译错误；项目需要接受该包来源后继续使用。
 
 ### Turn Flow
 
@@ -308,6 +316,8 @@ Excel
 - 注册 `CardPlayService`、`SettlementService`、`RewardService`、`ShopService`、Presentation Services。
 - 先不强行删除所有 Singleton，只迁移已拆出的服务。
 - 新增玩法服务必须构造注入，不新增玩法型 `XxxManager`。
+- `TurnManager.Construct(...)` 和 `UICardDragController.SetCardPlayService(...)` 标记为 `[Inject]`，保留默认实例作为过渡 fallback。
+- `ProjectSettings/PackageManagerSettings.asset` 只属于编辑器 Package Manager UI 状态，不作为本阶段装配真源；包真源是 `Packages/manifest.json` 和 `Packages/packages-lock.json`。
 
 验收：
 

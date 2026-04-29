@@ -11,6 +11,7 @@ using Martian.Tooltip;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using VContainer;
 
 namespace BaoZuPo.UI
 {
@@ -57,6 +58,7 @@ namespace BaoZuPo.UI
 
         public static UICardDragController Instance => _instance;
 
+        [Inject]
         public void SetCardPlayService(ICardPlayService cardPlayService)
         {
             _cardPlayService = cardPlayService ?? throw new ArgumentNullException(nameof(cardPlayService));

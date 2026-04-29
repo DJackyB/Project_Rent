@@ -14,6 +14,7 @@
     "Unity.TextMeshPro",
     "Unity.InputSystem",
     "UniTask",
+    "VContainer",
     "NodeCanvas",
     "ParadoxNotion",
     "DOTween.Modules",
