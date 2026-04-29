@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using BaoZuPo.Board;
 using BaoZuPo.Card;
 using BaoZuPo.Core;
@@ -52,10 +53,28 @@ namespace BaoZuPo.GameFlow
         private const float PreparePhaseOutroSeconds = 0.08f;
         private const float RewardPickOutroSeconds = 0.1f;
 
-        private readonly ICardPlayService _cardPlayService = new CardPlayService();
-        private readonly ISettlementService _settlementService = new SettlementService();
-        private readonly ISettlementPresentationMapper _settlementPresentationMapper = new SettlementPresentationMapper();
-        private readonly ISettlementPresentationService _settlementPresentationService = new SettlementPresentationService();
+        private ICardPlayService _cardPlayService = new CardPlayService();
+        private ISettlementService _settlementService = new SettlementService();
+        private ISettlementPresentationMapper _settlementPresentationMapper = new SettlementPresentationMapper();
+        private ISettlementPresentationService _settlementPresentationService = new SettlementPresentationService();
+        private IRewardService _rewardService = new RewardService();
+        private IShopService _shopService = new ShopService();
+
+        public void Construct(
+            ICardPlayService cardPlayService,
+            ISettlementService settlementService,
+            ISettlementPresentationMapper settlementPresentationMapper,
+            ISettlementPresentationService settlementPresentationService,
+            IRewardService rewardService,
+            IShopService shopService)
+        {
+            _cardPlayService = cardPlayService ?? throw new ArgumentNullException(nameof(cardPlayService));
+            _settlementService = settlementService ?? throw new ArgumentNullException(nameof(settlementService));
+            _settlementPresentationMapper = settlementPresentationMapper ?? throw new ArgumentNullException(nameof(settlementPresentationMapper));
+            _settlementPresentationService = settlementPresentationService ?? throw new ArgumentNullException(nameof(settlementPresentationService));
+            _rewardService = rewardService ?? throw new ArgumentNullException(nameof(rewardService));
+            _shopService = shopService ?? throw new ArgumentNullException(nameof(shopService));
+        }
 
         [Header("洗牌提示")]
         [SerializeField] private float shufflePauseBeforeSeconds = 0.35f;
@@ -76,7 +95,7 @@ namespace BaoZuPo.GameFlow
         /// <summary>标记 TurnEnded 事件是否已发布（防止重复�?/summary>
         private bool _settlementTurnEndedPublished;
         /// <summary>标记是否等待玩家选择奖励�?/summary>
-        private bool _isRewardSelectionPending;
+        private bool _isRewardFlowPending;
         /// <summary>标记是否等待结算后的随机事件流程完成。</summary>
         private bool _isPostSettlementRandomEventPending;
         private bool _isPreparePresentationPending;
@@ -85,11 +104,6 @@ namespace BaoZuPo.GameFlow
 
         /// <summary>缓存当前回合�?boosted 奖励状态，供结算动画完成后使用（贷款周期到达时触发高稀有度池）</summary>
         private bool _pendingRewardBoosted;
-        private CardData[] _shopOptions = Array.Empty<CardData>();
-        private bool[] _shopPurchased = Array.Empty<bool>();
-        private bool _shopOpenedThisTurn;
-        private bool _shopClosedThisTurn;
-        private bool _isShopOpen;
 
         public int CurrentTurn => _currentTurn;
         public bool IsGameOver => _isGameOver;
@@ -99,11 +113,11 @@ namespace BaoZuPo.GameFlow
         public bool ActionPhaseEnded { get; set; }
         /// <summary>是否有结算播放任务待执行</summary>
         public bool IsSettlementPlaybackPending => _pendingSettlementPlaybackCount > 0;
-        /// <summary>是否等待玩家从奖励池选择</summary>
-        public bool IsRewardSelectionPending => _isRewardSelectionPending;
+        /// <summary>是否等待奖励流程完成（选择或动画）</summary>
+        public bool IsRewardSelectionPending => _isRewardFlowPending;
         public bool IsPostSettlementRandomEventPending => _isPostSettlementRandomEventPending;
         public bool IsPreparePresentationPending => _isPreparePresentationPending;
-        public bool IsShopOpen => _isShopOpen;
+        public bool IsShopOpen => _shopService.IsOpen;
         /// <summary>当前结算批次 ID（用于跟踪哪个结算完成）</summary>
         public string ActiveSettlementBatchId => _activeSettlementBatchId;
 
@@ -145,7 +159,6 @@ namespace BaoZuPo.GameFlow
             }
 
             EventBus.Unsubscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
-            EventBus.Unsubscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
             _eventsSubscribed = false;
         }
 
@@ -807,14 +820,9 @@ namespace BaoZuPo.GameFlow
 
         private void ResetShopStateForNewTurn()
         {
-            CloseCurrentShop();
+            _shopService.Close(_currentTurn);
+            _shopService.ResetForNewTurn();
             CleanupTemporaryHandCards();
-
-            _shopOptions = Array.Empty<CardData>();
-            _shopPurchased = Array.Empty<bool>();
-            _shopOpenedThisTurn = false;
-            _shopClosedThisTurn = false;
-            _isShopOpen = false;
         }
 
         private void CleanupTemporaryHandCards()
@@ -838,104 +846,21 @@ namespace BaoZuPo.GameFlow
         public void OpenShop(CardInstance source)
         {
             EnsureGameManagerInitialized();
-            Debug.Log($"[TurnManager] OpenShop called. source={(source != null && source.Data != null ? source.Data.cardName : "null")}, phase={CurrentPhase}, actionEnded={ActionPhaseEnded}, openedThisTurn={_shopOpenedThisTurn}, closedThisTurn={_shopClosedThisTurn}, isOpen={_isShopOpen}");
 
             if (_isGameOver || CurrentPhase != GamePhase.Action || ActionPhaseEnded)
-            {
-                Debug.Log("[TurnManager] OpenShop aborted by phase/game over guard.");
                 return;
-            }
 
-            if (_shopOpenedThisTurn || _shopClosedThisTurn || _isShopOpen)
-            {
-                Debug.Log("[TurnManager] OpenShop aborted because shop was already opened/closed this turn or is currently open.");
-                return;
-            }
-
-            var config = GameManager.Instance != null ? GameManager.Instance.gameConfig : null;
-            if (config == null || config.shopLibrary == null)
-            {
-                throw new InvalidOperationException("[TurnManager] Shop opening requires GameConfig.shopLibrary.");
-            }
-
-            if (UIManager.Instance == null)
-            {
-                throw new InvalidOperationException("[TurnManager] Shop opening requires UIManager in scene.");
-            }
-
-            var sourceCards = config.shopLibrary.entries != null
-                ? config.shopLibrary.entries.Select(entry => entry != null ? entry.card : null).Where(card => card != null).ToList()
-                : new List<CardData>();
-            if (sourceCards.Count == 0)
-            {
-                Debug.LogWarning("[TurnManager] No shop cards available.");
-                return;
-            }
-
-            int desiredCount = Mathf.Clamp(config.shopOfferCount, 1, GameConfig.MaxShopOfferCount);
-            _shopOptions = BuildUniqueCardOptions(sourceCards, desiredCount);
-            if (_shopOptions.Length == 0)
-            {
-                Debug.LogWarning("[TurnManager] No unique shop cards available.");
-                return;
-            }
-
-            if (_shopOptions.Length < desiredCount)
-            {
-                Debug.LogWarning($"[TurnManager] Shop library only has {_shopOptions.Length} unique shop card(s) available. Offering {_shopOptions.Length} unique option(s).");
-            }
-
-            _shopPurchased = new bool[_shopOptions.Length];
-            _shopOpenedThisTurn = true;
-            _isShopOpen = true;
-            Debug.Log($"[TurnManager] Shop opened with {_shopOptions.Length} option(s).");
-            EventBus.Publish(new GameEvents.ShopOpened
-            {
-                Options = _shopOptions
-            });
+            _shopService.Open();
         }
 
         public bool TryPurchaseShopOffer(int offerIndex)
         {
-            if (!_isShopOpen || offerIndex < 0 || offerIndex >= _shopOptions.Length)
-            {
-                return false;
-            }
-
-            if (_shopPurchased[offerIndex])
-            {
-                return false;
-            }
-
-            var chosen = _shopOptions[offerIndex];
-            if (chosen == null)
-            {
-                return false;
-            }
-
-            if (chosen.cost > 0 && !MoneyManager.Instance.ReduceMoney(chosen.cost))
-            {
-                return false;
-            }
-
-            Deck.DeckManager.Instance.AddCardToDrawPile(chosen);
-            _shopPurchased[offerIndex] = true;
-            return true;
+            return _shopService.TryPurchase(offerIndex);
         }
 
         public void CloseCurrentShop()
         {
-            if (!_isShopOpen)
-            {
-                return;
-            }
-
-            _isShopOpen = false;
-            _shopClosedThisTurn = true;
-            EventBus.Publish(new GameEvents.ShopClosed
-            {
-                TurnNumber = _currentTurn
-            });
+            _shopService.Close(_currentTurn);
         }
 
         /// <summary>
@@ -1193,16 +1118,61 @@ namespace BaoZuPo.GameFlow
         {
             if (!_isGameOver)
             {
-                AwardOneCardFromThreeOptions(_pendingRewardBoosted);
-                // 如果 AwardOneCardFromThreeOptions 设置�?_isRewardSelectionPending�?
-                // 则等待玩家选择；否则（无可用卡）直接完�?
-                if (_isRewardSelectionPending)
+                _isRewardFlowPending = true;
+                StartCoroutine(RunRewardFlowAsync(_pendingRewardBoosted));
+                return;
+            }
+            CompleteSettlementPhase();
+        }
+
+        private IEnumerator RunRewardFlowAsync(bool boosted)
+        {
+            RewardChoiceResult choice = default;
+            bool taskDone = false;
+
+            AwaitRewardChoiceAsync(boosted, result => choice = result, () => taskDone = true).Forget();
+
+            yield return new WaitUntil(() => taskDone);
+
+            if (choice.ChosenCard != null)
+            {
+                var addedCard = Deck.DeckManager.Instance.AddCardToHand(choice.ChosenCard);
+                if (isActiveAndEnabled && UIManager.Instance?.handPanel != null && addedCard != null)
                 {
-                    return;
+                    Vector3? sourcePosition = choice.HasSourceWorldPosition ? choice.SourceWorldPosition : (Vector3?)null;
+                    yield return UIManager.Instance.handPanel.PlayIncomingCard(addedCard, UIHandIncomingAnimationKind.RewardPick, sourcePosition);
                 }
+
+                if (RewardPickOutroSeconds > 0f)
+                    yield return new WaitForSeconds(RewardPickOutroSeconds);
             }
 
+            _isRewardFlowPending = false;
             CompleteSettlementPhase();
+        }
+
+        private async UniTask AwaitRewardChoiceAsync(
+            bool boosted,
+            Action<RewardChoiceResult> onCompleted,
+            Action onFinally)
+        {
+            try
+            {
+                var result = await _rewardService.OfferAndWaitChoiceAsync(boosted, destroyCancellationToken);
+                onCompleted?.Invoke(result);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            finally
+            {
+                onFinally?.Invoke();
+            }
         }
 
         private bool TryStartPostSettlementRandomEvent()
@@ -1286,53 +1256,9 @@ namespace BaoZuPo.GameFlow
                 || (boardPanel != null && boardPanel.HasDestroyAnimations);
         }
 
-        private void OnCardRewardSelected(GameEvents.CardRewardSelected e)
-        {
-            if (!_isRewardSelectionPending)
-            {
-                return;
-            }
-
-            if (e.ChosenCard == null)
-            {
-                _isRewardSelectionPending = false;
-                CompleteSettlementPhase();
-                return;
-            }
-
-            if (!isActiveAndEnabled || UIManager.Instance == null || UIManager.Instance.handPanel == null)
-            {
-                Deck.DeckManager.Instance.AddCardToHand(e.ChosenCard);
-                _isRewardSelectionPending = false;
-                CompleteSettlementPhase();
-                return;
-            }
-
-            StartCoroutine(PlayRewardCardIntoHandAndComplete(e));
-        }
-
-        private IEnumerator PlayRewardCardIntoHandAndComplete(GameEvents.CardRewardSelected selection)
-        {
-            var addedCard = Deck.DeckManager.Instance.AddCardToHand(selection.ChosenCard);
-            if (UIManager.Instance != null && UIManager.Instance.handPanel != null && addedCard != null)
-            {
-                Vector3? sourcePosition = selection.HasSourceWorldPosition ? selection.SourceWorldPosition : null;
-                yield return UIManager.Instance.handPanel.PlayIncomingCard(addedCard, UIHandIncomingAnimationKind.RewardPick, sourcePosition);
-            }
-
-            if (RewardPickOutroSeconds > 0f)
-            {
-                yield return new WaitForSeconds(RewardPickOutroSeconds);
-            }
-
-            _isRewardSelectionPending = false;
-            CompleteSettlementPhase();
-        }
-
-
         private void CompleteSettlementPhase()
         {
-            if (_settlementTurnEndedPublished || _isRewardSelectionPending || _isPostSettlementRandomEventPending)
+            if (_settlementTurnEndedPublished || _isRewardFlowPending || _isPostSettlementRandomEventPending)
             {
                 return;
             }
@@ -1444,93 +1370,6 @@ namespace BaoZuPo.GameFlow
             return Mathf.RoundToInt(raw);
         }
 
-        /// <summary>
-        /// 展示三选一奖励�?
-        ///
-        /// 流程�?
-        /// 1. �?rewardLibrary 获取奖励池卡�?
-        /// 2. 根据 boosted 参数选择卡池�?
-        ///    - boosted=true：使用稀有度 >= Rare 的卡牌（高稀有度池）
-        ///    - boosted=false：使用完整奖励库（全稀有度�?
-        ///    - 如果 boosted 卡池为空，降级到完整�?
-        /// 3. 从卡池中随机选择 3 张不重复的卡�?
-        ///    - BuildUniqueRewardOptions 确保选出的卡片互不相�?
-        /// 4. 发布 CardRewardOffered 事件，UI 监听并展示三个选项
-        /// 5. 设置 _isRewardSelectionPending = true，等待玩家选择
-        /// 6. 玩家选择后，UI 发布 CardRewardSelected 事件，由 OnCardRewardSelected 处理
-        ///
-        /// 错误处理�?
-        /// - rewardLibrary 为空：记录警告，返回（无奖励�?
-        /// - 奖励库卡牌不�?3 张：按实际数量展示（如只�?1 张则展示 1 个选项�?
-        /// - UIManager 不存在：抛异常（必需�?
-        ///
-        /// 关键细节�?
-        /// - boosted 状态由 ExecuteSettlePhase 根据贷款周期缓存
-        /// - CardRewardSelected 事件会设�?_isRewardSelectionPending = false，完成循�?
-        /// - 如果 AwardOneCardFromThreeOptions 没有设置 _isRewardSelectionPending�?
-        ///   �?TryStartRewardOrComplete 会直接进�?CompleteSettlementPhase
-        /// </summary>
-        private void AwardOneCardFromThreeOptions(bool boosted)
-        {
-            EnsureEventSubscriptions();
-            var rewardLibrary = GameManager.Instance != null && GameManager.Instance.gameConfig != null
-                ? GameManager.Instance.gameConfig.rewardLibrary
-                : null;
-
-            if (rewardLibrary == null)
-            {
-                Debug.LogWarning("[TurnManager] No reward library configured.");
-                return;
-            }
-
-            var allCards = rewardLibrary.entries;
-            List<CardData> source;
-            if (boosted)
-            {
-                source = allCards.ConvertAll(e => e.card).FindAll(c => c.rarity >= CardRarity.Rare);
-                if (source.Count == 0)
-                {
-                    Debug.LogWarning("[TurnManager] Boosted reward requested but reward library has no Rare+ cards. Falling back to full reward library.");
-                    source = allCards.ConvertAll(e => e.card);
-                }
-            }
-            else
-            {
-                source = allCards.ConvertAll(e => e.card);
-            }
-
-            if (source.Count == 0)
-            {
-                Debug.LogWarning("[TurnManager] No reward cards available.");
-                return;
-            }
-
-            if (UIManager.Instance == null)
-            {
-                throw new InvalidOperationException("[TurnManager] Reward selection requires UIManager in scene.");
-            }
-
-            var options = BuildUniqueCardOptions(source, 3);
-            if (options.Length == 0)
-            {
-                Debug.LogWarning("[TurnManager] No unique reward cards available.");
-                return;
-            }
-
-            if (options.Length < 3)
-            {
-                Debug.LogWarning($"[TurnManager] Reward library only has {options.Length} unique reward card(s) available. Offering {options.Length} unique option(s).");
-            }
-
-            // 设置等待状态，�?UI 发布 CardRewardSelected 事件后恢�?
-            _isRewardSelectionPending = true;
-            EventBus.Publish(new GameEvents.CardRewardOffered
-            {
-                Options = options,
-                Boosted = boosted
-            });
-        }
-
         private void EnsureEventSubscriptions()
         {
             if (_eventsSubscribed)
@@ -1539,35 +1378,7 @@ namespace BaoZuPo.GameFlow
             }
 
             EventBus.Subscribe<GameEvents.SettlementPlaybackCompleted>(OnSettlementPlaybackCompleted);
-            EventBus.Subscribe<GameEvents.CardRewardSelected>(OnCardRewardSelected);
             _eventsSubscribed = true;
-        }
-
-        private static CardData[] BuildUniqueCardOptions(List<CardData> source, int desiredCount)
-        {
-            var remaining = source != null
-                ? source.Where(card => card != null).ToList()
-                : new List<CardData>();
-            var options = new List<CardData>(Mathf.Max(0, desiredCount));
-
-            while (remaining.Count > 0 && options.Count < desiredCount)
-            {
-                var chosen = remaining[UnityEngine.Random.Range(0, remaining.Count)];
-                options.Add(chosen);
-                remaining.RemoveAll(card => IsSameRewardCard(card, chosen));
-            }
-
-            return options.ToArray();
-        }
-
-        private static bool IsSameRewardCard(CardData left, CardData right)
-        {
-            if (left == null || right == null)
-            {
-                return false;
-            }
-
-            return ReferenceEquals(left, right) || left.cardId == right.cardId;
         }
     }
 }

@@ -2,7 +2,7 @@
 
 > 状态：执行中  
 > 创建日期：2026-04-28  
-> 当前阶段：Phase 1，CardPlayService 拆分完成，等待验收  
+> 当前阶段：Phase 3，RewardService / ShopService 拆分完成，等待验收；Phase 4 VContainer 接入仍未验收
 > 适用范围：核心流程、出牌、结算、奖励、商店、UI 表现、依赖管理和对象池重构
 
 ## 1. 总目标
@@ -93,7 +93,7 @@ public interface ICardPlayService
 
 public interface ISettlementService
 {
-    UniTask<SettlementResult> ResolveAsync(CancellationToken ct);
+    UniTask<SettlementResult> ResolveAsync(SettlementRequest request, CancellationToken ct);
 }
 
 public interface ISettlementPresentationMapper
@@ -108,11 +108,18 @@ public interface ISettlementPresentationService
 
 public interface IRewardService
 {
-    UniTask<CardData> OfferAndWaitChoiceAsync(bool boosted, CancellationToken ct);
+    UniTask<RewardChoiceResult> OfferAndWaitChoiceAsync(bool boosted, CancellationToken ct);
 }
 
 public interface IShopService
 {
+    bool IsOpen { get; }
+    bool OpenedThisTurn { get; }
+    bool ClosedThisTurn { get; }
+    void Open();
+    bool TryPurchase(int offerIndex);
+    void Close(int turnNumber);
+    void ResetForNewTurn();
     UniTask OpenAndWaitCloseAsync(CancellationToken ct);
 }
 ```
@@ -285,6 +292,7 @@ Excel
 - 新增 `IShopService.OpenAndWaitCloseAsync(ct)`。
 - UI 只提交玩家选择，不直接改手牌、金钱或商店状态。
 - `TurnManager` 暂时通过服务转调，保持旧主流程可跑。
+- 过渡期 `TurnManager` 仍保留默认 service 实例和 `Construct(...)` 手动注入入口；正式 VContainer 注入留到 Phase 4 单独验收。
 
 验收：
 
