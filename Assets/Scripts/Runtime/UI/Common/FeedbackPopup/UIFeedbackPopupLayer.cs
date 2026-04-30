@@ -2,6 +2,7 @@ using System;
 using Martian.Localization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Pool;
 
 namespace BaoZuPo.UI.Common.FeedbackPopup
 {
@@ -10,18 +11,27 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
     {
         [SerializeField] private UIFeedbackPopupStyle defaultStyle = new();
         [SerializeField] private UIFeedbackPopupView popupPrefab;
+        [SerializeField] private int poolDefaultCapacity = 8;
+        [SerializeField] private int poolMaxSize = 32;
 
         public static Action<TMP_Text> DefaultTextConfigurator { get; set; } = ApplyProjectLocalizedFont;
 
         private Canvas _canvas;
         private RectTransform _canvasRect;
         private RectTransform _layerRect;
+        private ObjectPool<UIFeedbackPopupView> _popupPool;
 
         public UIFeedbackPopupStyle DefaultStyle => defaultStyle;
 
         private void Awake()
         {
             EnsureInitialized();
+        }
+
+        private void OnDestroy()
+        {
+            _popupPool?.Clear();
+            _popupPool = null;
         }
 
         public static UIFeedbackPopupLayer GetOrCreate(Canvas canvas)
@@ -80,7 +90,7 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
                 return null;
             }
 
-            var popup = CreatePopupView();
+            var popup = GetPopupView();
             if (popup == null)
             {
                 request.Completed?.Invoke();
@@ -112,6 +122,38 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
             });
         }
 
+        private UIFeedbackPopupView GetPopupView()
+        {
+            EnsurePopupPool();
+            if (_popupPool == null)
+            {
+                return null;
+            }
+
+            var popup = _popupPool.Get();
+            popup.transform.SetAsLastSibling();
+            return popup;
+        }
+
+        private void EnsurePopupPool()
+        {
+            if (_popupPool != null)
+            {
+                return;
+            }
+
+            int safeDefaultCapacity = Mathf.Max(0, poolDefaultCapacity);
+            int safeMaxSize = Mathf.Max(1, poolMaxSize);
+            _popupPool = new ObjectPool<UIFeedbackPopupView>(
+                CreatePopupView,
+                OnGetPopupView,
+                OnReleasePopupView,
+                OnDestroyPopupView,
+                collectionCheck: true,
+                defaultCapacity: safeDefaultCapacity,
+                maxSize: safeMaxSize);
+        }
+
         private UIFeedbackPopupView CreatePopupView()
         {
             UIFeedbackPopupView popup;
@@ -126,8 +168,73 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
                 popup = popupObject.GetComponent<UIFeedbackPopupView>();
             }
 
-            popup.transform.SetAsLastSibling();
+            popup.SetReleaseHandler(ReleasePopupView);
             return popup;
+        }
+
+        private void OnGetPopupView(UIFeedbackPopupView popup)
+        {
+            if (popup == null)
+            {
+                return;
+            }
+
+            popup.SetReleaseHandler(ReleasePopupView);
+            popup.transform.SetParent(_layerRect, false);
+            popup.gameObject.SetActive(true);
+        }
+
+        private void OnReleasePopupView(UIFeedbackPopupView popup)
+        {
+            if (popup == null)
+            {
+                return;
+            }
+
+            popup.ResetForPoolRelease();
+            popup.transform.SetParent(_layerRect, false);
+            popup.gameObject.SetActive(false);
+        }
+
+        private static void OnDestroyPopupView(UIFeedbackPopupView popup)
+        {
+            if (popup != null)
+            {
+                DestroyPopupObject(popup.gameObject);
+            }
+        }
+
+        private void ReleasePopupView(UIFeedbackPopupView popup)
+        {
+            if (popup == null)
+            {
+                return;
+            }
+
+            if (_popupPool == null)
+            {
+                DestroyPopupObject(popup.gameObject);
+                return;
+            }
+
+            _popupPool.Release(popup);
+        }
+
+        private static void DestroyPopupObject(GameObject popupObject)
+        {
+            if (popupObject == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(popupObject);
+            }
+            else
+            {
+                DestroyImmediate(popupObject);
+            }
         }
 
         private static void ApplyProjectLocalizedFont(TMP_Text text)

@@ -1,4 +1,5 @@
 using DG.Tweening;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,9 +20,17 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
         private Image _accent;
         private Tween _sequence;
         private UIFeedbackPopupRequest _request;
+        private Action<UIFeedbackPopupView> _releaseHandler;
+
+        public void SetReleaseHandler(Action<UIFeedbackPopupView> releaseHandler)
+        {
+            _releaseHandler = releaseHandler;
+        }
 
         public void Play(UIFeedbackPopupRequest request, UIFeedbackPopupStyle style, Canvas canvas, RectTransform canvasRect)
         {
+            _sequence?.Kill(false);
+            _sequence = null;
             _request = request;
             style ??= new UIFeedbackPopupStyle();
 
@@ -57,6 +66,31 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
         {
             _sequence?.Kill(false);
             _sequence = null;
+        }
+
+        public void ResetForPoolRelease()
+        {
+            _sequence?.Kill(false);
+            _sequence = null;
+            _request = null;
+
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 0f;
+                _canvasGroup.blocksRaycasts = false;
+                _canvasGroup.interactable = false;
+            }
+
+            if (_rect != null)
+            {
+                _rect.anchoredPosition = Vector2.zero;
+                _rect.localScale = Vector3.one;
+            }
+
+            if (_label != null)
+            {
+                _label.text = string.Empty;
+            }
         }
 
         private void EnsureView(UIFeedbackPopupStyle style)
@@ -204,7 +238,14 @@ namespace BaoZuPo.UI.Common.FeedbackPopup
 
             if (this != null && gameObject != null)
             {
-                Destroy(gameObject);
+                if (_releaseHandler != null)
+                {
+                    _releaseHandler(this);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
             }
         }
     }

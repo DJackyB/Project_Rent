@@ -6,6 +6,7 @@ using BaoZuPo.UI.Common.Drag;
 using DG.Tweening;
 using Martian.Tooltip;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.UI;
 
 namespace BaoZuPo.UI
@@ -46,12 +47,15 @@ namespace BaoZuPo.UI
         [SerializeField] private float generatedStartScale = 0.9f;
         [SerializeField] private float targetStartScale = 0.9f;
         [SerializeField] private float targetPunchScale = 1.04f;
+        [SerializeField] private int ghostPoolDefaultCapacity = 4;
+        [SerializeField] private int ghostPoolMaxSize = 16;
 
         private readonly List<UICardView> _cardViews = new();
         private readonly List<UICardView> _orderedViewsBuffer = new();
         private readonly HashSet<UICardView> _exitingViews = new();
         private Canvas _rootCanvas;
         private RectTransform _animationLayerRoot;
+        private ObjectPool<GameObject> _ghostCardPool;
         private bool _runtimeAnimationLayerReady;
         private int _pendingDiscardGhostCount;
 
@@ -105,12 +109,23 @@ namespace BaoZuPo.UI
 
             targetRect.localScale = Vector3.one * targetStartScale;
 
-            var ghostObject = Instantiate(cardPrefab, _animationLayerRoot);
+            var ghostObject = GetGhostCardObject(_animationLayerRoot);
+            if (ghostObject == null)
+            {
+                if (targetCanvasGroup != null)
+                {
+                    targetCanvasGroup.alpha = 1f;
+                }
+
+                targetRect.localScale = Vector3.one;
+                yield break;
+            }
+
             ghostObject.name = $"{card.Data.cardName}_IncomingGhost";
             var ghostView = ghostObject.GetComponent<UICardView>();
             if (ghostView == null)
             {
-                Destroy(ghostObject);
+                DestroyCardObjectImmediately(ghostObject);
                 if (targetCanvasGroup != null)
                 {
                     targetCanvasGroup.alpha = 1f;
@@ -122,6 +137,7 @@ namespace BaoZuPo.UI
 
             ghostView.Setup(card, CardViewContext.Hand, this);
             DisableGhostInteraction(ghostObject);
+            ghostObject.SetActive(true);
 
             var ghostRect = ghostObject.transform as RectTransform;
             var ghostCanvasGroup = EnsureCanvasGroup(ghostObject);
@@ -158,7 +174,7 @@ namespace BaoZuPo.UI
 
             if (ghostObject != null)
             {
-                Destroy(ghostObject);
+                ReleaseGhostCardObject(ghostObject);
             }
 
             if (targetCanvasGroup != null)
@@ -214,7 +230,13 @@ namespace BaoZuPo.UI
 
         private IEnumerator PlayOutgoingGhost(CardInstance card, Vector3 worldCenter, Vector2 size)
         {
-            var ghostObject = Instantiate(cardPrefab, _animationLayerRoot);
+            var ghostObject = GetGhostCardObject(_animationLayerRoot);
+            if (ghostObject == null)
+            {
+                _pendingDiscardGhostCount--;
+                yield break;
+            }
+
             ghostObject.name = $"{(card != null ? card.Data.cardName : "Card")}_DiscardGhost";
             var ghostView = ghostObject.GetComponent<UICardView>();
             if (ghostView != null)
@@ -223,6 +245,7 @@ namespace BaoZuPo.UI
             }
 
             DisableGhostInteraction(ghostObject);
+            ghostObject.SetActive(true);
 
             var ghostRect = ghostObject.transform as RectTransform;
             if (ghostRect != null)
@@ -257,7 +280,7 @@ namespace BaoZuPo.UI
             _pendingDiscardGhostCount--;
             if (ghostObject != null)
             {
-                Destroy(ghostObject);
+                ReleaseGhostCardObject(ghostObject);
             }
         }
 
@@ -407,6 +430,125 @@ namespace BaoZuPo.UI
             }
 
             _runtimeAnimationLayerReady = true;
+        }
+
+        private void OnDestroy()
+        {
+            _ghostCardPool?.Clear();
+            _ghostCardPool = null;
+        }
+
+        private GameObject GetGhostCardObject(Transform parent)
+        {
+            EnsureGhostCardPool();
+            if (_ghostCardPool == null)
+            {
+                return null;
+            }
+
+            var ghostObject = _ghostCardPool.Get();
+            ghostObject.transform.SetParent(parent, false);
+            ghostObject.transform.SetAsLastSibling();
+            return ghostObject;
+        }
+
+        private void EnsureGhostCardPool()
+        {
+            if (_ghostCardPool != null)
+            {
+                return;
+            }
+
+            if (cardPrefab == null)
+            {
+                return;
+            }
+
+            int safeDefaultCapacity = Mathf.Max(0, ghostPoolDefaultCapacity);
+            int safeMaxSize = Mathf.Max(1, ghostPoolMaxSize);
+            safeDefaultCapacity = Mathf.Min(safeDefaultCapacity, safeMaxSize);
+            _ghostCardPool = new ObjectPool<GameObject>(
+                CreateGhostCardObject,
+                OnGetGhostCardObject,
+                OnReleaseGhostCardObject,
+                DestroyCardObjectImmediately,
+                collectionCheck: true,
+                defaultCapacity: safeDefaultCapacity,
+                maxSize: safeMaxSize);
+        }
+
+        private GameObject CreateGhostCardObject()
+        {
+            var ghostObject = Instantiate(cardPrefab);
+            ghostObject.name = "CardGhost";
+            DisableGhostInteraction(ghostObject);
+            ghostObject.SetActive(false);
+            return ghostObject;
+        }
+
+        private void OnGetGhostCardObject(GameObject ghostObject)
+        {
+            if (ghostObject == null)
+            {
+                return;
+            }
+
+            ghostObject.SetActive(false);
+            ResetGhostObjectState(ghostObject);
+            DisableGhostInteraction(ghostObject);
+        }
+
+        private void OnReleaseGhostCardObject(GameObject ghostObject)
+        {
+            if (ghostObject == null)
+            {
+                return;
+            }
+
+            ResetGhostObjectState(ghostObject);
+            ghostObject.SetActive(false);
+            if (_animationLayerRoot != null)
+            {
+                ghostObject.transform.SetParent(_animationLayerRoot, false);
+            }
+        }
+
+        private void ReleaseGhostCardObject(GameObject ghostObject)
+        {
+            if (ghostObject == null)
+            {
+                return;
+            }
+
+            if (_ghostCardPool == null)
+            {
+                DestroyCardObjectImmediately(ghostObject);
+                return;
+            }
+
+            _ghostCardPool.Release(ghostObject);
+        }
+
+        private static void ResetGhostObjectState(GameObject ghostObject)
+        {
+            if (ghostObject == null)
+            {
+                return;
+            }
+
+            foreach (var rect in ghostObject.GetComponentsInChildren<RectTransform>(true))
+            {
+                rect.DOKill(false);
+                rect.localScale = Vector3.one;
+            }
+
+            foreach (var canvasGroup in ghostObject.GetComponentsInChildren<CanvasGroup>(true))
+            {
+                canvasGroup.DOKill(false);
+                canvasGroup.alpha = 1f;
+                canvasGroup.blocksRaycasts = false;
+                canvasGroup.interactable = false;
+            }
         }
 
         private Vector3 ResolveIncomingStartPosition(UIHandIncomingAnimationKind kind, RectTransform targetRect, Vector3? sourceWorldPosition)

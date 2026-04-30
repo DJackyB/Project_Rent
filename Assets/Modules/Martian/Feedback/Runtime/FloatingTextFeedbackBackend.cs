@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Martian.Feedback;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.UI;
 
 namespace Martian.Feedback.Runtime
@@ -53,7 +54,7 @@ namespace Martian.Feedback.Runtime
         private readonly Dictionary<FeedbackPlaybackTrack, string> _trackOwners = new();
 
         /// <summary>Track 对象池。已完成的 Track 放回此池以重复利用。</summary>
-        private readonly Stack<FeedbackPlaybackTrack> _trackPool = new();
+        private ObjectPool<FeedbackPlaybackTrack> _trackPool;
 
         /// <summary>所有播放任务完成时触发。</summary>
         public event Action AllPlaybackCompleted;
@@ -70,10 +71,7 @@ namespace Martian.Feedback.Runtime
                 track?.SetFontResolver(_fontResolver);
             }
 
-            foreach (var track in _trackPool)
-            {
-                track?.SetFontResolver(_fontResolver);
-            }
+            // Inactive pooled tracks receive the resolver again when they are checked out.
         }
 
         public void Attach(Transform host)
@@ -135,18 +133,10 @@ namespace Martian.Feedback.Runtime
                 }
             }
 
-            foreach (var track in _trackPool)
-            {
-                if (track != null)
-                {
-                    track.Clear();
-                    DestroyObject(track.gameObject);
-                }
-            }
-
             _activeTracks.Clear();
             _trackOwners.Clear();
-            _trackPool.Clear();
+            _trackPool?.Clear();
+            _trackPool = null;
 
             if (_layerRoot != null)
             {
@@ -159,6 +149,7 @@ namespace Martian.Feedback.Runtime
         }
 
         internal int ActiveTrackCount => _activeTracks.Count;
+        internal int InactiveTrackCount => _trackPool?.CountInactive ?? 0;
 
         internal int GetPendingCount(string laneKey)
         {
@@ -237,7 +228,8 @@ namespace Martian.Feedback.Runtime
                 return existingTrack;
             }
 
-            FeedbackPlaybackTrack track = _trackPool.Count > 0 ? _trackPool.Pop() : CreateTrack();
+            EnsureTrackPool();
+            FeedbackPlaybackTrack track = _trackPool.Get();
             if (track == null)
             {
                 return null;
@@ -252,6 +244,23 @@ namespace Martian.Feedback.Runtime
             return track;
         }
 
+        private void EnsureTrackPool()
+        {
+            if (_trackPool != null)
+            {
+                return;
+            }
+
+            _trackPool = new ObjectPool<FeedbackPlaybackTrack>(
+                CreateTrack,
+                OnGetTrack,
+                OnReleaseTrack,
+                DestroyTrack,
+                collectionCheck: true,
+                defaultCapacity: 2,
+                maxSize: 16);
+        }
+
         private FeedbackPlaybackTrack CreateTrack()
         {
             var trackObject = new GameObject("MartianFeedbackTrack", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(FeedbackPlaybackTrack));
@@ -262,6 +271,44 @@ namespace Martian.Feedback.Runtime
             track.SetFontResolver(_fontResolver);
             track.Configure(_canvas, _canvasRect, _options);
             return track;
+        }
+
+        private void OnGetTrack(FeedbackPlaybackTrack track)
+        {
+            if (track == null)
+            {
+                return;
+            }
+
+            track.gameObject.SetActive(true);
+            track.SetFontResolver(_fontResolver);
+            track.Configure(_canvas, _canvasRect, _options);
+        }
+
+        private void OnReleaseTrack(FeedbackPlaybackTrack track)
+        {
+            if (track == null)
+            {
+                return;
+            }
+
+            track.Clear();
+            track.gameObject.SetActive(false);
+            if (_layerRoot != null)
+            {
+                track.transform.SetParent(_layerRoot, false);
+            }
+        }
+
+        private static void DestroyTrack(FeedbackPlaybackTrack track)
+        {
+            if (track == null)
+            {
+                return;
+            }
+
+            track.Clear();
+            DestroyObject(track.gameObject);
         }
 
         private void OnTrackPlaybackCompleted(FeedbackPlaybackTrack completedTrack)
@@ -278,10 +325,8 @@ namespace Martian.Feedback.Runtime
 
             _activeTracks.Remove(key);
             _trackOwners.Remove(completedTrack);
-            completedTrack.Clear();
-            completedTrack.gameObject.SetActive(false);
-            completedTrack.transform.SetParent(_layerRoot, false);
-            _trackPool.Push(completedTrack);
+            EnsureTrackPool();
+            _trackPool.Release(completedTrack);
 
             if (_activeTracks.Count == 0)
             {

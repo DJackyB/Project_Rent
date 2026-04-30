@@ -91,9 +91,14 @@ namespace Martian.Tests.Feedback
 
             _backend.CompleteTrackForTesting("player");
             Assert.AreEqual(0, _backend.ActiveTrackCount);
+            Assert.AreEqual(1, _backend.InactiveTrackCount);
             Assert.AreEqual(0, _backend.GetPendingCount("player"));
             Assert.AreEqual(1, completedCount);
             Assert.IsTrue(second.IsCompleted);
+
+            _backend.Publish(new FeedbackRequest { TargetKey = "player", Text = "+3" });
+            Assert.AreEqual(1, _backend.ActiveTrackCount);
+            Assert.AreEqual(0, _backend.InactiveTrackCount);
         }
 
         [Test]
