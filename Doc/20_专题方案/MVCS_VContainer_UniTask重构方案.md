@@ -2,7 +2,7 @@
 
 > 状态：执行中  
 > 创建日期：2026-04-28  
-> 当前阶段：Phase 4，VContainer 基础接入完成，等待验收；Phase 5 TurnFlowService 尚未开始
+> 当前阶段：Phase 6 已开始，Feedback popup、Card Ghost 与 transient feedback track 池已落地；结算数字现为单实例复用；Phase 5 等待 Unity Editor 实机复核
 > 适用范围：核心流程、出牌、结算、奖励、商店、UI 表现、依赖管理和对象池重构
 
 ## 1. 总目标
@@ -148,7 +148,9 @@ public sealed class RunState
 
 ### Boot / Composition
 
-`GameLifetimeScope` 是场景级装配入口。当前阶段只注册已经拆出的 `CardPlayService`、`SettlementService`、`RewardService`、`ShopService` 和结算表现相关 service，并注入 `TurnManager`、`UICardDragController`。后续 Phase 5 再由 `GameBootstrapper` 加载并校验配置，创建初始 `RunState`，调用 `TurnFlowService.RunAsync(ct)`。
+`GameLifetimeScope` 是场景级装配入口。当前阶段注册已经拆出的 `CardPlayService`、`SettlementService`、`RewardService`、`ShopService`、结算表现相关 service 和 `TurnFlowService`，并注入 `GameManager`、`TurnManager`、`UICardDragController`。`TurnFlowEntryPoint` 由 VContainer 启动，调用 `TurnFlowService.RunAsync(ct)`。
+
+`GameManager.Awake()` 会在默认配置下提前禁用同物体上的 `FSMOwner`，避免 NodeCanvas 在 VContainer entry point 启动前抢先驱动旧主流程。`useNodeCanvasTurnFlowForDebug` 仅用于调试回退。
 
 VContainer 通过 OpenUPM scoped registry 引入：
 
@@ -173,6 +175,13 @@ RunAsync
 ```
 
 它只负责编排，不写出牌、结算、奖励细节。
+
+当前落地形态仍复用 `TurnManager` 的兼容门面来执行各阶段，以降低 Phase 5 风险；正式流程真源已经从 NodeCanvas 图切到 `TurnFlowService`。`SampleScene` 中 `FSMOwner` 默认禁用，NodeCanvas 图保留给调试/原型，不再自动驱动回合。
+
+Phase 5 自动化覆盖：
+
+- `TurnFlowServiceTests.RunAsync_DrivesTurnLoopThroughSettlementAndRewardSkip` 覆盖 `Prepare -> Action -> Settle -> Reward skip -> next turn`。
+- `TurnFlowServiceTests.EnsureInitialized_ThrowsWhenGameConfigIsMissing` 覆盖主流程缺核心配置时快速失败。
 
 ### Card Play
 
@@ -230,10 +239,10 @@ SettlementResult
 
 建立局部类型池：
 
-- `FeedbackPopupPool`
-- `CardGhostPool`
-- `SettlementNumberPool`
-- `TransientEffectPool`
+- `FeedbackPopupPool`：已由 `UIFeedbackPopupLayer` 内部持有 `ObjectPool<UIFeedbackPopupView>`，popup 播完后 release，不再直接销毁。
+- `CardGhostPool`：已由 `UIHandPanel` 内部持有 `ObjectPool<GameObject>` 复用抽牌 Ghost / 弃牌 Ghost，播放完成后 release。
+- `SettlementNumberPool`：当前结算数字由 `UISettlementSequenceController` 复用场景中的 `transferLabel / roomAccumulatorLabel / accumulatorLabel` 单实例视图，不存在逐次创建/销毁的数字对象。
+- `TransientEffectPool`：`FloatingTextFeedbackBackend` 的 transient feedback track 已改用 `ObjectPool<FeedbackPlaybackTrack>`。
 
 对象播完 `Release`，`OnGet / OnRelease` 清理 tween、事件、文本、alpha、parent、interactable 状态。
 
@@ -331,14 +340,18 @@ Excel
 - 主流程改为 `PrepareAsync -> ActionAsync -> SettleAsync -> Reward / Shop / RandomEvent -> EndTurnAsync -> Loop`。
 - NodeCanvas 保留为调试/原型工具，但不再驱动正式回合。
 - 旧 `TurnManager` 只保留兼容门面，确认无调用后删除。
+- `TurnFlowEntryPoint` 由 VContainer 启动 async loop。
+- `GameManager.DisableNodeCanvasTurnFlow()` 默认停用 `FSMOwner`，可通过 `useNodeCanvasTurnFlowForDebug` 回退到旧图调试。
+- `GameManager.Awake()` 默认提前停用 `FSMOwner`，避免旧 FSM 在 VContainer entry point 之前抢跑。
 
 验收：
 
-- 开局能进入准备阶段。
-- 抽牌、行动、结算、奖励、下一回合完整闭环。
-- `TurnEnded` 只发布一次。
-- GameOver 能停止 async loop。
-- 禁用 NodeCanvas 后主流程仍能跑。
+- [x] 开局能进入准备阶段。
+- [x] 抽牌、行动、结算、奖励跳过、下一回合完整闭环。
+- [x] `TurnEnded` 在自动化覆盖中只发布一次。
+- [x] 缺少核心配置时快速失败，不继续伪运行。
+- [x] 禁用 NodeCanvas 后主流程由 `TurnFlowService` 推进。
+- [ ] Unity Editor 实机跑 3 回合，覆盖出牌、奖励选择、商店、随机事件、贷款扣款和 GameOver。
 
 ### Phase 6：ObjectPool<T> 表现对象池
 
@@ -346,11 +359,24 @@ Excel
 - 弹字、抽牌 Ghost、弃牌 Ghost、结算数字播完后 Release。
 - `OnGet / OnRelease` 清理 tween、事件、文本、alpha、parent、interactable。
 
+当前进展：
+
+- [x] `UIFeedbackPopupLayer` 使用 `UnityEngine.Pool.ObjectPool<UIFeedbackPopupView>` 复用 popup。
+- [x] `UIFeedbackPopupView` 播放完成后回调 release，并在 release 时清理 tween、文本、alpha、scale 和交互状态。
+- [x] `UIFeedbackPopupPoolTests.Show_ReusesCompletedPopupView` 覆盖 popup release 后复用同一个 view。
+- [x] `UIHandPanel` 使用 `UnityEngine.Pool.ObjectPool<GameObject>` 复用抽牌 Ghost 和弃牌 Ghost。
+- [x] `UIHandPanelGhostPoolTests.GhostPool_ReusesReleasedCardGhost` 覆盖 Ghost release 后复用同一个对象。
+- [x] 结算数字视图确认没有逐次 `Instantiate/Destroy`；当前使用单实例 `transfer / roomAccumulator / accumulator` 视图复用。
+- [x] `FloatingTextFeedbackBackend` 使用 `UnityEngine.Pool.ObjectPool<FeedbackPlaybackTrack>` 复用 transient feedback track。
+- [x] `FloatingTextFeedbackBackendTests.CompleteTrackForTesting_DrainsQueueAndFinishes` 覆盖 track 完成后进入 inactive pool 并再次取出。
+
 验收：
 
-- 连续结算多回合无残留 popup。
+- [x] popup release 后再次 show 可复用同一个 view。
+- [ ] 连续结算多回合无残留 popup。
 - Ghost 卡不残留在层级中。
 - Release 后再次取出状态干净。
+- transient feedback track 完成后进入 inactive pool，下一次发布复用。
 - 旧全局字符串 `ObjectPooler` 不再服务这些 UI 表现对象。
 
 ## 7. 子任务分派原则

@@ -1,6 +1,7 @@
+using BaoZuPo.Core;
+using BaoZuPo.UI;
 using VContainer;
 using VContainer.Unity;
-using BaoZuPo.UI;
 
 namespace BaoZuPo.GameFlow
 {
@@ -14,8 +15,11 @@ namespace BaoZuPo.GameFlow
             builder.Register<ISettlementPresentationService, SettlementPresentationService>(Lifetime.Scoped);
             builder.Register<IRewardService, RewardService>(Lifetime.Scoped);
             builder.Register<IShopService, ShopService>(Lifetime.Scoped);
+            builder.Register<ITurnFlowService, TurnFlowService>(Lifetime.Scoped);
+            builder.RegisterComponentInHierarchy<GameManager>();
             builder.RegisterComponentInHierarchy<TurnManager>();
             builder.RegisterComponentInHierarchy<UICardDragController>();
+            builder.RegisterEntryPoint<TurnFlowEntryPoint>(Lifetime.Scoped);
         }
     }
 }

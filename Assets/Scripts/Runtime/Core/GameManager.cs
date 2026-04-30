@@ -42,6 +42,9 @@ namespace BaoZuPo.Core
         /// </summary>
         private FSMOwner _turnFlowFsm;
 
+        [Header("Turn Flow")]
+        [SerializeField] private bool useNodeCanvasTurnFlowForDebug;
+
         /// <summary>
         /// 游戏上下文：统一暴露 MoneyManager、BoardManager、DeckManager 等系统入�?
         /// </summary>
@@ -64,7 +67,11 @@ namespace BaoZuPo.Core
             base.Awake();
             _turnFlowFsm = GetComponent<FSMOwner>();
 
-            EnsureInitialized();
+            DisableNodeCanvasTurnFlow();
+            if (gameConfig != null)
+            {
+                EnsureInitialized();
+            }
         }
 
         public void EnsureInitialized()
@@ -81,11 +88,35 @@ namespace BaoZuPo.Core
 
             if (gameConfig == null)
             {
-                Debug.LogError("[GameManager] GameConfig is not assigned.");
-                return;
+                throw new InvalidOperationException("[GameManager] GameConfig is not assigned.");
             }
 
             InitializeSystems();
+        }
+
+        public void DisableNodeCanvasTurnFlow()
+        {
+            if (useNodeCanvasTurnFlowForDebug)
+            {
+                return;
+            }
+
+            if (_turnFlowFsm == null)
+            {
+                _turnFlowFsm = GetComponent<FSMOwner>();
+            }
+
+            if (_turnFlowFsm == null)
+            {
+                return;
+            }
+
+            if (_turnFlowFsm.isRunning)
+            {
+                _turnFlowFsm.StopBehaviour(false);
+            }
+
+            _turnFlowFsm.enabled = false;
         }
 
         /// <summary>
